@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+.venv*/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# Output files (generated, not committed)
+output/
+!output/.gitkeep
+
+# Data files (large binaries)
+data/*.parquet
+!data/.gitkeep
+
+# Templates (keep original, ignore copies)
+templates/
+!templates/.gitkeep
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+
+# Env
+.env
+.env.local
+.env.production

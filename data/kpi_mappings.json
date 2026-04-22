@@ -1,0 +1,72 @@
+{
+  "MLP": {
+    "Variables Mineras||Movimiento mina sulfuros": "Movimiento Mina",
+    "Variables Mineras||Movimiento mina óxidos": "__NA__",
+    "Variables Mineras||Desarrollo mina sulfuros": "Desarrollo Mina||Desarrollo Mina",
+    "Variables Mineras||Remanejo sulfuros": "Remanejo||Remanejo",
+    "Variables Mineras||Desarrollo mina óxidos": "__NA__",
+    "Variables Mineras||Remanejo oxidos": "__NA__",
+    "Variables Mineras||Procesamiento": "Tratamiento",
+    "Variables Mineras||Beneficio": "__NA__",
+    "Variables Mineras||Apilado": "__NA__",
+    "Variables Mineras||Ley sulfuros": "Ley de Cu",
+    "Variables Mineras||Ley oxidos": "__NA__",
+    "Variables Mineras||Recuperación sulfuros": "Recuperación de cobre",
+    "Variables Mineras||Recuperación óxidos": "__NA__",
+    "Variables Mineras||CuFino": "Cu fino pagable filtrado",
+    "Variables Mineras||Cátodos": "__NA__",
+    "Variables Mineras||Horas operativas transporte": "Horas Horómetro",
+    "Variables Mineras||Horas efectivas transporte": "Horas Efectivas",
+    "Variables Mineras||Total Tronado/Quebrado": [
+      "Roca Quebrada (Lastre)",
+      "Roca Quebrada (Mineral)"
+    ],
+    "Tarifas||Bolas": "Tarifa Bolas",
+    "Tarifas||Ácido": "__NA__",
+    "Tarifas||Energía": "Energía all in",
+    "Tarifas||Combustible": "Combustible",
+    "Tarifas||Explosivos": "Precios Insumos Críticos||Explosivos",
+    "Consumos||Bolas": "Consumo Bolas",
+    "Consumos||Ácido": "",
+    "Consumos||Energía Total": "Consumo Energía Compañía",
+    "Consumos||Energía Planta Conc.": "__NA__",
+    "Consumos||Energía Planta Hidro A.Seca": "__NA__",
+    "Consumos||Energía Planta Hidro A.Humeda": "__NA__",
+    "Consumos||Combustible": "Mina||Consumo Comb. - Transporte",
+    "Consumos||Explosivos": "Mina||Explosivos",
+    "Rendimientos||Bolas": {
+      "_f": true,
+      "a": "Consumos||Bolas",
+      "op": "/",
+      "b": "Variables Mineras||Procesamiento",
+      "scale": 1000
+    },
+    "Rendimientos||Ácido": "__NA__",
+    "Rendimientos||Energía concentradora": {
+      "_f": true,
+      "a": "Consumos||Energía Total",
+      "op": "/",
+      "b": "Variables Mineras||Procesamiento"
+    },
+    "Rendimientos||Energía Hidro": "__NA__",
+    "Rendimientos||Combustible": {
+      "_f": true,
+      "a": "Consumos||Combustible",
+      "op": "/",
+      "b": "Variables Mineras||Procesamiento",
+      "scale": 1000
+    },
+    "Rendimientos||Explosivos": {
+      "_f": true,
+      "a": "Consumos||Explosivos",
+      "op": "/",
+      "b": "Variables Mineras||Total Tronado/Quebrado",
+      "scale": 1000
+    },
+    "Gasto||Bolas": "Gasto Total Bolas",
+    "Gasto||Ácido": "",
+    "Gasto||Energía": "",
+    "Gasto||Combustible": "Gasto Combustible",
+    "Gasto||Explosivos": "Gasto Explosivos (s/Accesorios)"
+  }
+}

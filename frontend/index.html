@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robot 2026 — Automatización de Reportes v2</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1A3A4A; }
+    :root { --teal:#1A7080; --teal-lt:#4EC3C3; --amber:#F5A800; --red:#C8312A; --navy:#1A3A4A; --gray:#E8E8E8; }
+
+    /* Header */
+    .header { background:linear-gradient(135deg, #1A7080 0%, #4EC3C3 100%); color:white; padding:14px 32px; display:flex; align-items:center; justify-content:space-between; }
+    .header h1 { font-size:1.2rem; font-weight:700; }
+    .header p  { color:var(--teal-lt); font-size:.82rem; margin-top:2px; }
+    .nav-tabs { display:flex; gap:4px; }
+    .nav-tab { padding:7px 18px; border-radius:6px; cursor:pointer; font-size:.88rem; font-weight:600; border:none; background:rgba(255,255,255,.1); color:rgba(255,255,255,.7); }
+    .nav-tab.active { background:var(--teal); color:white; }
+    .nav-tab:hover:not(.active) { background:rgba(255,255,255,.18); color:white; }
+
+    /* Layout */
+    .main { max-width:1100px; margin:0 auto; padding:24px 16px; display:flex; flex-direction:column; gap:16px; }
+    .card { background:white; border-radius:10px; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+    .card-title { font-size:.95rem; font-weight:700; color:var(--teal); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    .card-title::before { content:''; display:inline-block; width:4px; height:16px; background:var(--teal); border-radius:2px; }
+
+    /* Forms */
+    .form-row { display:flex; flex-wrap:wrap; gap:16px; }
+    .form-group { display:flex; flex-direction:column; gap:4px; min-width:110px; }
+    .form-group label { font-size:.72rem; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.06em; }
+    .form-group select { padding:8px 12px; border:2px solid var(--gray); border-radius:6px; font-size:.9rem; color:var(--navy); background:white; cursor:pointer; outline:none; }
+    .form-group select:focus { border-color:var(--teal-lt); }
+
+    /* Chips / checkboxes */
+    .checkbox-row { display:flex; flex-wrap:wrap; gap:8px; }
+    .chip { display:flex; align-items:center; gap:6px; padding:6px 14px; border:2px solid var(--gray); border-radius:20px; cursor:pointer; font-size:.875rem; font-weight:600; user-select:none; transition:all .15s; }
+    .chip.on { background:var(--teal); border-color:var(--teal); color:white; }
+    .chip input { display:none; }
+
+    /* Buttons */
+    .btn-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .btn { padding:10px 22px; border:none; border-radius:6px; font-size:.9rem; font-weight:600; cursor:pointer; transition:opacity .15s; }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .btn-primary   { background:var(--teal); color:white; }
+    .btn-secondary { background:var(--gray); color:var(--navy); }
+    .btn-success   { background:#059669; color:white; }
+    .btn-primary:hover:not(:disabled)   { background:#15606e; }
+    .btn-secondary:hover:not(:disabled) { background:#d5d5d5; }
+    .btn-success:hover:not(:disabled)   { background:#047857; }
+    .btn-dl { background:var(--amber); color:var(--navy); text-decoration:none; display:inline-flex; align-items:center; gap:6px; padding:10px 22px; border-radius:6px; font-size:.9rem; font-weight:600; }
+    .btn-dl:hover { opacity:.85; }
+
+    /* Stats */
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin-bottom:12px; }
+    .stat { text-align:center; padding:12px; background:#f8f9fa; border-radius:8px; }
+    .stat-n { font-size:2rem; font-weight:800; color:var(--teal); }
+    .stat-n.warn { color:var(--amber); }
+    .stat-lbl { font-size:.72rem; color:#888; margin-top:2px; }
+    .pills { display:flex; flex-wrap:wrap; gap:6px; }
+    .pill { padding:3px 12px; border-radius:20px; font-size:.78rem; font-weight:700; }
+    .pill-ok   { background:#d1fae5; color:#065f46; }
+    .pill-warn { background:#fef3c7; color:#92400e; }
+
+    /* Table */
+    .tbl-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    th { background:var(--navy); color:white; padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; }
+    td { padding:7px 12px; border-bottom:1px solid var(--gray); vertical-align:middle; }
+    tr:hover td { background:#f8f9fa; }
+    .badge { padding:2px 8px; border-radius:10px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+    .badge-ok   { background:#d1fae5; color:#065f46; }
+    .badge-miss { background:#fee2e2; color:#991b1b; }
+    .badge-partial { background:#fef3c7; color:#92400e; }
+
+    /* Mapping input */
+    .map-input { width:100%; padding:6px 10px; border:2px solid var(--gray); border-radius:6px; font-size:.84rem; outline:none; min-width:220px; }
+    .map-input:focus { border-color:var(--teal-lt); }
+    .map-input.mapped { border-color:#10b981; background:#f0fdf4; }
+
+    /* Log */
+    .log-box { background:var(--navy); border-radius:8px; padding:14px; max-height:180px; overflow-y:auto; font-family:monospace; font-size:.8rem; display:flex; flex-direction:column; gap:3px; }
+    .li { color:#94a3b8; } .lok { color:#6ee7b7; } .lw { color:#fcd34d; } .ler { color:#fca5a5; }
+
+    /* Misc */
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .spin { display:inline-block; width:13px; height:13px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:5px; }
+    .divider-lbl { font-size:.72rem; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+    .company-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+    .company-tab { padding:6px 16px; border:2px solid var(--gray); border-radius:6px; cursor:pointer; font-weight:700; font-size:.88rem; background:white; }
+    .company-tab.active { background:var(--teal); border-color:var(--teal); color:white; }
+    .map-summary { font-size:.82rem; color:#666; margin-bottom:12px; }
+    .map-summary strong { color:var(--teal); }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio',
+               'Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const COMPANIES = ['MLP','CEN','ANT','CMZ'];
+const NOW = new Date();
+
+/* ─── API helpers ─── */
+async function apiGet(path) {
+  const r = await fetch(path);
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||'Error del servidor'); }
+  return r.json();
+}
+async function apiPost(path, body) {
+  const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||'Error del servidor'); }
+  return r.json();
+}
+
+/* ─── Shared components ─── */
+function Header({ tab, setTab }) {
+  return (
+    <div className="header">
+      <div>
+        <h1>Robot 2026</h1>
+        <p>Automatización de Reportes</p>
+      </div>
+      <div className="nav-tabs">
+        <button className={`nav-tab ${tab==='auto'?'active':''}`} onClick={()=>setTab('auto')}>▶ Automatización</button>
+        <button className={`nav-tab ${tab==='mapeos'?'active':''}`} onClick={()=>setTab('mapeos')}>⚙ Configurar Mapeos</button>
+        <button className={`nav-tab ${tab==='viz'?'active':''}`} onClick={()=>setTab('viz')}>📊 Visualizar</button>
+        <button className={`nav-tab ${tab==='params'?'active':''}`} onClick={()=>setTab('params')}>$ Parámetros</button>
+      </div>
+    </div>
+  );
+}
+
+function LogPanel({ logs }) {
+  const ref = useRef(null);
+  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [logs]);
+  return (
+    <div className="card">
+      <div className="card-title">Registro de actividad</div>
+      <div className="log-box" ref={ref}>
+        {logs.length===0 ? <span className="li">Sin actividad aún.</span>
+          : logs.map((l,i)=>(
+            <span key={i} className={l.type==='ok'?'lok':l.type==='warn'?'lw':l.type==='error'?'ler':'li'}>
+              {l.time} {l.message}
+            </span>
+          ))
+        }
+      </div>
+    </div>
+  );
+}
+
+function StatusCard({ result }) {
+  const noMap = result.companies?.reduce((s,c)=>s+c.kpis_no_mapeados,0)||0;
+  return (
+    <div className="card">
+      <div className="card-title">Resultado de la automatización</div>
+      <div className="stat-grid">
+        <div className="stat"><div className="stat-n">{result.total_escritos}</div><div className="stat-lbl">KPIs escritos</div></div>
+        <div className="stat"><div className="stat-n">{result.companies?.length||0}</div><div className="stat-lbl">Compañías</div></div>
+        <div className="stat"><div className={`stat-n ${noMap>0?'warn':''}`}>{noMap}</div><div className="stat-lbl">Sin mapear</div></div>
+      </div>
+      <div className="pills">
+        {result.companies?.map(c=>(
+          <span key={c.compania} className={`pill ${c.kpis_no_mapeados>0?'pill-warn':'pill-ok'}`}>
+            {c.compania}: {c.kpis_escritos} escritos{c.kpis_no_mapeados>0?`, ${c.kpis_no_mapeados} sin mapear`:''}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PreviewTable({ preview }) {
+  const rows = preview.kpis || [];
+  return (
+    <div className="card">
+      <div className="card-title">Vista previa — {preview.matched_kpis} mapeados, {preview.unmatched_kpis} sin mapear</div>
+      <div className="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Compañía</th><th>KPI</th><th>Categoría</th><th>Mes</th><th>YTD</th><th>Estado</th></tr>
+          </thead>
+          <tbody>
+            {rows.slice(0,60).map((r,i)=>(
+              <tr key={i}>
+                <td>{r.compania}</td>
+                <td>{r.kpi}</td>
+                <td>{r.category}</td>
+                <td>{r.valores?.mes!=null ? Number(r.valores.mes).toLocaleString('es-CL') : '—'}</td>
+                <td>{r.valores?.ytd!=null ? Number(r.valores.ytd).toLocaleString('es-CL') : '—'}</td>
+                <td><span className={`badge ${r.matched?'badge-ok':'badge-miss'}`}>{r.matched?'Mapeado':'Sin mapear'}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length>60 && <p style={{fontSize:'.8rem',color:'#888',padding:'8px 12px'}}>Mostrando primeras 60 de {rows.length} filas</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Tab: Automatización ─── */
+function AutoTab() {
+  const [periodos, setPeriodos]        = useState({ anios:[NOW.getFullYear()], tipos:['Real'] });
+  const [anio, setAnio]                = useState(NOW.getFullYear());
+  const [mes, setMes]                  = useState(NOW.getMonth()+1);
+  const [tipo, setTipo]                = useState('Real');
+  const [companies, setCompanies]      = useState([...COMPANIES]);
+  const [preview, setPreview]          = useState(null);
+  const [result, setResult]            = useState(null);
+  const [logs, setLogs]                = useState([]);
+  const [loadingP, setLoadingP]        = useState(true);
+  const [loadingPv, setLoadingPv]      = useState(false);
+  const [loadingR, setLoadingR]        = useState(false);
+
+  function addLog(msg, type='info') {
+    const time = new Date().toLocaleTimeString('es-CL');
+    setLogs(p=>[...p,{message:msg, type, time:`[${time}]`}]);
+  }
+
+  useEffect(()=>{
+    apiGet('/api/periodos')
+      .then(d=>{
+        setPeriodos(d);
+        if(d.anios?.length) setAnio(Math.max(...d.anios));
+        if(d.tipos?.length) setTipo(d.tipos.includes('Real')?'Real':d.tipos[0]);
+        addLog('Períodos cargados.','ok');
+      })
+      .catch(()=>addLog('No se pudo conectar con el servidor.','error'))
+      .finally(()=>setLoadingP(false));
+  },[]);
+
+  function toggleCo(c){ setCompanies(p=>p.includes(c)?p.filter(x=>x!==c):[...p,c]); setPreview(null); setResult(null); }
+
+  async function handlePreview(){
+    if(!companies.length){addLog('Selecciona al menos una compañía.','warn');return;}
+    setLoadingPv(true); setPreview(null); setResult(null);
+    addLog(`Vista previa — año ${anio}, mes ${MESES[mes]}, tipo ${tipo}…`);
+    try{
+      const d=await apiPost('/api/preview',{anio,mes,tipo,companies});
+      setPreview(d);
+      addLog(`${d.matched_kpis} KPIs mapeados, ${d.unmatched_kpis} sin mapear.`,d.unmatched_kpis>0?'warn':'ok');
+    }catch(e){ addLog(e.message||'Error.','error'); }
+    finally{ setLoadingPv(false); }
+  }
+
+  async function handleRun(){
+    if(!companies.length){addLog('Selecciona al menos una compañía.','warn');return;}
+    setLoadingR(true); setResult(null);
+    addLog(`Ejecutando — año ${anio}, mes ${MESES[mes]}, tipo ${tipo}…`);
+    try{
+      const d=await apiPost('/api/ejecutar',{anio,mes,tipo,companies});
+      setResult(d);
+      addLog(`✓ Excel generado: ${d.archivo_salida} — ${d.total_escritos} KPIs escritos.`,'ok');
+      d.companies?.forEach(c=>{ if(c.kpis_no_mapeados>0) addLog(`${c.compania}: ${c.kpis_no_mapeados} sin mapear.`,'warn'); });
+    }catch(e){ addLog(e.message||'Error.','error'); }
+    finally{ setLoadingR(false); }
+  }
+
+  const busy = loadingPv||loadingR;
+  return (
+    <div className="main">
+      <div className="card">
+        <div className="card-title">Configuración del período</div>
+        {loadingP ? <p style={{color:'#aaa',fontSize:'.9rem'}}><span className="spin"/>Cargando períodos…</p> : (
+          <>
+            <div className="form-row" style={{marginBottom:'18px'}}>
+              <div className="form-group">
+                <label>Año</label>
+                <select value={anio} disabled={busy} onChange={e=>{setAnio(Number(e.target.value));setPreview(null);setResult(null);}}>
+                  {(periodos.anios||[NOW.getFullYear()]).map(a=><option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Mes</label>
+                <select value={mes} disabled={busy} onChange={e=>{setMes(Number(e.target.value));setPreview(null);setResult(null);}}>
+                  {Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>{MESES[m]}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Tipo</label>
+                <select value={tipo} disabled={busy} onChange={e=>{setTipo(e.target.value);setPreview(null);setResult(null);}}>
+                  {(periodos.tipos||['Real']).map(t=><option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="divider-lbl">Compañías</div>
+            <div className="checkbox-row">
+              {COMPANIES.map(c=>(
+                <label key={c} className={`chip ${companies.includes(c)?'on':''}`}>
+                  <input type="checkbox" checked={companies.includes(c)} onChange={()=>toggleCo(c)} disabled={busy}/>{c}
+                </label>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="btn-row">
+        <button className="btn btn-secondary" onClick={handlePreview} disabled={busy||loadingP}>
+          {loadingPv?<><span className="spin"/>Cargando…</>:'🔍 Vista previa'}
+        </button>
+        <button className="btn btn-primary" onClick={handleRun} disabled={busy||loadingP}>
+          {loadingR?<><span className="spin"/>Ejecutando…</>:'▶ Ejecutar automatización'}
+        </button>
+        {result?.archivo_salida && (
+          <a href={`/api/descargar/${result.archivo_salida}`} download className="btn-dl">⬇ Descargar Excel</a>
+        )}
+      </div>
+
+      {result && <StatusCard result={result}/>}
+      {preview && !result && <PreviewTable preview={preview}/>}
+      <LogPanel logs={logs}/>
+    </div>
+  );
+}
+
+/* ─── Tab: Configurar Mapeos ─── */
+function MapeosTab() {
+  const [company, setCompany]        = useState('MLP');
+  const [excelKpis, setExcelKpis]    = useState([]);
+  const [parquetKpis, setParquetKpis]= useState([]);
+  // uiMaps: keyed by array-index string (e.g. "22") — guaranteed unique, no label collisions
+  const [uiMaps, setUiMaps]          = useState({});
+  // labelMappings: keyed by "Section||Label" — used only for save/load with backend
+  const [labelMappings, setLabelMappings] = useState({});
+  const [loading, setLoading]        = useState(false);
+  const [saving, setSaving]          = useState(false);
+  const [saved, setSaved]            = useState(false);
+  const [error, setError]            = useState('');
+
+  // _id = String(array-index), _lk = "Section||Label" for backend
+  const enrichedKpis = React.useMemo(() => {
+    let sec = '';
+    return excelKpis.map((k, i) => {
+      if (k.type === 'header') { sec = k.label; return k; }
+      return { ...k, section: sec, _id: String(i), _lk: `${sec}||${k.label}` };
+    });
+  }, [excelKpis]);
+
+  useEffect(() => {
+    setLoading(true); setError('');
+    Promise.all([
+      apiGet(`/api/setup/excel-kpis/${company}`),
+      apiGet(`/api/setup/parquet-kpis/${company}`),
+      apiGet('/api/setup/mappings'),
+    ])
+    .then(([excel, parquet, saved]) => {
+      const kpis = excel.kpis || [];
+      setExcelKpis(kpis);
+      setParquetKpis(parquet.kpis || []);
+      setLabelMappings(saved || {});
+      // Convert label-keyed saved maps → index-keyed for UI
+      let sec = '';
+      const converted = {};
+      const cmap = (saved || {})[company] || {};
+      kpis.forEach((k, i) => {
+        if (k.type === 'header') { sec = k.label; return; }
+        const lk = `${sec}||${k.label}`;
+        if (cmap[lk] !== undefined) converted[String(i)] = cmap[lk];
+      });
+      setUiMaps(converted);
+    })
+    .catch(e => setError(e.message || 'Error cargando datos'))
+    .finally(() => setLoading(false));
+  }, [company]);
+
+  function setKpiVal(id, value) {
+    setUiMaps(prev => ({ ...prev, [id]: value }));
+    setSaved(false);
+  }
+  function setKpiSource(id, idx, value) {
+    setUiMaps(prev => {
+      const cur = prev[id];
+      const arr = Array.isArray(cur) ? [...cur] : [cur||''];
+      arr[idx] = value;
+      return { ...prev, [id]: arr.length===1 ? arr[0] : arr };
+    });
+    setSaved(false);
+  }
+  function addKpiSource(id) {
+    setUiMaps(prev => {
+      const cur = prev[id];
+      const arr = cur==='__NA__' ? [] : Array.isArray(cur) ? cur : (cur ? [cur] : []);
+      return { ...prev, [id]: [...arr, ''] };
+    });
+    setSaved(false);
+  }
+  function removeKpiSource(id, idx) {
+    setUiMaps(prev => {
+      const cur = prev[id];
+      const arr = (Array.isArray(cur) ? cur : [cur||'']).filter((_,i)=>i!==idx);
+      return { ...prev, [id]: arr.length===0 ? '' : arr.length===1 ? arr[0] : arr };
+    });
+    setSaved(false);
+  }
+
+  async function handleSave() {
+    setSaving(true); setSaved(false);
+    try {
+      // Convert index-keyed uiMaps → label-keyed for backend
+      const labelMap = {};
+      for (const k of enrichedKpis) {
+        if (k.type !== 'kpi') continue;
+        const val = uiMaps[k._id];
+        if (val !== undefined) labelMap[k._lk] = val;
+      }
+      const toSave = { ...labelMappings, [company]: labelMap };
+      await apiPost('/api/setup/mappings', toSave);
+      setLabelMappings(toSave);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch(e) {
+      setError(e.message || 'Error al guardar');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const kpiRows  = enrichedKpis.filter(k => k.type==='kpi');
+  const mapped   = kpiRows.filter(k => uiMaps[k._id] && uiMaps[k._id]!=='__NA__');
+  const na       = kpiRows.filter(k => uiMaps[k._id]==='__NA__');
+  const unmapped = kpiRows.filter(k => !uiMaps[k._id]);
+
+  return (
+    <div className="main">
+      <div className="card">
+        <div className="card-title">Configurar Mapeos KPI</div>
+        <p style={{fontSize:'.88rem',color:'#555',marginBottom:'16px',lineHeight:'1.5'}}>
+          Para cada KPI del Excel, elige el nombre equivalente en el Parquet (Libro_Gestion).
+          El mapeo se guarda permanentemente y se usa en todas las ejecuciones.
+        </p>
+        <div className="company-tabs">
+          {COMPANIES.map(c=>(
+            <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>
+              {c}
+            </button>
+          ))}
+        </div>
+
+        {loading && <p style={{color:'#aaa'}}><span className="spin"/>Cargando KPIs de {company}…</p>}
+        {error   && <p style={{color:'var(--red)',fontSize:'.88rem'}}>{error}</p>}
+
+        {!loading && !error && excelKpis.length > 0 && (
+          <>
+            <p className="map-summary">
+              <strong>{mapped.length}</strong> mapeados · <strong>{na.length}</strong> no aplica · <strong style={{color:unmapped.length>0?'var(--amber)':'inherit'}}>{unmapped.length}</strong> pendientes de {kpiRows.length} KPIs en {company}.
+            </p>
+
+            <div className="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{width:'90px'}}>Código</th>
+                    <th>KPI en Excel</th>
+                    <th style={{width:'70px'}}>Unidad</th>
+                    <th>KPI en Parquet (busca y selecciona)</th>
+                    <th style={{width:'100px'}}>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrichedKpis.map((k,i)=>{
+                    if(k.type==='header') return (
+                      <tr key={`h-${i}`}>
+                        <td colSpan={5} style={{
+                          background:'var(--navy)', color:'white',
+                          fontWeight:'700', fontSize:'.82rem',
+                          padding:'8px 12px', letterSpacing:'.04em',
+                          textTransform:'uppercase'
+                        }}>{k.label}</td>
+                      </tr>
+                    );
+                    const id      = k._id;
+                    const raw     = uiMaps[id];
+                    const isNA    = raw === '__NA__';
+                    const isForm  = !isNA && typeof raw === 'object' && raw?._f;
+                    const sources = (isNA || isForm) ? [] : Array.isArray(raw) ? raw : (raw ? [raw] : ['']);
+                    const isMapped = isNA ? false : isForm ? !!(raw.a && raw.b) : sources.some(s=>s&&s.trim());
+                    const isMulti  = sources.length > 1;
+                    const selStyle = {flex:1, padding:'5px 8px', border:'2px solid #10b981', borderRadius:'5px',
+                                      fontSize:'.82rem', minWidth:'160px', background:'#f0fdf4'};
+                    return (
+                      <tr key={id}>
+                        <td style={{fontFamily:'monospace',fontSize:'.8rem',color:'#888'}}>{k.code}</td>
+                        <td style={{fontWeight:'600'}}>{k.label}</td>
+                        <td style={{color:'#888',fontSize:'.82rem'}}>{k.unit}</td>
+                        <td>
+                          {isNA ? (
+                            <span style={{fontSize:'.84rem',color:'#888',fontStyle:'italic'}}>
+                              No aplica
+                              <button onClick={()=>setKpiVal(id,'')} style={{marginLeft:'8px',background:'none',border:'none',cursor:'pointer',color:'var(--teal)',fontSize:'.78rem',fontWeight:'700'}}>Cambiar</button>
+                            </span>
+                          ) : isForm ? (
+                            <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
+                              <select style={selStyle} value={raw.a||''} onChange={e=>setKpiVal(id,{...raw,a:e.target.value})}>
+                                <option value="">— KPI A —</option>
+                                {kpiRows.filter(r=>r._id!==id).map(r=>(
+                                  <option key={r._id} value={r._lk}>{r.section} › {r.label}</option>
+                                ))}
+                              </select>
+                              <select value={raw.op||'/'} onChange={e=>setKpiVal(id,{...raw,op:e.target.value})}
+                                style={{width:'46px',padding:'5px 4px',border:'2px solid #10b981',borderRadius:'5px',fontSize:'.95rem',textAlign:'center',background:'#f0fdf4',fontWeight:700}}>
+                                <option value="/">÷</option>
+                                <option value="*">×</option>
+                                <option value="+">+</option>
+                                <option value="-">−</option>
+                              </select>
+                              <select style={selStyle} value={raw.b||''} onChange={e=>setKpiVal(id,{...raw,b:e.target.value})}>
+                                <option value="">— KPI B —</option>
+                                {kpiRows.filter(r=>r._id!==id).map(r=>(
+                                  <option key={r._id} value={r._lk}>{r.section} › {r.label}</option>
+                                ))}
+                              </select>
+                              <span style={{fontSize:'.75rem',color:'#aaa'}}>×k</span>
+                              <select value={raw.scale_op||'*'} onChange={e=>setKpiVal(id,{...raw,scale_op:e.target.value})}
+                                style={{width:'46px',padding:'5px 4px',border:'1px solid #ddd',borderRadius:'5px',fontSize:'.95rem',textAlign:'center',fontWeight:700}}>
+                                <option value="*">×</option>
+                                <option value="/">÷</option>
+                              </select>
+                              <input type="number" placeholder="1" value={raw.scale??''} onChange={e=>setKpiVal(id,{...raw,scale:e.target.value===''?null:Number(e.target.value)})}
+                                style={{width:'72px',padding:'5px 7px',border:'1px solid #ddd',borderRadius:'5px',fontSize:'.84rem'}}/>
+                              <button onClick={()=>setKpiVal(id,'')} title="Volver a mapeo parquet"
+                                style={{background:'none',border:'1px solid #aaa',borderRadius:'4px',padding:'3px 7px',cursor:'pointer',fontSize:'.75rem',color:'#888'}}>Parquet</button>
+                            </div>
+                          ) : (
+                            <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
+                              {sources.map((s,idx)=>(
+                                <div key={idx} style={{display:'flex',gap:'4px',alignItems:'center'}}>
+                                  <input
+                                    className={`map-input ${s&&s.trim()?'mapped':''}`}
+                                    list={`pq-${company}`}
+                                    value={s}
+                                    placeholder="Escribe para buscar…"
+                                    autoComplete="off"
+                                    name={`kpi-${id}-${idx}`}
+                                    onChange={e=>setKpiSource(id, idx, e.target.value)}
+                                    style={{flex:1}}
+                                  />
+                                  {sources.length>1 && (
+                                    <button onClick={()=>removeKpiSource(id,idx)}
+                                      title="Quitar esta fuente"
+                                      style={{background:'var(--red)',color:'white',border:'none',borderRadius:'4px',width:'22px',height:'22px',cursor:'pointer',fontWeight:'700',fontSize:'.82rem',flexShrink:0}}>−</button>
+                                  )}
+                                </div>
+                              ))}
+                              <div style={{display:'flex',gap:'6px'}}>
+                                <button onClick={()=>addKpiSource(id)} title="Agregar otra fuente (suma)"
+                                  style={{background:'none',border:'1px dashed var(--teal)',color:'var(--teal)',borderRadius:'4px',padding:'2px 8px',cursor:'pointer',fontSize:'.78rem',fontWeight:'700'}}>+ suma</button>
+                                <button onClick={()=>setKpiVal(id,{_f:true,a:'',op:'/',b:''})} title="Definir como fórmula"
+                                  style={{background:'none',border:'1px dashed #10b981',color:'#10b981',borderRadius:'4px',padding:'2px 8px',cursor:'pointer',fontSize:'.78rem',fontWeight:'700'}}>÷ fórmula</button>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td style={{whiteSpace:'nowrap'}}>
+                          {isNA
+                            ? <span className="badge badge-partial">No aplica</span>
+                            : <span className={`badge ${isMapped?'badge-ok':'badge-miss'}`}>
+                                {isMapped ? (isForm ? 'Fórmula' : isMulti ? `Suma (${sources.length})` : 'Mapeado') : 'Pendiente'}
+                              </span>
+                          }
+                          {!isNA && (
+                            <button title="Marcar como No aplica" onClick={()=>setKpiVal(id,'__NA__')}
+                              style={{marginLeft:'6px',background:'none',border:'none',cursor:'pointer',color:'#aaa',fontSize:'.78rem'}}>N/A</button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <datalist id={`pq-${company}`}>
+              {parquetKpis.map(k=><option key={k} value={k}/>)}
+            </datalist>
+
+            <div style={{marginTop:'16px'}}>
+              <button className="btn btn-success" onClick={handleSave} disabled={saving}>
+                {saving ? <><span className="spin"/>Guardando…</> : '💾 Guardar mapeos'}
+              </button>
+              {saved && <span style={{marginLeft:'12px',color:'#059669',fontWeight:'600',fontSize:'.88rem'}}>✓ Guardado correctamente</span>}
+            </div>
+          </>
+        )}
+
+        {!loading && !error && excelKpis.length === 0 && (
+          <p style={{color:'#aaa',fontSize:'.9rem'}}>
+            No se encontraron KPIs para {company}. Verifica que el archivo
+            <code style={{background:'#f0f2f5',padding:'0 4px',borderRadius:'3px',fontSize:'.82rem'}}> templates/Robot 2026.xlsx </code>
+            esté en la carpeta <code style={{background:'#f0f2f5',padding:'0 4px',borderRadius:'3px',fontSize:'.82rem'}}>templates/</code>.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Tab: Visualizar ─── */
+const MESES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTH_FIELDS_FE = ['enero','febrero','marzo','abril','mayo','junio','julio',
+                         'agosto','septiembre','octubre','noviembre','diciembre'];
+
+function fmt(v) {
+  if (v === null || v === undefined) return <span style={{color:'#ccc'}}>—</span>;
+  const n = Number(v);
+  if (isNaN(n)) return '—';
+  return n.toLocaleString('es-CL', {maximumFractionDigits: 2});
+}
+
+const RANGE_YEARS = Array.from({length: new Date().getFullYear()-2023}, (_,i)=>2024+i);
+
+function VisualizarTab() {
+  const [company, setCompany] = useState('MLP');
+  const [tipos, setTipos]     = useState([]);
+  const _now = NOW.getMonth() === 0
+    ? { yr: NOW.getFullYear() - 1, mo: 12 }
+    : { yr: NOW.getFullYear(),     mo: NOW.getMonth() };  // getMonth() = current - 1 = previous month number
+  const yr = _now.yr;
+  const mo = _now.mo;  // previous month
+  const [tipo1,    setTipo1]    = useState('');
+  const [a1ini,    setA1ini]    = useState(yr);
+  const [m1ini,    setM1ini]    = useState(1);
+  const [a1fin,    setA1fin]    = useState(yr);
+  const [m1fin,    setM1fin]    = useState(mo);
+  const [tipo2,    setTipo2]    = useState('');
+  const [a2ini,    setA2ini]    = useState(yr - 1);
+  const [m2ini,    setM2ini]    = useState(1);
+  const [data,     setData]     = useState(null);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [hideNA,   setHideNA]   = useState(true);
+
+  useEffect(() => {
+    apiGet('/api/periodos').then(p => {
+      const ts = p.tipos || [];
+      setTipos(ts);
+      const t1 = ts.find(t=>t.toLowerCase().includes('real')) || ts[0] || '';
+      const t2 = ts.find(t=>t.toLowerCase().includes('ppto') || t.toLowerCase().includes('presupuesto')) || ts.find(t=>t!==t1) || ts[0] || '';
+      setTipo1(t1); setTipo2(t2);
+    }).catch(()=>{});
+  }, []);
+
+  // Compute comp2 end from comp2 start + same duration as comp1
+  const dur = (a1fin - a1ini) * 12 + (m1fin - m1ini); // months offset (0 = same month)
+  const m2fin_raw = m2ini + dur;
+  const a2fin = a2ini + Math.floor((m2fin_raw - 1) / 12);
+  const m2fin = ((m2fin_raw - 1) % 12) + 1;
+
+  function cargar() {
+    setLoading(true); setError(''); setData(null);
+    const enc = encodeURIComponent;
+    const q = `tipo1=${enc(tipo1)}&año1_ini=${a1ini}&mes1_ini=${m1ini}&año1_fin=${a1fin}&mes1_fin=${m1fin}`
+            + `&tipo2=${enc(tipo2)}&año2_ini=${a2ini}&mes2_ini=${m2ini}&año2_fin=${a2fin}&mes2_fin=${m2fin}`;
+    apiGet(`/api/visualizar/${company}?${q}`)
+      .then(setData)
+      .catch(e=>setError(e.message||'Error'))
+      .finally(()=>setLoading(false));
+  }
+
+  const colStyle  = {padding:'3px 7px', textAlign:'right', fontSize:'.76rem', whiteSpace:'nowrap'};
+  const hColStyle = {padding:'5px 7px', textAlign:'right', fontSize:'.7rem', color:'white',
+                     background:'#1A3A4A', whiteSpace:'nowrap', fontWeight:600};
+
+  function RangeSel({label, color, tipo, setTipo, aIni, setAIni, mIni, setMIni, aFin, setAFin, mFin, setMFin}) {
+    const selSt = {padding:'5px 7px', border:'1px solid #ddd', borderRadius:'5px', fontSize:'.82rem'};
+    return (
+      <div style={{border:`2px solid ${color}`, borderRadius:'8px', padding:'10px 14px'}}>
+        <div style={{fontSize:'.68rem', fontWeight:700, color, textTransform:'uppercase', marginBottom:'8px', letterSpacing:'.05em'}}>{label}</div>
+        <div style={{display:'flex', gap:'6px', alignItems:'center', flexWrap:'wrap'}}>
+          <select value={tipo} onChange={e=>setTipo(e.target.value)}
+            style={{...selSt, color, fontWeight:700, minWidth:'80px'}}>
+            {tipos.map(t=><option key={t}>{t}</option>)}
+          </select>
+          <span style={{fontSize:'.75rem',color:'#888'}}>Desde</span>
+          <select value={mIni} onChange={e=>setMIni(Number(e.target.value))} style={selSt}>
+            {MESES.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+          </select>
+          <select value={aIni} onChange={e=>setAIni(Number(e.target.value))} style={selSt}>
+            {RANGE_YEARS.map(a=><option key={a}>{a}</option>)}
+          </select>
+          <span style={{fontSize:'.75rem',color:'#888'}}>Hasta</span>
+          <select value={mFin} onChange={e=>setMFin(Number(e.target.value))} style={selSt}>
+            {MESES.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+          </select>
+          <select value={aFin} onChange={e=>setAFin(Number(e.target.value))} style={selSt}>
+            {RANGE_YEARS.map(a=><option key={a}>{a}</option>)}
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="main">
+      <div className="card">
+        <div className="card-title">Visualizar KPIs por Período</div>
+        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'16px'}}>
+          <div className="form-group">
+            <label>Compañía</label>
+            <select value={company} onChange={e=>setCompany(e.target.value)}>
+              {COMPANIES.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <RangeSel label="Comparación 1" color="var(--teal)"
+            tipo={tipo1} setTipo={setTipo1}
+            aIni={a1ini} setAIni={setA1ini} mIni={m1ini} setMIni={setM1ini}
+            aFin={a1fin} setAFin={setA1fin} mFin={m1fin} setMFin={setM1fin}/>
+          {/* Comp2: user picks tipo + desde; fin is auto-computed to match comp1 duration */}
+          {(() => { const selSt={padding:'5px 7px',border:'1px solid #ddd',borderRadius:'5px',fontSize:'.82rem'}; return (
+          <div style={{border:'2px solid #F5A800', borderRadius:'8px', padding:'10px 14px'}}>
+            <div style={{fontSize:'.68rem', fontWeight:700, color:'#F5A800', textTransform:'uppercase', marginBottom:'8px', letterSpacing:'.05em'}}>Comparación 2</div>
+            <div style={{display:'flex', gap:'6px', alignItems:'center', flexWrap:'wrap'}}>
+              <select value={tipo2} onChange={e=>setTipo2(e.target.value)}
+                style={{...selSt, color:'#F5A800', fontWeight:700, minWidth:'80px'}}>
+                {tipos.map(t=><option key={t}>{t}</option>)}
+              </select>
+              <span style={{fontSize:'.75rem',color:'#888'}}>Desde</span>
+              <select value={m2ini} onChange={e=>setM2ini(Number(e.target.value))} style={selSt}>
+                {MESES.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+              </select>
+              <select value={a2ini} onChange={e=>setA2ini(Number(e.target.value))} style={selSt}>
+                {RANGE_YEARS.map(a=><option key={a}>{a}</option>)}
+              </select>
+              <span style={{fontSize:'.72rem',color:'#aaa',fontStyle:'italic'}}>
+                → hasta {MESES[m2fin]} {a2fin}
+              </span>
+            </div>
+          </div>
+          ); })()}
+          <button className="btn btn-primary" onClick={cargar} disabled={loading}
+            style={{alignSelf:'flex-end', height:'38px'}}>
+            {loading?<><span className="spin"/>Cargando…</>:'📊 Cargar'}
+          </button>
+          <button onClick={()=>setHideNA(v=>!v)} style={{
+            alignSelf:'flex-end', height:'38px', padding:'0 16px', border:'2px solid var(--gray)',
+            borderRadius:'6px', fontSize:'.84rem', fontWeight:600, cursor:'pointer',
+            background: hideNA?'#fee2e2':'white', color: hideNA?'#991b1b':'#666',
+            borderColor: hideNA?'#fca5a5':'var(--gray)'
+          }}>{hideNA ? '👁 Mostrar N/A' : '🙈 Ocultar N/A'}</button>
+        </div>
+
+        {error && <p style={{color:'var(--red)',fontSize:'.88rem',marginBottom:'12px'}}>{error}</p>}
+
+        {data && (() => {
+          const nc1 = data.cols1.length, nc2 = data.cols2.length;
+          const ncMax = Math.max(nc1, nc2);
+          const totalCols = 3 + ncMax + 2; // KPI + Ud + Tipo + max_months + Mes + YTD
+          const pad1 = ncMax - nc1, pad2 = ncMax - nc2;
+          const thC1 = {padding:'5px 8px', textAlign:'right', fontSize:'.7rem', color:'white',
+                        background:'#1A6575', whiteSpace:'nowrap', fontWeight:600};
+          const thC2 = {padding:'5px 8px', textAlign:'right', fontSize:'.7rem', color:'white',
+                        background:'#8a6000', whiteSpace:'nowrap', fontWeight:600};
+          const kpiCellSt = (bg) => ({padding:'4px 10px', fontWeight:600,
+            position:'sticky', left:0, background:bg, zIndex:1, borderRight:'1px solid #eee',
+            verticalAlign:'middle'});
+          const unitCellSt = {padding:'4px 8px', color:'#888', textAlign:'center',
+            borderRight:'1px solid #eee', verticalAlign:'middle'};
+          return (
+            <div className="tbl-wrap">
+              <table style={{fontSize:'.76rem', borderCollapse:'collapse'}}>
+                <thead>
+                  {/* Comp1 header row */}
+                  <tr>
+                    <th rowSpan={2} style={{...hColStyle, textAlign:'left', minWidth:'170px', position:'sticky', left:0, zIndex:2}}>KPI</th>
+                    <th rowSpan={2} style={{...hColStyle, width:'42px'}}>Ud.</th>
+                    <th style={{...thC1, minWidth:'58px', borderLeft:'2px solid #4EC3C3', textAlign:'center'}}>{data.tipo1}</th>
+                    {data.cols1.map((c,i)=>(
+                      <th key={`c1-${i}`} style={{...thC1}}>{c.label}</th>
+                    ))}
+                    <th style={{...thC1, background:'#0e4e5e'}}>Mes</th>
+                    <th style={{...thC1, background:'#0e4e5e'}}>YTD</th>
+                    {Array(pad1).fill(null).map((_,i)=><th key={i} style={{background:'#1A3A4A'}}></th>)}
+                  </tr>
+                  {/* Comp2 header row */}
+                  <tr>
+                    <th style={{...thC2, borderLeft:'2px solid #F5A800', textAlign:'center'}}>{data.tipo2}</th>
+                    {data.cols2.map((c,i)=>(
+                      <th key={`c2-${i}`} style={{...thC2}}>{c.label}</th>
+                    ))}
+                    <th style={{...thC2, background:'#5a3c00'}}>Mes</th>
+                    <th style={{...thC2, background:'#5a3c00'}}>YTD</th>
+                    {Array(pad2).fill(null).map((_,i)=><th key={i} style={{background:'#1A3A4A'}}></th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.sections.map((sec,si)=>{
+                    const visKpis = hideNA ? sec.kpis.filter(k=>!k.is_na) : sec.kpis;
+                    if (hideNA && visKpis.length === 0) return null;
+                    return (
+                    <React.Fragment key={si}>
+                      <tr>
+                        <td colSpan={totalCols} style={{
+                          background:'#1A3A4A', color:'white', fontWeight:700,
+                          padding:'5px 10px', fontSize:'.73rem', letterSpacing:'.05em', textTransform:'uppercase'
+                        }}>{sec.label}</td>
+                      </tr>
+                      {visKpis.map((kpi,ki)=>{
+                        const bg = ki%2===0?'white':'#f8fafb';
+                        return (
+                          <React.Fragment key={ki}>
+                            {/* Row 1: comp1 */}
+                            <tr style={{background:bg}}>
+                              <td rowSpan={2} style={{...kpiCellSt(bg), color:kpi.mapped?'inherit':'#ccc'}}>{kpi.label}</td>
+                              <td rowSpan={2} style={unitCellSt}>{kpi.unit}</td>
+                              <td style={{padding:'4px 7px', fontSize:'.7rem', fontWeight:700, color:'#4EC3C3',
+                                borderLeft:'2px solid #4EC3C3', whiteSpace:'nowrap', textAlign:'center',
+                                background:'#f4fdfd'}}>{data.tipo1}</td>
+                              {kpi.vals1.map((v,vi)=>(
+                                <td key={vi} style={{...colStyle}}>{fmt(v)}</td>
+                              ))}
+                              <td style={{...colStyle, background:'#f0f9f9', fontWeight:600}}>{fmt(kpi.mes1)}</td>
+                              <td style={{...colStyle, background:'#f0f9f9', fontWeight:600}}>{fmt(kpi.ytd1)}</td>
+                              {Array(pad1).fill(null).map((_,i)=><td key={i}></td>)}
+                            </tr>
+                            {/* Row 2: comp2 */}
+                            <tr style={{background:bg, borderBottom:'2px solid #e5e7eb'}}>
+                              <td style={{padding:'4px 7px', fontSize:'.7rem', fontWeight:700, color:'#F5A800',
+                                borderLeft:'2px solid #F5A800', whiteSpace:'nowrap', textAlign:'center',
+                                background:'#fffbf0'}}>{data.tipo2}</td>
+                              {kpi.vals2.map((v,vi)=>(
+                                <td key={vi} style={{...colStyle}}>{fmt(v)}</td>
+                              ))}
+                              <td style={{...colStyle, background:'#fef9ec', fontWeight:600}}>{fmt(kpi.mes2)}</td>
+                              <td style={{...colStyle, background:'#fef9ec', fontWeight:600}}>{fmt(kpi.ytd2)}</td>
+                              {Array(pad2).fill(null).map((_,i)=><td key={i}></td>)}
+                            </tr>
+                          </React.Fragment>
+                        );
+                      })}
+                    </React.Fragment>
+                  );})}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Tab: Parámetros Financieros ─── */
+const PARAM_ROWS = [
+  { kpi:'Dólar', tipo:'Real',   field:'dolar_real',   color:'#4EC3C3' },
+  { kpi:'Dólar', tipo:'Budget', field:'dolar_budget', color:'#F5A800' },
+  { kpi:'IPC',   tipo:'Real',   field:'ipc_real',     color:'#4EC3C3' },
+  { kpi:'IPC',   tipo:'Budget', field:'ipc_budget',   color:'#F5A800' },
+  { kpi:'CPI',   tipo:'Real',   field:'cpi_real',     color:'#4EC3C3' },
+  { kpi:'CPI',   tipo:'Budget', field:'cpi_budget',   color:'#F5A800' },
+];
+const MONTH_LABELS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function ParamsTab() {
+  const curYear = NOW.getFullYear();
+  const [anio, setAnio]     = useState(curYear);
+  const [params, setParams] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+
+  React.useEffect(() => {
+    apiGet('/api/params').then(d => setParams(d)).catch(()=>{});
+  }, []);
+
+  if (!params) return <div style={{padding:'32px',color:'#888'}}>Cargando...</div>;
+
+  const getVal = (field, mes) => {
+    const v = params.kpis?.[anio]?.[mes]?.[field];
+    return v == null ? '' : v;
+  };
+
+  const setVal = (field, mes, raw) => {
+    const val = raw === '' ? null : parseFloat(raw);
+    setParams(p => ({
+      ...p,
+      kpis: {
+        ...p.kpis,
+        [anio]: {
+          ...(p.kpis?.[anio] || {}),
+          [mes]: {
+            ...(p.kpis?.[anio]?.[mes] || {}),
+            [field]: isNaN(val) ? null : val,
+          }
+        }
+      }
+    }));
+    setSaved(false);
+  };
+
+  const setExpTc = (company, raw) => {
+    const val = raw === '' ? null : parseFloat(raw);
+    setParams(p => ({
+      ...p,
+      exp_tc: { ...p.exp_tc, [company]: isNaN(val) ? null : val }
+    }));
+    setSaved(false);
+  };
+
+  const handleSave = () => {
+    setSaving(true);
+    apiPost('/api/params', params)
+      .then(() => { setSaved(true); })
+      .catch(() => alert('Error al guardar'))
+      .finally(() => setSaving(false));
+  };
+
+  const inpSt = { width:'72px', padding:'3px 5px', border:'1px solid #ddd', borderRadius:'4px', fontSize:'.8rem', textAlign:'right' };
+  const thSt  = { background:'var(--navy)', color:'white', padding:'6px 8px', textAlign:'center', whiteSpace:'nowrap', fontSize:'.8rem' };
+  const tdSt  = { padding:'4px 6px', textAlign:'center', borderBottom:'1px solid #f0f0f0' };
+
+  return (
+    <div className="container">
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px'}}>
+        <h2 style={{margin:0, color:'var(--navy)', fontSize:'1.1rem'}}>Parámetros Económicos</h2>
+        <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
+          <select value={anio} onChange={e=>setAnio(Number(e.target.value))}
+            style={{padding:'5px 10px', border:'1px solid #ddd', borderRadius:'5px', fontSize:'.88rem'}}>
+            {[curYear-1, curYear, curYear+1].map(y=><option key={y} value={y}>{y}</option>)}
+          </select>
+          <button onClick={handleSave} disabled={saving}
+            style={{padding:'7px 20px', background:'var(--teal)', color:'white', border:'none', borderRadius:'6px', fontWeight:700, cursor:'pointer', fontSize:'.88rem'}}>
+            {saving ? 'Guardando...' : saved ? '✓ Guardado' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+
+      {/* KPI table */}
+      <div className="tbl-wrap" style={{marginBottom:'28px'}}>
+        <table>
+          <thead>
+            <tr>
+              <th style={thSt}>KPI</th>
+              <th style={thSt}>Tipo</th>
+              {MONTH_LABELS.map((lb,i)=><th key={i} style={thSt}>{lb}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {PARAM_ROWS.map(({kpi, tipo, field, color}, ri) => {
+              const isFirst = ri % 2 === 0;
+              return (
+                <tr key={field} style={{background: isFirst ? 'white' : '#fffbf2'}}>
+                  {isFirst
+                    ? <td rowSpan={2} style={{...tdSt, fontWeight:700, verticalAlign:'middle', borderRight:'2px solid #e0e0e0'}}>{kpi}</td>
+                    : null}
+                  <td style={{...tdSt, color, fontWeight:600, fontSize:'.78rem', borderRight:'1px solid #eee'}}>{tipo}</td>
+                  {MONTH_LABELS.map((_,i)=>(
+                    <td key={i} style={tdSt}>
+                      <input type="number" style={inpSt} value={getVal(field, i+1)}
+                        onChange={e=>setVal(field, i+1, e.target.value)}/>
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Exposición TC */}
+      <h3 style={{color:'var(--navy)', fontSize:'.95rem', marginBottom:'12px'}}>Exposición a Tipo de Cambio</h3>
+      <div style={{display:'flex', gap:'20px', flexWrap:'wrap'}}>
+        {COMPANIES.map(co => (
+          <div key={co} style={{display:'flex', flexDirection:'column', gap:'4px', alignItems:'center',
+            background:'white', border:'1px solid #e0e0e0', borderRadius:'8px', padding:'12px 18px', minWidth:'90px'}}>
+            <span style={{fontWeight:700, color:'var(--navy)', fontSize:'.9rem'}}>{co}</span>
+            <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
+              <input type="number" min="0" max="100" step="0.1"
+                style={{...inpSt, width:'60px'}}
+                value={params.exp_tc?.[co] == null ? '' : params.exp_tc[co]}
+                onChange={e=>setExpTc(co, e.target.value)}/>
+              <span style={{fontSize:'.85rem', color:'#666'}}>%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Root App ─── */
+function App() {
+  const [tab, setTab] = useState('auto');
+  return (
+    <>
+      <Header tab={tab} setTab={setTab}/>
+      {tab==='auto'   && <AutoTab/>}
+      {tab==='mapeos' && <MapeosTab/>}
+      {tab==='viz'    && <VisualizarTab/>}
+      {tab==='params' && <ParamsTab/>}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
