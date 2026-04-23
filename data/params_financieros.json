@@ -1,9 +1,24 @@
 {
-  "kpis": {},
+  "kpis": {
+    "2026": {
+      "1": {
+        "dolar_real": 881.96,
+        "dolar_budget": 910
+      },
+      "2": {
+        "dolar_real": 862.34,
+        "dolar_budget": 910
+      },
+      "3": {
+        "dolar_real": 912.44,
+        "dolar_budget": 910
+      }
+    }
+  },
   "exp_tc": {
-    "MLP": null,
-    "CEN": null,
-    "ANT": null,
-    "CMZ": null
+    "MLP": 50,
+    "CEN": 55,
+    "ANT": 51,
+    "CMZ": 49.8
   }
 }

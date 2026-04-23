@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npx skills --help; Write-Host \"---EXIT:$LASTEXITCODE---\")"
+    ]
+  }
+}

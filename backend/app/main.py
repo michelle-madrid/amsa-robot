@@ -7,6 +7,7 @@ from .routes.automation import router
 from .routes.setup import router as setup_router
 from .routes.visualizar import router as viz_router
 from .routes.params import router as params_router
+from .routes.calculos import router as calculos_router
 
 FRONTEND_INDEX = Path(__file__).resolve().parents[2] / "frontend" / "index.html"
 
@@ -26,6 +27,7 @@ app.include_router(router)
 app.include_router(setup_router)
 app.include_router(viz_router)
 app.include_router(params_router)
+app.include_router(calculos_router)
 
 
 @app.get("/health")

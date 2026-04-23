@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from ..config import settings
 
 router = APIRouter(prefix="/api/params", tags=["params"])
@@ -25,7 +25,8 @@ def get_params():
 
 
 @router.post("")
-def save_params(data: dict):
+async def save_params(request: Request):
+    data = await request.json()
     PARAMS_FILE.write_text(
         json.dumps(data, ensure_ascii=False, indent=2),
         encoding="utf-8",
