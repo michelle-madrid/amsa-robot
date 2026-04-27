@@ -52,6 +52,25 @@
     { "type": "kpi", "label": "Ácido",       "unit": "kUS$" },
     { "type": "kpi", "label": "Energía",     "unit": "kUS$" },
     { "type": "kpi", "label": "Combustible", "unit": "kUS$" },
-    { "type": "kpi", "label": "Explosivos",  "unit": "kUS$" }
+    { "type": "kpi", "label": "Explosivos",  "unit": "kUS$" },
+
+    { "type": "header",    "label": "Subproductos" },
+    { "type": "kpi", "label": "Ventas Subproductos",                    "unit": "kUS$"  },
+    { "type": "kpi", "label": "Ingresos Subproductos",                  "unit": "kUS$"  },
+    { "type": "kpi", "label": "Precio Realizado Subproductos al costo", "unit": "US$/t" },
+    { "type": "kpi", "label": "Precio Budget",                          "unit": "US$/t" },
+    { "type": "kpi", "label": "Cantidades Producidas",                  "unit": "t"     },
+
+    { "type": "header",    "label": "TC/RC & Comercialización" },
+    { "type": "subheader", "label": "Unidades" },
+    { "type": "kpi", "label": "Cu pag. embarcado", "unit": "ton" },
+    { "type": "kpi", "label": "MoF pag. vendido",  "unit": "mlb" },
+    { "type": "kpi", "label": "CuFino",             "unit": "ton" },
+    { "type": "subheader", "label": "Gasto" },
+    { "type": "kpi", "label": "TC/RC",                "unit": "kUS$"  },
+    { "type": "kpi", "label": "TC/RC unitario",        "unit": "US$/t" },
+    { "type": "kpi", "label": "Comercialización",      "unit": "kUS$"  },
+    { "type": "kpi", "label": "Comer. unitario",       "unit": "US/t"  },
+    { "type": "kpi", "label": "Total TC/RC & Comero.", "unit": "kUS$"  }
   ]
 }

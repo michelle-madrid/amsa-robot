@@ -3,12 +3,15 @@ from pathlib import Path
 
 
 _df_cache: pd.DataFrame | None = None
+_cache_mtime: float | None = None
 
 
 def get_cached_df(parquet_path: Path) -> pd.DataFrame:
-    global _df_cache
-    if _df_cache is None:
+    global _df_cache, _cache_mtime
+    mtime = parquet_path.stat().st_mtime
+    if _df_cache is None or mtime != _cache_mtime:
         _df_cache = load_parquet(parquet_path)
+        _cache_mtime = mtime
     return _df_cache
 
 

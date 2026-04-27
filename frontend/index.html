@@ -119,6 +119,11 @@ async function apiPost(path, body) {
   if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||'Error del servidor'); }
   return r.json();
 }
+async function apiPut(path, body) {
+  const r = await fetch(path, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||'Error del servidor'); }
+  return r.json();
+}
 
 /* ─── Shared components ─── */
 function Header({ tab, setTab }) {
@@ -133,6 +138,7 @@ function Header({ tab, setTab }) {
         <button className={`nav-tab ${tab==='mapeos'?'active':''}`} onClick={()=>setTab('mapeos')}>⚙ Configurar Mapeos</button>
         <button className={`nav-tab ${tab==='viz'?'active':''}`} onClick={()=>setTab('viz')}>📊 Visualizar</button>
         <button className={`nav-tab ${tab==='params'?'active':''}`} onClick={()=>setTab('params')}>$ Parámetros</button>
+        <button className={`nav-tab ${tab==='formulas'?'active':''}`} onClick={()=>setTab('formulas')}>🔬 Fórmulas</button>
       </div>
     </div>
   );
@@ -799,8 +805,11 @@ function VisualizarTab({period, tipos}) {
                 </thead>
                 <tbody>
                   {data.sections.map((sec,si)=>{
-                    const visKpis = hideNA ? sec.kpis.filter(k=>!k.is_na) : sec.kpis;
-                    if (hideNA && visKpis.length === 0) return null;
+                    const visKpis = hideNA
+                      ? sec.kpis.filter(k => k.type === 'subheader' || !k.is_na)
+                      : sec.kpis;
+                    const hasData = visKpis.some(k => k.type !== 'subheader');
+                    if (hideNA && !hasData) return null;
                     return (
                     <React.Fragment key={si}>
                       <tr>
@@ -810,6 +819,18 @@ function VisualizarTab({period, tipos}) {
                         }}>{sec.label}</td>
                       </tr>
                       {visKpis.map((kpi,ki)=>{
+                        if (kpi.type === 'subheader') {
+                          return (
+                            <tr key={ki}>
+                              <td colSpan={totalCols} style={{
+                                background:'#d4e8ee', color:'#1A3A4A', fontWeight:700,
+                                padding:'4px 14px', fontSize:'.72rem', letterSpacing:'.04em',
+                                textTransform:'uppercase', borderTop:'1px solid #9ac8d8',
+                                borderBottom:'1px solid #9ac8d8'
+                              }}>{kpi.label}</td>
+                            </tr>
+                          );
+                        }
                         const bg = ki%2===0?'white':'#f8fafb';
                         return (
                           <React.Fragment key={ki}>
@@ -899,6 +920,11 @@ function VisualizarTab({period, tipos}) {
               rows:[['Ley Concentradora','concentradora'],['Ley Hidro','hidro']] },
           ];
 
+          // Simple series — single row each
+          const simpleSections = [
+            { label:'Variación Inventario',  unit:'kt',  key:'variacion_inventario' },
+          ];
+
           const totalCols = 2 + nc + 2; // label + ud + months + Mes + YTD
 
           return (
@@ -962,6 +988,103 @@ function VisualizarTab({period, tipos}) {
                       </React.Fragment>
                     );
                   })}
+                  {/* Desarrollo Mina — IFRIC20 / Efecto P / Efecto Q */}
+                  {calcData.desarrollo_mina && (() => {
+                    const dm = calcData.desarrollo_mina;
+                    const hasItems = dm.items && dm.items.length > 0;
+                    return (
+                      <React.Fragment>
+                        <tr><td colSpan={totalCols} style={thS}>Desarrollo Mina</td></tr>
+                        {hasItems && dm.items.map(({label, vals, mes, ytd}, ri) => {
+                          const bg = ri % 2 === 0 ? 'white' : '#f8fafb';
+                          return (
+                            <tr key={ri} style={{background: bg}}>
+                              <td style={{...tdKpi, background: bg}}>{label}</td>
+                              <td style={tdUd}>kUS$</td>
+                              {vals.map((v, vi) => <td key={vi} style={colSt}>{fmtN(v)}</td>)}
+                              <td style={colSt}>{fmtN(mes)}</td>
+                              <td style={colSt}>{fmtN(ytd)}</td>
+                            </tr>
+                          );
+                        })}
+                        {hasItems && dm.total && (
+                          <tr style={{borderTop:'2px solid #e0e0e0'}}>
+                            <td style={totSt}>Total</td>
+                            <td style={{...tdUd, background:'#f0f9f9'}}>kUS$</td>
+                            {dm.total.vals.map((v, vi) => <td key={vi} style={totV}>{fmtN(v)}</td>)}
+                            <td style={totV}>{fmtN(dm.total.mes)}</td>
+                            <td style={totV}>{fmtN(dm.total.ytd)}</td>
+                          </tr>
+                        )}
+                        {!hasItems && (
+                          <tr style={{background:'white'}}>
+                            <td colSpan={totalCols} style={{padding:'8px 12px', color:'#aaa', fontSize:'.8rem', fontStyle:'italic'}}>
+                              Sin KPIs configurados — configura en la pestaña Fórmulas
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })()}
+
+                  {/* Simple sections: Variación Inventario */}
+                  {simpleSections.map((sec, si) => {
+                    const series = calcData[sec.key];
+                    if (!series) return null;
+                    return (
+                      <React.Fragment key={`s-${si}`}>
+                        <tr>
+                          <td colSpan={totalCols} style={thS}>{sec.label}</td>
+                        </tr>
+                        <tr style={{background:'white'}}>
+                          <td style={{...tdKpi, background:'white'}}>{sec.label}</td>
+                          <td style={tdUd}>{sec.unit}</td>
+                          {series.vals.map((v, vi) => (
+                            <td key={vi} style={colSt}>{fmtN(v)}</td>
+                          ))}
+                          <td style={colSt}>{fmtN(series.mes)}</td>
+                          <td style={colSt}>{fmtN(series.ytd)}</td>
+                        </tr>
+                      </React.Fragment>
+                    );
+                  })}
+
+                  {/* Actividad Contexto: Mov Mina, Actividad Mina/Conc/Hidro */}
+                  {calcData.actividad_contexto && (() => {
+                    const acData = calcData.actividad_contexto;
+                    const acRows = [
+                      { lbl:'Mov. Mina (sin IFRIC20 ni VarInv)', key:'mov_mina',       unit:'kt'   },
+                      { lbl:'Actividad Mina',                    key:'actividad_mina',  unit:'kUS$' },
+                      { lbl:'Actividad Concentradora',           key:'actividad_conc',  unit:'kUS$' },
+                      { lbl:'Actividad Hidro',                   key:'actividad_hidro', unit:'kUS$' },
+                    ];
+                    const thAmber = {
+                      background:'#92400e', color:'white', fontWeight:700,
+                      padding:'7px 12px', fontSize:'.75rem', letterSpacing:'.04em',
+                      textTransform:'uppercase',
+                    };
+                    return (
+                      <React.Fragment>
+                        <tr><td colSpan={totalCols} style={thAmber}>Actividad — Contexto (Real − Ppto)</td></tr>
+                        {acRows.map(({lbl, key, unit}, ri) => {
+                          const series = acData[key];
+                          if (!series) return null;
+                          const bg = ri % 2 === 0 ? '#fffbf0' : '#fef3c7';
+                          return (
+                            <tr key={ri} style={{background: bg}}>
+                              <td style={{...tdKpi, background: bg, color:'#92400e', fontStyle:'italic'}}>{lbl}</td>
+                              <td style={{...tdUd, color:'#92400e'}}>{unit}</td>
+                              {series.vals.map((v, vi) => (
+                                <td key={vi} style={colSt}>{fmtN(v)}</td>
+                              ))}
+                              <td style={colSt}>{fmtN(series.mes)}</td>
+                              <td style={colSt}>{fmtN(series.ytd)}</td>
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -1115,6 +1238,407 @@ function ParamsTab({period}) {
   );
 }
 
+/* ─── Tab: Fórmulas ─── */
+const FORMULA_META = [
+  { group:'Delta Gasto (Precio)',
+    formula:'(Tarifa_r − Tarifa_p) × Consumo_r  [× escala según insumo]',
+    vars:[
+      { key:'tarifa_bolas',        label:'Tarifa Bolas' },
+      { key:'tarifa_energia',      label:'Tarifa Energía' },
+      { key:'tarifa_combustible',  label:'Tarifa Combustible' },
+      { key:'tarifa_explosivos',   label:'Tarifa Explosivos' },
+      { key:'consumo_bolas',       label:'Consumo Bolas' },
+      { key:'consumo_energia',     label:'Consumo Energía' },
+      { key:'consumo_combustible', label:'Consumo Combustible' },
+      { key:'consumo_explosivos',  label:'Consumo Explosivos' },
+    ]
+  },
+  { group:'Delta Rendimiento',
+    formula:'(Rendimiento_r − Rendimiento_b) × Base_r × Tarifa_p  [Rendimiento = Consumo / Base]',
+    vars:[
+      { key:'tarifa_bolas',        label:'Tarifa Bolas (precio base)' },
+      { key:'tarifa_energia',      label:'Tarifa Energía (precio base)' },
+      { key:'tarifa_combustible',  label:'Tarifa Combustible (precio base)' },
+      { key:'tarifa_explosivos',   label:'Tarifa Explosivos (precio base)' },
+      { key:'consumo_bolas',       label:'Consumo Bolas (numerador)' },
+      { key:'consumo_energia',     label:'Consumo Energía (numerador)' },
+      { key:'consumo_combustible', label:'Consumo Combustible (numerador)' },
+      { key:'consumo_explosivos',  label:'Consumo Explosivos (numerador)' },
+      { key:'tratamiento',         label:'Tratamiento (base Bolas/Energía)' },
+      { key:'horas_efectivas',     label:'Horas Efectivas (base Combustible)' },
+      { key:'tronadura',           label:'Tronadura (base Explosivos)', multi:true },
+    ]
+  },
+  { group:'Delta Actividad & Efecto Ley',
+    formula:'Fórmula trilineal: dp×dl×dr sobre Tratamiento, Ley y Recuperación',
+    vars:[
+      { key:'tratamiento',  label:'Tratamiento' },
+      { key:'ley_cu',       label:'Ley de Cu' },
+      { key:'recuperacion', label:'Recuperación' },
+    ]
+  },
+];
+
+const SIMPLE_META = [
+  { key:'variacion_inventario', label:'Variación Inventario',
+    desc:'Delta real − presupuesto (suma de KPIs seleccionados)', unit:'kt' },
+];
+
+function FormulasTab() {
+  const [params,  setParams]  = useState(null);
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [error,   setError]   = useState('');
+  const [pqKpis,  setPqKpis]  = useState([]);
+
+  useEffect(() => {
+    Promise.all([
+      apiGet('/api/calculos/formula-params'),
+      apiGet('/api/setup/parquet-kpis/MLP'),
+    ]).then(([fp, pq]) => {
+      setParams(fp);
+      setPqKpis(pq.kpis || []);
+    }).catch(e => setError(e.message || 'Error cargando parámetros'));
+  }, []);
+
+  function setKey(k, v) {
+    setParams(p => ({ ...p, kpi_keys: { ...p.kpi_keys, [k]: v } }));
+    setSaved(false);
+  }
+
+  function setTronItem(idx, v) {
+    setParams(p => {
+      const arr = Array.isArray(p.kpi_keys.tronadura) ? [...p.kpi_keys.tronadura] : [p.kpi_keys.tronadura];
+      arr[idx] = v;
+      return { ...p, kpi_keys: { ...p.kpi_keys, tronadura: arr } };
+    });
+    setSaved(false);
+  }
+
+  function setSimpleItem(secKey, idx, v) {
+    setParams(p => {
+      const arr = [...(p[secKey] || [])];
+      arr[idx] = v;
+      return { ...p, [secKey]: arr };
+    });
+    setSaved(false);
+  }
+
+  function addSimpleItem(secKey) {
+    setParams(p => ({ ...p, [secKey]: [...(p[secKey] || []), ''] }));
+    setSaved(false);
+  }
+
+  function removeSimpleItem(secKey, idx) {
+    setParams(p => ({ ...p, [secKey]: (p[secKey] || []).filter((_, i) => i !== idx) }));
+    setSaved(false);
+  }
+
+  function setActCtx(field, v) {
+    setParams(p => ({ ...p, actividad_contexto: { ...(p.actividad_contexto || {}), [field]: v } }));
+    setSaved(false);
+  }
+
+  function setActCtxKpiItem(idx, v) {
+    setParams(p => {
+      const arr = [...(p.actividad_contexto?.mov_mina_kpis || [])];
+      arr[idx] = v;
+      return { ...p, actividad_contexto: { ...(p.actividad_contexto || {}), mov_mina_kpis: arr } };
+    });
+    setSaved(false);
+  }
+
+  function addActCtxKpiItem() {
+    setParams(p => {
+      const arr = [...(p.actividad_contexto?.mov_mina_kpis || []), ''];
+      return { ...p, actividad_contexto: { ...(p.actividad_contexto || {}), mov_mina_kpis: arr } };
+    });
+    setSaved(false);
+  }
+
+  function removeActCtxKpiItem(idx) {
+    setParams(p => {
+      const arr = (p.actividad_contexto?.mov_mina_kpis || []).filter((_, i) => i !== idx);
+      return { ...p, actividad_contexto: { ...(p.actividad_contexto || {}), mov_mina_kpis: arr } };
+    });
+    setSaved(false);
+  }
+
+  async function handleSave() {
+    setSaving(true); setSaved(false);
+    try {
+      await apiPut('/api/calculos/formula-params', params);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch(e) { setError(e.message || 'Error al guardar'); }
+    finally { setSaving(false); }
+  }
+
+  const inpSt = { flex:1, padding:'5px 9px', border:'2px solid #10b981', borderRadius:'5px',
+                  fontSize:'.82rem', minWidth:'220px', background:'#f0fdf4' };
+  const grpHd = { background:'#1A3A4A', color:'white', fontWeight:700, padding:'8px 14px',
+                  fontSize:'.8rem', letterSpacing:'.04em', textTransform:'uppercase' };
+
+  if (!params) return (
+    <div className="main">
+      <div className="card">
+        {error
+          ? <p style={{color:'var(--red)'}}>{error}</p>
+          : <p style={{color:'#aaa'}}><span className="spin"/>Cargando parámetros…</p>
+        }
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="main">
+      <div className="card">
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'18px'}}>
+          <div className="card-title" style={{margin:0}}>Fórmulas de Cálculo — Variables Configurables</div>
+          <button onClick={handleSave} disabled={saving}
+            style={{padding:'8px 22px', background:'var(--teal)', color:'white', border:'none',
+                    borderRadius:'6px', fontWeight:700, cursor:'pointer', fontSize:'.88rem'}}>
+            {saving ? 'Guardando…' : saved ? '✓ Guardado' : '💾 Guardar'}
+          </button>
+        </div>
+        {error && <p style={{color:'var(--red)', fontSize:'.85rem', marginBottom:'10px'}}>{error}</p>}
+
+        <p style={{fontSize:'.83rem', color:'#666', marginBottom:'18px', lineHeight:'1.5'}}>
+          Aquí puedes ver y editar qué KPI del Parquet alimenta cada variable de los cálculos.
+          Los cambios se aplican la próxima vez que calcules.
+        </p>
+
+        <datalist id="pq-all">
+          {pqKpis.map(k => <option key={k} value={k}/>)}
+        </datalist>
+
+        {/* Formula sections */}
+        {FORMULA_META.map((grp, gi) => (
+          <div key={gi} style={{marginBottom:'20px', border:'1px solid #e5e7eb', borderRadius:'8px', overflow:'hidden'}}>
+            <div style={grpHd}>{grp.group}</div>
+            <div style={{background:'#f8f9fa', padding:'8px 14px', fontSize:'.75rem', color:'#666',
+                         borderBottom:'1px solid #e5e7eb', fontStyle:'italic'}}>
+              {grp.formula}
+            </div>
+            <table style={{width:'100%', borderCollapse:'collapse', fontSize:'.83rem'}}>
+              <thead>
+                <tr style={{background:'#f3f4f6'}}>
+                  <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151', width:'240px'}}>Variable</th>
+                  <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151'}}>KPI en Parquet</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grp.vars.map((v, vi) => {
+                  const isMulti = v.multi;
+                  const val = params.kpi_keys[v.key];
+                  const arr = isMulti ? (Array.isArray(val) ? val : [val || '']) : null;
+                  return (
+                    <tr key={vi} style={{borderTop:'1px solid #f0f0f0', background: vi%2===0?'white':'#fafafa'}}>
+                      <td style={{padding:'7px 14px', color:'#374151', fontWeight:500}}>{v.label}</td>
+                      <td style={{padding:'6px 14px'}}>
+                        {isMulti ? (
+                          <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                            {arr.map((item, idx) => (
+                              <div key={idx} style={{display:'flex', gap:'6px', alignItems:'center'}}>
+                                <input list="pq-all" value={item} onChange={e => setTronItem(idx, e.target.value)}
+                                  style={inpSt} placeholder="KPI en parquet…"/>
+                                {arr.length > 1 && (
+                                  <button onClick={() => {
+                                    const next = arr.filter((_,i)=>i!==idx);
+                                    setKey(v.key, next.length === 1 ? next[0] : next);
+                                  }} style={{background:'var(--red)',color:'white',border:'none',
+                                    borderRadius:'4px',width:'22px',height:'22px',cursor:'pointer',fontWeight:700}}>−</button>
+                                )}
+                              </div>
+                            ))}
+                            <button onClick={() => setKey(v.key, [...arr, ''])}
+                              style={{alignSelf:'flex-start', background:'none', border:'1px dashed var(--teal)',
+                                      color:'var(--teal)', borderRadius:'4px', padding:'2px 8px',
+                                      cursor:'pointer', fontSize:'.75rem', fontWeight:700}}>+ agregar</button>
+                          </div>
+                        ) : (
+                          <input list="pq-all" value={val || ''} onChange={e => setKey(v.key, e.target.value)}
+                            style={inpSt} placeholder="KPI en parquet…"/>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ))}
+
+        {/* Desarrollo Mina — items configurables */}
+        {(() => {
+          const dmItems = params.desarrollo_mina_items || [];
+          const tealHd  = { ...grpHd };
+          return (
+            <div style={{marginBottom:'20px', border:'1px solid #e5e7eb', borderRadius:'8px', overflow:'hidden'}}>
+              <div style={tealHd}>Desarrollo Mina — IFRIC20 / Efecto P / Efecto Q <span style={{fontWeight:400, fontSize:'.75rem', marginLeft:'8px'}}>kUS$</span></div>
+              <div style={{background:'#f8f9fa', padding:'8px 14px', fontSize:'.75rem', color:'#666',
+                           borderBottom:'1px solid #e5e7eb', fontStyle:'italic'}}>
+                Cada fila es la suma de sus KPIs (real − presupuesto). Configura los KPIs del parquet para IFRIC20, Efecto P y Efecto Q.
+              </div>
+              <table style={{width:'100%', borderCollapse:'collapse', fontSize:'.83rem'}}>
+                <thead>
+                  <tr style={{background:'#f3f4f6'}}>
+                    <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151', width:'140px'}}>Fila</th>
+                    <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151'}}>KPIs en Parquet</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dmItems.map((item, ii) => (
+                    <tr key={ii} style={{borderTop:'1px solid #f0f0f0', background: ii%2===0?'white':'#fafafa', verticalAlign:'top'}}>
+                      <td style={{padding:'8px 14px', fontWeight:600, color:'#374151'}}>{item.label}</td>
+                      <td style={{padding:'6px 14px'}}>
+                        <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                          {(item.kpis || []).map((kpi, ki) => (
+                            <div key={ki} style={{display:'flex', gap:'6px', alignItems:'center'}}>
+                              <input list="pq-all" value={kpi}
+                                onChange={e => {
+                                  const next = dmItems.map((it, idx) => {
+                                    if (idx !== ii) return it;
+                                    const kpis = [...(it.kpis || [])];
+                                    kpis[ki] = e.target.value;
+                                    return {...it, kpis};
+                                  });
+                                  setParams(p => ({...p, desarrollo_mina_items: next}));
+                                  setSaved(false);
+                                }}
+                                style={inpSt} placeholder="KPI en parquet…"/>
+                              <button onClick={() => {
+                                const next = dmItems.map((it, idx) => {
+                                  if (idx !== ii) return it;
+                                  return {...it, kpis: (it.kpis || []).filter((_,i)=>i!==ki)};
+                                });
+                                setParams(p => ({...p, desarrollo_mina_items: next}));
+                                setSaved(false);
+                              }} style={{background:'var(--red)',color:'white',border:'none',
+                                borderRadius:'4px',width:'22px',height:'22px',cursor:'pointer',fontWeight:700}}>−</button>
+                            </div>
+                          ))}
+                          <button onClick={() => {
+                            const next = dmItems.map((it, idx) => {
+                              if (idx !== ii) return it;
+                              return {...it, kpis: [...(it.kpis || []), '']};
+                            });
+                            setParams(p => ({...p, desarrollo_mina_items: next}));
+                            setSaved(false);
+                          }} style={{alignSelf:'flex-start', background:'none', border:'1px dashed var(--teal)',
+                            color:'var(--teal)', borderRadius:'4px', padding:'2px 8px',
+                            cursor:'pointer', fontSize:'.75rem', fontWeight:700}}>+ KPI</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+
+        {/* Simple sections: Variación Inventario */}
+        {SIMPLE_META.map((sec, si) => (
+          <div key={si} style={{marginBottom:'20px', border:'1px solid #e5e7eb', borderRadius:'8px', overflow:'hidden'}}>
+            <div style={grpHd}>{sec.label} <span style={{fontWeight:400, fontSize:'.75rem', marginLeft:'8px'}}>{sec.unit}</span></div>
+            <div style={{background:'#f8f9fa', padding:'8px 14px', fontSize:'.75rem', color:'#666',
+                         borderBottom:'1px solid #e5e7eb', fontStyle:'italic'}}>{sec.desc}</div>
+            <div style={{padding:'12px 14px', display:'flex', flexDirection:'column', gap:'6px'}}>
+              {(params[sec.key] || []).map((item, idx) => (
+                <div key={idx} style={{display:'flex', gap:'6px', alignItems:'center'}}>
+                  <input list="pq-all" value={item} onChange={e => setSimpleItem(sec.key, idx, e.target.value)}
+                    style={inpSt} placeholder="KPI en parquet…"/>
+                  <button onClick={() => removeSimpleItem(sec.key, idx)}
+                    style={{background:'var(--red)',color:'white',border:'none',
+                            borderRadius:'4px',width:'22px',height:'22px',cursor:'pointer',fontWeight:700}}>−</button>
+                </div>
+              ))}
+              <button onClick={() => addSimpleItem(sec.key)}
+                style={{alignSelf:'flex-start', background:'none', border:'1px dashed var(--teal)',
+                        color:'var(--teal)', borderRadius:'4px', padding:'3px 10px',
+                        cursor:'pointer', fontSize:'.78rem', fontWeight:700}}>+ agregar KPI</button>
+            </div>
+          </div>
+        ))}
+
+        {/* Actividad Contexto */}
+        {(() => {
+          const ac = params.actividad_contexto || {};
+          const movKpis = ac.mov_mina_kpis || [];
+          const amberHd = { background:'#92400e', color:'white', fontWeight:700, padding:'8px 14px',
+                            fontSize:'.8rem', letterSpacing:'.04em', textTransform:'uppercase' };
+          const numInp = { padding:'5px 9px', border:'2px solid #f59e0b', borderRadius:'5px',
+                           fontSize:'.82rem', width:'130px', background:'#fffbf0' };
+          return (
+            <div style={{marginBottom:'20px', border:'1px solid #f59e0b', borderRadius:'8px', overflow:'hidden'}}>
+              <div style={amberHd}>Actividad Contexto — Mov Mina & Costos Unitarios</div>
+              <div style={{background:'#fffbf0', padding:'8px 14px', fontSize:'.75rem', color:'#92400e',
+                           borderBottom:'1px solid #f59e0b', fontStyle:'italic'}}>
+                Act. Mina = ΔMovMina × CostoUnit_Mina × (exp_TC×TC_ppto/TC_real + (1−exp_TC)) — análogo para Concentradora
+              </div>
+              <div style={{padding:'14px'}}>
+                {/* Mov Mina KPIs */}
+                <div style={{marginBottom:'14px'}}>
+                  <div style={{fontWeight:700, fontSize:'.8rem', color:'#92400e', marginBottom:'6px'}}>
+                    KPIs Movimiento Mina (suma)
+                  </div>
+                  <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
+                    {movKpis.map((item, idx) => (
+                      <div key={idx} style={{display:'flex', gap:'6px', alignItems:'center'}}>
+                        <input list="pq-all" value={item} onChange={e => setActCtxKpiItem(idx, e.target.value)}
+                          style={{...inpSt, border:'2px solid #f59e0b', background:'#fffbf0'}} placeholder="KPI en parquet…"/>
+                        {movKpis.length > 1 && (
+                          <button onClick={() => removeActCtxKpiItem(idx)}
+                            style={{background:'var(--red)',color:'white',border:'none',
+                                    borderRadius:'4px',width:'22px',height:'22px',cursor:'pointer',fontWeight:700}}>−</button>
+                        )}
+                      </div>
+                    ))}
+                    <button onClick={addActCtxKpiItem}
+                      style={{alignSelf:'flex-start', background:'none', border:'1px dashed #f59e0b',
+                              color:'#92400e', borderRadius:'4px', padding:'3px 10px',
+                              cursor:'pointer', fontSize:'.78rem', fontWeight:700}}>+ agregar KPI</button>
+                  </div>
+                </div>
+
+                {/* Procesamiento KPI */}
+                <div style={{marginBottom:'14px'}}>
+                  <div style={{fontWeight:700, fontSize:'.8rem', color:'#92400e', marginBottom:'4px'}}>
+                    KPI Procesamiento (base Concentradora)
+                  </div>
+                  <input list="pq-all" value={ac.procesamiento_kpi || ''} onChange={e => setActCtx('procesamiento_kpi', e.target.value)}
+                    style={{...inpSt, border:'2px solid #f59e0b', background:'#fffbf0'}} placeholder="KPI en parquet…"/>
+                </div>
+
+                {/* Unit costs */}
+                <div style={{fontWeight:700, fontSize:'.8rem', color:'#92400e', marginBottom:'8px'}}>
+                  Costos Unitarios Budget (US$/kt) — ajuste TC desde Parámetros Financieros
+                </div>
+                <div style={{display:'flex', gap:'20px', flexWrap:'wrap'}}>
+                  {[
+                    ['Mina (US$/kt mov)', 'costo_unitario_mina'],
+                    ['Concentradora (US$/kt proc)', 'costo_unitario_conc'],
+                    ['Hidro (US$/kt)', 'costo_unitario_hidro'],
+                  ].map(([lbl, field]) => (
+                    <div key={field} style={{display:'flex', flexDirection:'column', gap:'3px'}}>
+                      <label style={{fontSize:'.75rem', fontWeight:600, color:'#92400e'}}>{lbl}</label>
+                      <input type="number" step="0.01"
+                        value={ac[field] == null ? '' : ac[field]}
+                        onChange={e => setActCtx(field, e.target.value === '' ? null : parseFloat(e.target.value))}
+                        style={numInp} placeholder="no configurado"/>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Root App ─── */
 function App() {
   const [tab,   setTab]   = useState('auto');
@@ -1150,10 +1674,11 @@ function App() {
     <>
       <Header tab={tab} setTab={setTab}/>
       {(tab==='viz' || tab==='params') && <PeriodBar period={period} setters={setters} tipos={tipos}/>}
-      {tab==='auto'   && <AutoTab/>}
-      {tab==='mapeos' && <MapeosTab/>}
-      {tab==='viz'    && <VisualizarTab period={period} tipos={tipos}/>}
-      {tab==='params' && <ParamsTab period={period}/>}
+      {tab==='auto'     && <AutoTab/>}
+      {tab==='mapeos'   && <MapeosTab/>}
+      {tab==='viz'      && <VisualizarTab period={period} tipos={tipos}/>}
+      {tab==='params'   && <ParamsTab period={period}/>}
+      {tab==='formulas' && <FormulasTab/>}
     </>
   );
 }

@@ -175,6 +175,10 @@ def get_visualization(
             cur_kpis = []
             continue
 
+        if item["type"] == "subheader":
+            cur_kpis.append({"type": "subheader", "label": item["label"], "is_na": False})
+            continue
+
         label = item["label"]
         lk    = f"{cur_sec}||{label}"
         mapped = mappings.get(lk)
@@ -210,6 +214,8 @@ def get_visualization(
     ytd_by_lk2: dict[str, float | None] = {}
     for sec in sections:
         for kpi in sec["kpis"]:
+            if kpi.get("type") == "subheader":
+                continue
             by_lk1[kpi["lk"]] = kpi["vals1"]
             by_lk2[kpi["lk"]] = kpi["vals2"]
             mes_by_lk1[kpi["lk"]] = kpi["mes1"]
@@ -219,6 +225,8 @@ def get_visualization(
 
     for sec in sections:
         for kpi in sec["kpis"]:
+            if kpi.get("type") == "subheader":
+                continue
             mapped = mappings.get(kpi["lk"])
             if not isinstance(mapped, dict) or not mapped.get("_f"):
                 continue

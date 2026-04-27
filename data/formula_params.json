@@ -1,0 +1,31 @@
+{
+  "kpi_keys": {
+    "tarifa_bolas":        "Tarifa Bolas",
+    "tarifa_energia":      "Energía all in",
+    "tarifa_combustible":  "Combustible",
+    "tarifa_explosivos":   "Precios Insumos Críticos||Explosivos",
+    "consumo_bolas":       "Consumo Bolas",
+    "consumo_energia":     "Consumo Energía Compañía",
+    "consumo_combustible": "Mina||Consumo Comb. - Transporte",
+    "consumo_explosivos":  "Mina||Explosivos",
+    "tratamiento":         "Tratamiento",
+    "ley_cu":              "Mineral Procesado||Ley de Cu",
+    "recuperacion":        "Mineral Procesado||Recuperación de cobre",
+    "horas_efectivas":     "Mina||Horas Efectivas",
+    "tronadura":           ["Roca Quebrada (Lastre)", "Roca Quebrada (Mineral)"]
+  },
+  "desarrollo_mina":      ["Desarrollo Mina||Desarrollo Mina"],
+  "desarrollo_mina_items": [
+    { "key": "ifric20",  "label": "IFRIC20",  "kpis": [] },
+    { "key": "efecto_p", "label": "Efecto P",  "kpis": [] },
+    { "key": "efecto_q", "label": "Efecto Q",  "kpis": [] }
+  ],
+  "variacion_inventario": ["Var. Inv. Mina", "Var. Inv. Planta"],
+  "actividad_contexto": {
+    "mov_mina_kpis":        ["Movimiento Mina"],
+    "procesamiento_kpi":    "Tratamiento",
+    "costo_unitario_mina":  null,
+    "costo_unitario_conc":  null,
+    "costo_unitario_hidro": null
+  }
+}

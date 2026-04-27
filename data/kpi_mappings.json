@@ -15,8 +15,8 @@
     "Variables Mineras||Recuperación óxidos": "__NA__",
     "Variables Mineras||CuFino": "Cu fino pagable filtrado",
     "Variables Mineras||Cátodos": "__NA__",
-    "Variables Mineras||Horas operativas transporte": "Horas Horómetro",
-    "Variables Mineras||Horas efectivas transporte": "Horas Efectivas",
+    "Variables Mineras||Horas operativas transporte": "",
+    "Variables Mineras||Horas efectivas transporte": "Mina||Horas Efectivas",
     "Variables Mineras||Total Tronado/Quebrado": [
       "Roca Quebrada (Lastre)",
       "Roca Quebrada (Mineral)"
@@ -53,7 +53,7 @@
       "_f": true,
       "a": "Consumos||Combustible",
       "op": "/",
-      "b": "Variables Mineras||Procesamiento",
+      "b": "Variables Mineras||Horas efectivas transporte",
       "scale": 1000
     },
     "Rendimientos||Explosivos": {
@@ -66,7 +66,22 @@
     "Gasto||Bolas": "Gasto Total Bolas",
     "Gasto||Ácido": "",
     "Gasto||Energía": "",
-    "Gasto||Combustible": "Gasto Combustible",
-    "Gasto||Explosivos": "Gasto Explosivos (s/Accesorios)"
+    "Gasto||Combustible": "Precios Insumos Críticos||Gasto Combustible",
+    "Gasto||Explosivos": "Gasto Explosivos (s/Accesorios)",
+
+    "Subproductos||Ventas Subproductos":                    "__NA__",
+    "Subproductos||Ingresos Subproductos":                  "__NA__",
+    "Subproductos||Precio Realizado Subproductos al costo": "__NA__",
+    "Subproductos||Precio Budget":                          "__NA__",
+    "Subproductos||Cantidades Producidas":                  "__NA__",
+
+    "TC/RC & Comercialización||Cu pag. embarcado": "__NA__",
+    "TC/RC & Comercialización||MoF pag. vendido":  "__NA__",
+    "TC/RC & Comercialización||CuFino":             "__NA__",
+    "TC/RC & Comercialización||TC/RC":              "__NA__",
+    "TC/RC & Comercialización||TC/RC unitario":     "__NA__",
+    "TC/RC & Comercialización||Comercialización":   "__NA__",
+    "TC/RC & Comercialización||Comer. unitario":    "__NA__",
+    "TC/RC & Comercialización||Total TC/RC & Comero.": "__NA__"
   }
 }
