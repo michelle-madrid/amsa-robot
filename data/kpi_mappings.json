@@ -1,6 +1,6 @@
 {
   "MLP": {
-    "Variables Mineras||Movimiento mina sulfuros": "Movimiento Mina",
+    "Variables Mineras||Movimiento mina sulfuros": "Movimiento Total||Movimiento Total",
     "Variables Mineras||Movimiento mina óxidos": "__NA__",
     "Variables Mineras||Desarrollo mina sulfuros": "Desarrollo Mina||Desarrollo Mina",
     "Variables Mineras||Remanejo sulfuros": "Remanejo||Remanejo",
@@ -9,7 +9,7 @@
     "Variables Mineras||Procesamiento": "Tratamiento",
     "Variables Mineras||Beneficio": "__NA__",
     "Variables Mineras||Apilado": "__NA__",
-    "Variables Mineras||Ley sulfuros": "Ley de Cu",
+    "Variables Mineras||Ley sulfuros": "Mineral Procesado||Ley de Cu",
     "Variables Mineras||Ley oxidos": "__NA__",
     "Variables Mineras||Recuperación sulfuros": "Recuperación de cobre",
     "Variables Mineras||Recuperación óxidos": "__NA__",
@@ -21,6 +21,7 @@
       "Roca Quebrada (Lastre)",
       "Roca Quebrada (Mineral)"
     ],
+    "Variables Mineras||Var. Inv. Mina": "Administración||Variación de Inventario",
     "Tarifas||Bolas": "Tarifa Bolas",
     "Tarifas||Ácido": "__NA__",
     "Tarifas||Energía": "Energía all in",
@@ -64,24 +65,95 @@
       "scale": 1000
     },
     "Gasto||Bolas": "Gasto Total Bolas",
-    "Gasto||Ácido": "",
-    "Gasto||Energía": "",
+    "Gasto||Ácido": "__NA__",
+    "Gasto||Energía": "Items Relevantes||Energía",
     "Gasto||Combustible": "Precios Insumos Críticos||Gasto Combustible",
     "Gasto||Explosivos": "Gasto Explosivos (s/Accesorios)",
-
-    "Subproductos||Ventas Subproductos":                    "__NA__",
-    "Subproductos||Ingresos Subproductos":                  "__NA__",
-    "Subproductos||Precio Realizado Subproductos al costo": "__NA__",
-    "Subproductos||Precio Budget":                          "__NA__",
-    "Subproductos||Cantidades Producidas":                  "__NA__",
-
-    "TC/RC & Comercialización||Cu pag. embarcado": "__NA__",
-    "TC/RC & Comercialización||MoF pag. vendido":  "__NA__",
-    "TC/RC & Comercialización||CuFino":             "__NA__",
-    "TC/RC & Comercialización||TC/RC":              "__NA__",
-    "TC/RC & Comercialización||TC/RC unitario":     "__NA__",
-    "TC/RC & Comercialización||Comercialización":   "__NA__",
-    "TC/RC & Comercialización||Comer. unitario":    "__NA__",
-    "TC/RC & Comercialización||Total TC/RC & Comero.": "__NA__"
+    "Subproductos||Ventas Subproductos||Moly": {
+      "_s": true,
+      "src": "Moly||Tons",
+      "op": "/",
+      "scalar": 1000
+    },
+    "Subproductos||Ventas Subproductos||Oro": "",
+    "Subproductos||Ventas Subproductos||Plata": "",
+    "Subproductos||Ingresos Subproductos||Moly": "",
+    "Subproductos||Ingresos Subproductos||Oro": "",
+    "Subproductos||Ingresos Subproductos||Plata": "",
+    "Subproductos||Ingresos Subproductos||Renio": "",
+    "Subproductos||Precio Realizado Subproductos al costo||Moly": "Precios||Molibdeno, Precio realizado",
+    "Subproductos||Precio Realizado Subproductos al costo||Oro": "Precios||Oro, Precio realizado",
+    "Subproductos||Precio Realizado Subproductos al costo||Plata": "Precios||Plata, Precio realizado",
+    "Subproductos||Precio Budget||Moly": "",
+    "Subproductos||Precio Budget||Oro": "",
+    "Subproductos||Precio Budget||Plata": "",
+    "Subproductos||Cantidades Producidas||Moly": "",
+    "Subproductos||Cantidades Producidas||Oro": "",
+    "Subproductos||Cantidades Producidas||Plata": "",
+    "Subproductos||Créditos Subproductos||Moly": "",
+    "TC/RC & Comercialización||Unidades||Cu pag. embarcado": "Total Cobre||Total Venta de Cobre",
+    "TC/RC & Comercialización||Unidades||MoF pag. vendido": "",
+    "TC/RC & Comercialización||Unidades||CuFino": "Cu fino pagable filtrado||Cu fino pagable filtrado",
+    "TC/RC & Comercialización||Gasto||TC/RC": "Administración||TC/RC",
+    "TC/RC & Comercialización||Gasto||TC/RC unitario": {
+      "_f": true,
+      "a": "TC/RC & Comercialización||Gasto||TC/RC",
+      "op": "/",
+      "b": "TC/RC & Comercialización||Unidades||CuFino"
+    },
+    "TC/RC & Comercialización||Gasto||Comercialización": "Administración||Comercialización",
+    "TC/RC & Comercialización||Gasto||Comer. unitario": {
+      "_f": true,
+      "a": "TC/RC & Comercialización||Gasto||Comercialización",
+      "op": "/",
+      "b": "TC/RC & Comercialización||Unidades||CuFino"
+    },
+    "TC/RC & Comercialización||Gasto||Total TC/RC & Comero.": {
+      "_f": true,
+      "a": "TC/RC & Comercialización||Gasto||TC/RC",
+      "op": "+",
+      "b": "TC/RC & Comercialización||Gasto||Comercialización"
+    },
+    "Costos Ajustados||Mina||Perforación": "Mina||Perforación",
+    "Costos Ajustados||Mina||Tronadura": "Mina||Tronadura",
+    "Costos Ajustados||Mina||Carguío": "Mina||Carguío",
+    "Costos Ajustados||Mina||Transporte": "Mina||Transporte",
+    "Costos Ajustados||Mina||Servicios de Apoyo Mina": "Mina||Servicios de Apoyo\nMina",
+    "Costos Ajustados||Mina||Adm. Operación y Gestión": "Mina||Administración Mina",
+    "Costos Ajustados||Planta Concentradora + Puerto||Chancado": "Planta Concentradora||Alimentación Mineral",
+    "Costos Ajustados||Planta Concentradora + Puerto||Molienda": "Planta Concentradora||Molienda",
+    "Costos Ajustados||Planta Concentradora + Puerto||Flotación": "Planta Concentradora||Flotación",
+    "Costos Ajustados||Planta Concentradora + Puerto||Planta Molibdeno": "Planta Concentradora||Planta Molibdeno",
+    "Costos Ajustados||Planta Concentradora + Puerto||TFT": [
+      "Planta Concentradora||Transporte de Concentrado",
+      "Planta Concentradora||Relaves y Depósitos"
+    ],
+    "Costos Ajustados||Planta Concentradora + Puerto||Puerto": [
+      "Puerto||Administración Puerto",
+      "Puerto||Mantenimiento Puerto",
+      "Puerto||Planta Filtrado",
+      "Puerto||Puerto",
+      "Puerto||Servicios de Apoyo Puerto",
+      "Puerto||Sistema de Agua Desalada (Desalac.)"
+    ],
+    "Costos Ajustados||Planta Concentradora + Puerto||Adm. y Servicios": "Planta Concentradora||Administración Planta",
+    "Costos Ajustados||Planta SX-EW||Aglomeración / Apilamiento": "__NA__",
+    "Costos Ajustados||Planta SX-EW||Lixiviación": "__NA__",
+    "Costos Ajustados||Planta SX-EW||ROM / SL": "__NA__",
+    "Costos Ajustados||Planta SX-EW||SX-EW": "__NA__",
+    "Costos Ajustados||Planta SX-EW||Admin.": "__NA__",
+    "Costos Ajustados||Planta SX-EW||Otros costos planta SX-EW": "__NA__",
+    "Costos Ajustados||G&A||G&A": "",
+    "Costos Ajustados||Servicios de Apoyo||Planificación y Desarrollo": "Serivicios de Apoyo||Planif y Desarrollo",
+    "Costos Ajustados||Servicios de Apoyo||Servicios de la Operación": "Serivicios de Apoyo||Excelencia Operacional",
+    "Costos Ajustados||Servicios de Apoyo||Gerencia de Operaciones": "Serivicios de Apoyo||Gerencia deOperaciones / Excelencia Op",
+    "Costos Ajustados||Servicios de Apoyo||Planificación de la Producción": "__NA__",
+    "Costos Ajustados||Servicios de Apoyo||Campamentos": "Serivicios de Apoyo||Servicio Campamentos",
+    "Costos Ajustados||Servicios de Apoyo||Gestión del Mantención": "Serivicios de Apoyo||Gestión Mantenimiento/Serv Apoyo a la Operación",
+    "Costos Ajustados||IFRS16||IFRS16": "IFRS15||IFRS15",
+    "Costos Ajustados||Ajustes Financieros||Depreciación / Amortización": ""
+  },
+  "CEN": {
+    "Variables Mineras||Remanejo oxidos": "Remanejo||Remanejo"
   }
 }

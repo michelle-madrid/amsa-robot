@@ -13,8 +13,32 @@ from pydantic import BaseModel
 
 from ..config import settings
 from ..services import parquet_service as pq
+from ..services.mapping_store import load_mappings
 
 router = APIRouter(prefix="/api/calculos", tags=["calculos"])
+
+# Correspondencia fija: clave de variable de fórmula → lk en kpi_mappings
+# Permite derivar automáticamente los valores desde los mapeos Excel ya configurados.
+_FORMULA_VAR_TO_LK: dict[str, str] = {
+    "tarifa_bolas":        "Tarifas||Bolas",
+    "tarifa_energia":      "Tarifas||Energía",
+    "tarifa_combustible":  "Tarifas||Combustible",
+    "tarifa_explosivos":   "Tarifas||Explosivos",
+    "consumo_bolas":       "Consumos||Bolas",
+    "consumo_energia":     "Consumos||Energía Total",
+    "consumo_combustible": "Consumos||Combustible",
+    "consumo_explosivos":  "Consumos||Explosivos",
+    "tratamiento":         "Variables Mineras||Procesamiento",
+    "horas_efectivas":     "Variables Mineras||Horas efectivas transporte",
+    "tronadura":           "Variables Mineras||Total Tronado/Quebrado",
+    "ley_cu":              "Variables Mineras||Ley sulfuros",
+    "recuperacion":        "Variables Mineras||Recuperación sulfuros",
+    "vi_inv_mina":         "Variables Mineras||Var. Inv. Mina",
+    "vi_inv_planta":       "Variables Mineras||Var. Inv. Planta",
+    "tcrc_q":              "TC/RC & Comercialización||Unidades||CuFino",
+    "tcrc_total":          "TC/RC & Comercialización||Gasto||TC/RC",
+    "comer_total":         "TC/RC & Comercialización||Gasto||Comercialización",
+}
 
 MONTH_FIELDS = pq.MONTH_FIELDS
 MONTH_BY_NUM = {i + 1: f for i, f in enumerate(MONTH_FIELDS)}
@@ -26,6 +50,8 @@ _TIPO_ALIASES: list[set[str]] = [
 
 FORMULA_PARAMS_PATH = Path(__file__).resolve().parents[3] / "data" / "formula_params.json"
 PARAMS_FIN_PATH     = Path(__file__).resolve().parents[3] / "data" / "params_financieros.json"
+KPI_STRUCTURE_FILE  = Path(__file__).resolve().parents[3] / "data" / "kpi_structure.json"
+MAPPING_PATH        = Path(__file__).resolve().parents[3] / "data" / "kpi_mappings.json"
 
 DEFAULT_PARAMS: dict = {
     "kpi_keys": {
@@ -42,6 +68,38 @@ DEFAULT_PARAMS: dict = {
         "recuperacion":        "Recuperación de cobre",
         "horas_efectivas":     "Mina||Horas Efectivas",
         "tronadura":           ["Roca Quebrada (Lastre)", "Roca Quebrada (Mineral)"],
+        "tcrc_q":              "",
+        "tcrc_total":          "",
+        "comer_total":         "",
+        "gasto_operacional":      "",
+        "gasto_operacional_real": "",
+        "dev_mina_vol":           "",
+        "c3":                     "",
+        "c2":                     "",
+        "c1_abs":                 "",
+        "da":                     "",
+        "subprod_b":              "",
+        "tcrc_b_total":           "",
+        "comer_b_total":          "",
+        # Efectos operacionales (Análisis Costo waterfall)
+        "vi_inv_mina":            "",
+        "vi_inv_planta":          "",
+        "ifrs16":                 "",
+        # Estructura real (cierre waterfall)
+        "tcrc_r_total":           "",
+        "comer_r_total":          "",
+        "subprod_r":              "",
+        "c1_r_costo":             "",
+        "da_r":                   "",
+        "c2_r":                   "",
+        "c3_r":                   "",
+        "otros_fin_r":            "",
+        "dif_cambio_r":           "",
+        "donaciones_r":           "",
+        "gasto_expl_r":           "",
+        "ing_gasto_fin_r":        "",
+        "ing_no_op_r":            "",
+        "otros_egr_op_r":         "",
     },
     "desarrollo_mina":      ["Desarrollo Mina||Desarrollo Mina"],
     "desarrollo_mina_items": [
@@ -50,6 +108,8 @@ DEFAULT_PARAMS: dict = {
         {"key": "efecto_q", "label": "Efecto Q",  "kpis": []},
     ],
     "variacion_inventario": ["Var. Inv. Mina", "Var. Inv. Planta"],
+    "kpi_keys_per_company": {},
+    "subprod_precio_scale": 1.0,
     "actividad_contexto": {
         "mov_mina_kpis":        ["Movimiento Mina"],
         "procesamiento_kpi":    "Tratamiento",
@@ -60,13 +120,45 @@ DEFAULT_PARAMS: dict = {
 }
 
 
+def _apply_formula_var_mappings(kpi_keys: dict, company: str) -> dict:
+    """Override formula-var keys using the already-configured kpi_mappings for this company."""
+    all_maps = load_mappings()
+    company_map = all_maps.get(company, {})
+    result = dict(kpi_keys)
+    # 1. Static auto-resolution via _FORMULA_VAR_TO_LK
+    for var_key, lk in _FORMULA_VAR_TO_LK.items():
+        raw = company_map.get(lk)
+        if not raw or raw == "__NA__":
+            continue
+        if isinstance(raw, str):
+            result[var_key] = raw
+        elif isinstance(raw, list):
+            non_empty = [x for x in raw if x and x != "__NA__"]
+            if non_empty:
+                result[var_key] = non_empty if len(non_empty) > 1 else non_empty[0]
+    # 2. Explicit _formula_vars overrides (manual assignments, higher priority)
+    for var_key, lk in all_maps.get("_formula_vars", {}).get(company, {}).items():
+        raw = company_map.get(lk)
+        if not raw or raw == "__NA__":
+            continue
+        if isinstance(raw, str):
+            result[var_key] = raw
+        elif isinstance(raw, list):
+            non_empty = [x for x in raw if x and x != "__NA__"]
+            if non_empty:
+                result[var_key] = non_empty if len(non_empty) > 1 else non_empty[0]
+    return result
+
+
 def _load_params() -> dict:
     if FORMULA_PARAMS_PATH.exists():
         saved = json.loads(FORMULA_PARAMS_PATH.read_text(encoding="utf-8"))
         result: dict = {**DEFAULT_PARAMS}
         if "kpi_keys" in saved:
             result["kpi_keys"] = {**DEFAULT_PARAMS["kpi_keys"], **saved["kpi_keys"]}
-        for k in ("desarrollo_mina", "variacion_inventario"):
+        if "kpi_keys_per_company" in saved:
+            result["kpi_keys_per_company"] = saved["kpi_keys_per_company"]
+        for k in ("desarrollo_mina", "variacion_inventario", "subprod_precio_scale"):
             if k in saved:
                 result[k] = saved[k]
         if "desarrollo_mina_items" in saved:
@@ -109,12 +201,19 @@ def _build_columns(año_ini, mes_ini, año_fin, mes_fin):
 
 
 def _fetch_snapshot(df_co, tipo: str, year: int, month: int) -> dict[str, dict]:
-    periodo  = year * 100 + month
     variants = _tipo_variants(tipo)
-    df = df_co[
-        (df_co["periodo"] == periodo)
-        & (df_co["tipo"].str.strip().str.lower().isin(variants))
-    ]
+    df_tipo  = df_co[df_co["tipo"].str.strip().str.lower().isin(variants)]
+
+    periodo = year * 100 + month
+    df = df_tipo[df_tipo["periodo"] == periodo]
+
+    if df.empty:
+        year_min = year * 100 + 1
+        df_year  = df_tipo[(df_tipo["periodo"] >= year_min) & (df_tipo["periodo"] <= periodo)]
+        if not df_year.empty:
+            periodo = int(df_year["periodo"].max())
+            df = df_tipo[df_tipo["periodo"] == periodo]
+
     result: dict[str, dict] = {}
     for _, row in df.iterrows():
         kpi_name    = str(row.get("kpi", "") or "").strip()
@@ -278,6 +377,25 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
     vals_el  = [el_conc, el_hidro]
     el_total = sum(_s(x) for x in vals_el if x is not None) or None
 
+    # Efectos TC/RC y Comercialización — unitarios calculados inline (TC/RC total / cantidad)
+    tcrc_q_r    = r(k.get("tcrc_q", ""))
+    tcrc_q_b    = b(k.get("tcrc_q", ""))
+    tcrc_tot_r  = r(k.get("tcrc_total", ""))
+    tcrc_tot_b  = b(k.get("tcrc_total", ""))
+    comer_tot_r = r(k.get("comer_total", ""))
+    comer_tot_b = b(k.get("comer_total", ""))
+    tcrc_u_r    = _safe_div(tcrc_tot_r,  tcrc_q_r)
+    tcrc_u_b    = _safe_div(tcrc_tot_b,  tcrc_q_b)
+    comer_u_r   = _safe_div(comer_tot_r, tcrc_q_r)
+    comer_u_b   = _safe_div(comer_tot_b, tcrc_q_b)
+
+    tcrc_cant  = _m(_n(tcrc_q_r, tcrc_q_b), tcrc_u_r)
+    tcrc_tar   = _m(_n(tcrc_u_r, tcrc_u_b), tcrc_q_b)
+    tcrc_tot   = _sum_or_none([tcrc_cant, tcrc_tar])
+    comer_cant = _m(_n(tcrc_q_r, tcrc_q_b), comer_u_r)
+    comer_tar  = _m(_n(comer_u_r, comer_u_b), tcrc_q_b)
+    comer_tot  = _sum_or_none([comer_cant, comer_tar])
+
     def fmt(v):
         return round(v, 4) if v is not None else None
 
@@ -298,6 +416,12 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
         },
         "efecto_ley": {
             "concentradora": fmt(el_conc), "hidro": fmt(el_hidro), "total": fmt(el_total),
+        },
+        "efectos_tcrc": {
+            "cantidades": fmt(tcrc_cant), "tarifas": fmt(tcrc_tar), "total": fmt(tcrc_tot),
+        },
+        "efectos_comer": {
+            "cantidades": fmt(comer_cant), "tarifas": fmt(comer_tar), "total": fmt(comer_tot),
         },
     }
 
@@ -362,6 +486,242 @@ def _compute_actividad_contexto(
     }
 
 
+# ── subproductos effects ────────────────────────────────────────────────────
+
+_SUBPROD_METALS = ["Moly", "Oro", "Plata", "Renio"]
+
+
+def _get_src(mapped, use_real: bool) -> str | None:
+    """Extract parquet column from a mapping, respecting real/budget split (_rb format)."""
+    if not mapped or mapped == "__NA__":
+        return None
+    if isinstance(mapped, dict):
+        if mapped.get("_rb"):
+            return mapped.get("real" if use_real else "budget") or None
+        if mapped.get("_s"):
+            return mapped.get("src") or None
+    if isinstance(mapped, str):
+        return mapped or None
+    if isinstance(mapped, list):
+        srcs = [s for s in mapped if s]
+        return srcs[0] if srcs else None
+    return None
+
+
+def _get_kpi_list(mapped, use_real: bool) -> list[str]:
+    """Extract list of parquet columns from a mapping, respecting real/budget split."""
+    if mapped == "__NA__":
+        return []
+    if not mapped and mapped != "":
+        return []
+    if isinstance(mapped, dict):
+        if mapped.get("_rb"):
+            src = mapped.get("real" if use_real else "budget", "")
+            return [src] if src else []
+        if mapped.get("_s"):
+            src = mapped.get("src", "")
+            return [src] if src else []
+    if isinstance(mapped, list):
+        return [s for s in mapped if s]
+    if isinstance(mapped, str):
+        return [mapped] if mapped else []
+    return []
+
+
+def _compute_subprod_effects(
+    col_snaps: list, col_fields: list,
+    end_r: dict, end_b: dict,
+    mappings: dict, precio_scale: float,
+) -> dict:
+    ep_result: dict = {}
+    eq_result: dict = {}
+    cr_result: dict = {}
+    n = len(col_fields)
+    ep_totals   = [None] * n
+    eq_totals   = [None] * n
+    cr_r_totals = [None] * n
+    cr_b_totals = [None] * n
+
+    def _accum_list(lst, vals):
+        for i, v in enumerate(vals):
+            if v is not None:
+                lst[i] = (lst[i] or 0.0) + v
+
+    fmt = lambda v: round(v, 4) if v is not None else None
+
+    for metal in _SUBPROD_METALS:
+        qty_m   = mappings.get(f"Subproductos||Ventas Subproductos||{metal}")
+        pr_m    = mappings.get(f"Subproductos||Precio Realizado Subproductos al costo||{metal}")
+        pb_m    = mappings.get(f"Subproductos||Precio Budget||{metal}")
+        ing_m   = mappings.get(f"Subproductos||Ingresos Subproductos||{metal}")
+        qty_src_r = _get_src(qty_m, True);  qty_src_b = _get_src(qty_m, False)
+        pr_src    = _get_src(pr_m,  True)   # only used with real snapshot
+        pb_src    = _get_src(pb_m,  False)  # only used with budget snapshot
+        ing_src_r = _get_src(ing_m, True);  ing_src_b = _get_src(ing_m, False)
+        qty_r_src = qty_src_r or qty_src_b
+        qty_b_src = qty_src_b or qty_src_r
+        ing_r_src = ing_src_r or ing_src_b
+        ing_b_src = ing_src_b or ing_src_r
+
+        ep_vals: list = []; eq_vals: list = []
+        cr_r_vals: list = []; cr_b_vals: list = []
+
+        for (rs, bs), f in zip(col_snaps, col_fields):
+            qty_r = _resolve(rs, qty_r_src, f) if qty_r_src else None
+            qty_b = _resolve(bs, qty_b_src, f) if qty_b_src else None
+            pr_r  = _resolve(rs, pr_src,    f) if pr_src    else None
+            pb_b  = _resolve(bs, pb_src,    f) if pb_src    else None
+            ing_r = _resolve(rs, ing_r_src, f) if ing_r_src else None
+            ing_b = _resolve(bs, ing_b_src, f) if ing_b_src else None
+            ep_vals.append(fmt(_m(_n(pr_r, pb_b), qty_r, precio_scale)))
+            eq_vals.append(fmt(_m(_n(qty_r, qty_b), pb_b, precio_scale)))
+            cr_r_vals.append(fmt(ing_r))
+            cr_b_vals.append(fmt(ing_b))
+
+        def _rend_r(f): return _resolve(end_r, pr_src,    f) if pr_src    else None
+        def _rend_b(f): return _resolve(end_b, pb_src,    f) if pb_src    else None
+        def _rqty_r(f): return _resolve(end_r, qty_r_src, f) if qty_r_src else None
+        def _rqty_b(f): return _resolve(end_b, qty_b_src, f) if qty_b_src else None
+
+        ep_mes  = fmt(_m(_n(_rend_r("mes"), _rend_b("mes")), _rqty_r("mes"), precio_scale))
+        ep_ytd  = fmt(_sum_or_none(ep_vals))
+        eq_mes  = fmt(_m(_n(_rqty_r("mes"), _rqty_b("mes")), _rend_b("mes"), precio_scale))
+        eq_ytd  = fmt(_sum_or_none(eq_vals))
+        cr_r_mes = fmt(_resolve(end_r, ing_r_src, "mes") if ing_r_src else None)
+        cr_b_mes = fmt(_resolve(end_b, ing_b_src, "mes") if ing_b_src else None)
+        cr_r_ytd = fmt(_resolve(end_r, ing_r_src, "ytd") if ing_r_src else None)
+        cr_b_ytd = fmt(_resolve(end_b, ing_b_src, "ytd") if ing_b_src else None)
+
+        ep_result[metal] = {"vals": ep_vals, "mes": ep_mes, "ytd": ep_ytd}
+        if any(v is not None for v in ep_vals) or ep_mes is not None:
+            _accum_list(ep_totals, ep_vals)
+        eq_result[metal] = {"vals": eq_vals, "mes": eq_mes, "ytd": eq_ytd}
+        if any(v is not None for v in eq_vals) or eq_mes is not None:
+            _accum_list(eq_totals, eq_vals)
+        cr_result[metal] = {
+            "real":   {"vals": cr_r_vals, "mes": cr_r_mes, "ytd": cr_r_ytd},
+            "budget": {"vals": cr_b_vals, "mes": cr_b_mes, "ytd": cr_b_ytd},
+        }
+        if (ing_r_src or ing_b_src) and any(v is not None for v in cr_r_vals + cr_b_vals):
+            _accum_list(cr_r_totals, cr_r_vals)
+            _accum_list(cr_b_totals, cr_b_vals)
+
+    rl = lambda lst: [fmt(v) for v in lst]
+    ep_result["total"] = {
+        "vals": rl(ep_totals),
+        "mes":  fmt(_sum_or_none([ep_result[m]["mes"] for m in _SUBPROD_METALS])),
+        "ytd":  fmt(_sum_or_none([ep_result[m]["ytd"] for m in _SUBPROD_METALS])),
+    }
+    eq_result["total"] = {
+        "vals": rl(eq_totals),
+        "mes":  fmt(_sum_or_none([eq_result[m]["mes"] for m in _SUBPROD_METALS])),
+        "ytd":  fmt(_sum_or_none([eq_result[m]["ytd"] for m in _SUBPROD_METALS])),
+    }
+    cr_result["total"] = {
+        "real":   {"vals": rl(cr_r_totals),
+                   "mes": fmt(_sum_or_none([cr_result[m]["real"]["mes"]   for m in _SUBPROD_METALS])),
+                   "ytd": fmt(_sum_or_none([cr_result[m]["real"]["ytd"]   for m in _SUBPROD_METALS]))},
+        "budget": {"vals": rl(cr_b_totals),
+                   "mes": fmt(_sum_or_none([cr_result[m]["budget"]["mes"] for m in _SUBPROD_METALS])),
+                   "ytd": fmt(_sum_or_none([cr_result[m]["budget"]["ytd"] for m in _SUBPROD_METALS]))},
+    }
+
+    return {"efecto_precio": ep_result, "efecto_cantidad": eq_result, "creditos": cr_result}
+
+
+# ── mapped sections (Subproductos, TC/RC) ──────────────────────────────────
+
+def _load_company_mappings(company: str) -> dict:
+    if MAPPING_PATH.exists():
+        return json.loads(MAPPING_PATH.read_text(encoding="utf-8")).get(company, {})
+    return {}
+
+
+def _build_unit_lookup(company: str) -> dict[str, str]:
+    if not KPI_STRUCTURE_FILE.exists():
+        return {}
+    structure = json.loads(KPI_STRUCTURE_FILE.read_text(encoding="utf-8"))
+    lookup: dict[str, str] = {}
+    cur_subhdr = ""
+    for item in structure.get(company, []):
+        if item["type"] == "header":
+            cur_subhdr = ""
+        elif item["type"] == "subheader":
+            cur_subhdr = item["label"]
+        elif item["type"] == "kpi" and cur_subhdr:
+            lookup[f"{cur_subhdr}||{item['label']}"] = item.get("unit", "")
+    return lookup
+
+
+def _apply_scalar(v, op: str, scalar: float):
+    if v is None or scalar is None:
+        return None
+    if op == "/" and scalar == 0:
+        return None
+    return {"+": v + scalar, "-": v - scalar, "*": v * scalar, "/": v / scalar}.get(op, v)
+
+
+def _parse_mapped_items(mappings: dict, section_prefix: str, unit_lookup: dict) -> list:
+    """Returns [(subhdr, label, kpi_list_r, kpi_list_b, unit, scalar_info)] for all valid 3-part mapping keys.
+    kpi_list_r/b are the parquet columns for real and budget respectively (_rb format gives different lists).
+    scalar_info is (op, scalar) for _s mappings, else None."""
+    items = []
+    prefix = section_prefix + "||"
+    for key, mapped in mappings.items():
+        if not key.startswith(prefix):
+            continue
+        rest = key[len(prefix):]
+        parts = rest.split("||", 1)
+        if len(parts) != 2:
+            continue
+        subhdr, label = parts
+        if mapped == "__NA__":
+            continue
+        scalar_info = None
+        if isinstance(mapped, dict) and mapped.get("_s"):
+            src = mapped.get("src", "")
+            kpi_list_r = [src] if src else []
+            kpi_list_b = kpi_list_r
+            sc = mapped.get("scalar")
+            if sc is not None:
+                scalar_info = (mapped.get("op", "*"), float(sc))
+        else:
+            kpi_list_r = _get_kpi_list(mapped, True)
+            kpi_list_b = _get_kpi_list(mapped, False)
+        unit = unit_lookup.get(f"{subhdr}||{label}", "")
+        items.append((subhdr, label, kpi_list_r, kpi_list_b, unit, scalar_info))
+    return items
+
+
+def _build_mapped_section_response(
+    col_snaps: list, col_fields: list,
+    end_r: dict, end_b: dict,
+    items: list,
+) -> dict:
+    result: dict = {}
+    for subhdr, label, kpi_list_r, kpi_list_b, unit, scalar_info in items:
+        if not kpi_list_r and not kpi_list_b:
+            result.setdefault(subhdr, {})[label] = {"vals": [None] * len(col_snaps), "mes": None, "ytd": None, "unit": unit}
+            continue
+        r_list = kpi_list_r or kpi_list_b
+        b_list = kpi_list_b or kpi_list_r
+        def _delta(rs, bs, f, rl=r_list, bl=b_list):
+            rv = _sum_resolve(rs, rl, f)
+            bv = _sum_resolve(bs, bl, f)
+            v  = _n(rv, bv)
+            return round(v, 4) if v is not None else None
+        vals  = [_delta(rs, bs, f) for (rs, bs), f in zip(col_snaps, col_fields)]
+        mes_v = _delta(end_r, end_b, "mes")
+        ytd_v = _delta(end_r, end_b, "ytd")
+        if scalar_info:
+            op_s, sc_s = scalar_info
+            vals  = [_apply_scalar(v, op_s, sc_s) for v in vals]
+            mes_v = _apply_scalar(mes_v, op_s, sc_s)
+            ytd_v = _apply_scalar(ytd_v, op_s, sc_s)
+        result.setdefault(subhdr, {})[label] = {"vals": vals, "mes": mes_v, "ytd": ytd_v, "unit": unit}
+    return result
+
+
 # ── endpoints ──────────────────────────────────────────────────────────────
 
 @router.get("/formula-params")
@@ -371,10 +731,12 @@ def get_formula_params():
 
 class FormulaParamsBody(BaseModel):
     kpi_keys: dict
+    kpi_keys_per_company: dict = {}
     desarrollo_mina: list
     desarrollo_mina_items: list = []
     variacion_inventario: list
     actividad_contexto: dict = {}
+    subprod_precio_scale: float = 1.0
 
 
 @router.put("/formula-params")
@@ -392,6 +754,10 @@ def get_calculos(
         raise HTTPException(404, "Parquet no encontrado")
 
     p = _load_params()
+    per_co_keys = p.get("kpi_keys_per_company", {}).get(company, {})
+    if per_co_keys:
+        p["kpi_keys"] = {**p["kpi_keys"], **per_co_keys}
+    p["kpi_keys"] = _apply_formula_var_mappings(p["kpi_keys"], company)
 
     params_fin: dict = {}
     if PARAMS_FIN_PATH.exists():
@@ -441,10 +807,19 @@ def get_calculos(
     # Mes + YTD
     end_r = real_snaps.get(año_fin, {})
     end_b = budget_snaps.get(año_fin, {})
-    mes_deltas = _compute_deltas(end_r, end_b, "mes", p)
-    ytd_deltas = _compute_deltas(end_r, end_b, "ytd", p)
 
-    # YTD for rate-based sections = sum of monthly cols
+    # Mapped sections (Subproductos, TC/RC & Comercialización)
+    company_mappings = _load_company_mappings(company)
+    unit_lookup      = _build_unit_lookup(company)
+    col_snaps        = [(real_snaps.get(c["year"], {}), budget_snaps.get(c["year"], {})) for c in cols]
+    col_fields_list  = [MONTH_BY_NUM[c["month"]] for c in cols]
+    tcrc_items        = _parse_mapped_items(company_mappings, "TC/RC & Comercialización", unit_lookup)
+    tcrc_data         = _build_mapped_section_response(col_snaps, col_fields_list, end_r, end_b, tcrc_items)
+    precio_scale      = p.get("subprod_precio_scale", 1.0)
+    subprod_effects   = _compute_subprod_effects(
+        col_snaps, col_fields_list, end_r, end_b, company_mappings, precio_scale
+    )
+    # Mes = last column value; YTD = sum of all monthly columns
     def _sum_cols(section: str, key: str):
         total, has = 0.0, False
         for cd in col_deltas:
@@ -453,41 +828,26 @@ def get_calculos(
                 total += v; has = True
         return round(total, 4) if has else None
 
-    ytd_gasto_override = {
-        k: _sum_cols("delta_gasto_precio", k)
-        for k in ["bolas", "acido", "energia", "combustible", "explosivos", "total"]
-    }
-    ytd_rend_override = {
-        k: _sum_cols("delta_rendimiento", k)
-        for k in ["bolas", "acido", "energia_conc", "energia_hidro", "combustible", "explosivos", "total"]
-    }
-
-    # Simple delta Mes/YTD
-    dev_mes    = _compute_simple_delta(end_r, end_b, "mes", p["desarrollo_mina"])
-    dev_ytd    = _compute_simple_delta(end_r, end_b, "ytd", p["desarrollo_mina"])
-    dev_mes_items = {it["key"]: _compute_dm_item(end_r, end_b, "mes", it) for it in dm_items}
-    dev_ytd_items = {it["key"]: _compute_dm_item(end_r, end_b, "ytd", it) for it in dm_items}
-    varinv_mes = _compute_simple_delta(end_r, end_b, "mes", p["variacion_inventario"])
-    varinv_ytd = _compute_simple_delta(end_r, end_b, "ytd", p["variacion_inventario"])
+    # Simple delta Mes/YTD — Mes from last column, YTD from sum of columns
+    dev_mes       = col_dev[-1] if col_dev else None
+    dev_ytd       = _sum_or_none(col_dev)
+    dev_mes_items = col_dev_items[-1] if col_dev_items else {}
+    dev_ytd_items = {it["key"]: _sum_or_none([d.get(it["key"]) for d in col_dev_items]) for it in dm_items}
+    varinv_mes    = col_varinv[-1] if col_varinv else None
+    varinv_ytd    = _sum_or_none(col_varinv)
 
     # Actividad contexto Mes/YTD
-    act_ctx_mes = _compute_actividad_contexto(end_r, end_b, "mes", p, _tc_factor(año_fin, mes_fin))
+    act_ctx_mes = col_act_ctx[-1] if col_act_ctx else {k: None for k in ["mov_mina", "actividad_mina", "actividad_conc", "actividad_hidro"]}
     act_ctx_ytd = {
         k: _sum_or_none([d[k] for d in col_act_ctx])
         for k in ["mov_mina", "actividad_mina", "actividad_conc", "actividad_hidro"]
     }
 
     def build_series(section: str, key: str) -> dict:
-        if section == "delta_gasto_precio":
-            ytd_val = ytd_gasto_override[key]
-        elif section == "delta_rendimiento":
-            ytd_val = ytd_rend_override[key]
-        else:
-            ytd_val = ytd_deltas[section][key]
         return {
             "vals": [cd[section][key] for cd in col_deltas],
-            "mes":  mes_deltas[section][key],
-            "ytd":  ytd_val,
+            "mes":  col_deltas[-1][section][key] if col_deltas else None,
+            "ytd":  _sum_cols(section, key),
         }
 
     def section_series(section: str, keys: list[str]) -> dict:
@@ -505,6 +865,8 @@ def get_calculos(
             ["trat_concentradora", "trat_hidro", "rec_concentradora", "rec_hidro", "total"]),
         "efecto_ley": section_series("efecto_ley",
             ["concentradora", "hidro", "total"]),
+        "efectos_tcrc":  section_series("efectos_tcrc",  ["cantidades", "tarifas", "total"]),
+        "efectos_comer": section_series("efectos_comer", ["cantidades", "tarifas", "total"]),
         "desarrollo_mina": {
             "items": [
                 {
@@ -533,4 +895,8 @@ def get_calculos(
             }
             for k in ["mov_mina", "actividad_mina", "actividad_conc", "actividad_hidro"]
         },
+        "efecto_precio_subprod":   subprod_effects["efecto_precio"],
+        "efecto_cantidad_subprod": subprod_effects["efecto_cantidad"],
+        "creditos_subprod":        subprod_effects["creditos"],
+        "tcrc": tcrc_data,
     }

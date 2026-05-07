@@ -91,6 +91,39 @@
     .company-tab.active { background:var(--teal); border-color:var(--teal); color:white; }
     .map-summary { font-size:.82rem; color:#666; margin-bottom:12px; }
     .map-summary strong { color:var(--teal); }
+
+    /* ── Table utilities ── */
+    .tbl-sec { background:#1A3A4A; color:white; font-weight:700; padding:5px 10px; font-size:.73rem; letter-spacing:.05em; text-transform:uppercase; }
+    .tbl-subhd { background:#d4e8ee; color:#1A3A4A; font-weight:700; padding:4px 14px; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; border-top:1px solid #9ac8d8; border-bottom:1px solid #9ac8d8; }
+    .tbl-amber { background:#92400e; color:white; font-weight:700; padding:7px 12px; font-size:.75rem; letter-spacing:.04em; text-transform:uppercase; }
+    .tbl-th-c1 { padding:5px 8px; text-align:right; font-size:.7rem; color:white; background:#1A6575; white-space:nowrap; font-weight:600; }
+    .tbl-th-c2 { padding:5px 8px; text-align:right; font-size:.7rem; color:white; background:#8a6000; white-space:nowrap; font-weight:600; }
+    .tbl-kpi { padding:4px 10px; font-weight:600; position:sticky; left:0; background:inherit; z-index:1; border-right:1px solid #eee; white-space:nowrap; min-width:200px; }
+    .tbl-ud { padding:4px 8px; color:#888; text-align:center; border-right:1px solid #eee; font-size:.76rem; }
+    .tbl-val { padding:3px 7px; text-align:right; font-size:.76rem; white-space:nowrap; }
+    .tbl-tot { padding:4px 10px; font-weight:700; background:#f0f9f9; position:sticky; left:0; z-index:1; border-right:1px solid #eee; white-space:nowrap; }
+    .tbl-tot-val { padding:3px 7px; text-align:right; font-size:.76rem; font-weight:700; background:#f0f9f9; white-space:nowrap; }
+    /* ── Visualizar KPI table ── */
+    .viz-hcol { padding:5px 7px; text-align:right; font-size:.7rem; color:white; background:#1A3A4A; white-space:nowrap; font-weight:600; }
+    .viz-col { padding:3px 7px; text-align:right; font-size:.76rem; white-space:nowrap; }
+    .viz-kpi { padding:4px 10px; font-weight:600; position:sticky; left:0; z-index:1; border-right:1px solid #eee; vertical-align:middle; }
+    .viz-unit { padding:4px 8px; color:#888; text-align:center; border-right:1px solid #eee; vertical-align:middle; }
+    .viz-tag1 { padding:4px 7px; font-size:.7rem; font-weight:700; color:#4EC3C3; border-left:2px solid #4EC3C3; white-space:nowrap; text-align:center; background:#f4fdfd; }
+    .viz-tag2 { padding:4px 7px; font-size:.7rem; font-weight:700; color:#F5A800; border-left:2px solid #F5A800; white-space:nowrap; text-align:center; background:#fffbf0; }
+    .viz-mes1 { padding:3px 7px; text-align:right; font-size:.76rem; white-space:nowrap; background:#f0f9f9; font-weight:600; }
+    .viz-mes2 { padding:3px 7px; text-align:right; font-size:.76rem; white-space:nowrap; background:#fef9ec; font-weight:600; }
+    /* ── Formulas tab ── */
+    .fm-grp-hd { background:#1A3A4A; color:white; font-weight:700; padding:8px 14px; font-size:.8rem; letter-spacing:.04em; text-transform:uppercase; }
+    .fm-amber-hd { background:#92400e; color:white; font-weight:700; padding:8px 14px; font-size:.8rem; letter-spacing:.04em; text-transform:uppercase; }
+    .fm-inp { flex:1; padding:5px 9px; border:2px solid #10b981; border-radius:5px; font-size:.82rem; min-width:220px; background:#f0fdf4; }
+    .fm-amber-inp { padding:5px 9px; border:2px solid #f59e0b; border-radius:5px; font-size:.82rem; min-width:220px; background:#fffbf0; }
+    .fm-num-inp { padding:5px 9px; border:2px solid #f59e0b; border-radius:5px; font-size:.82rem; width:130px; background:#fffbf0; }
+    /* ── Params tab ── */
+    .params-inp { width:68px; padding:3px 5px; border:1px solid #ddd; border-radius:4px; font-size:.8rem; text-align:right; }
+    .params-td { padding:4px 6px; text-align:center; border-bottom:1px solid #f0f0f0; }
+    /* ── Shared ── */
+    .err  { color:var(--red); font-size:.88rem; margin-bottom:12px; }
+    .hint { color:#aaa; }
   </style>
 </head>
 <body>
@@ -101,7 +134,7 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio',
                'Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -124,9 +157,31 @@ async function apiPut(path, body) {
   if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||'Error del servidor'); }
   return r.json();
 }
+async function apiDelete(path) {
+  const r = await fetch(path, { method:'DELETE' });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||'Error del servidor'); }
+  return r.json();
+}
+
+/* ─── Custom hook: async state ─── */
+function useAsyncState() {
+  const [s, setS] = useState({ loading:false, error:'', data:null });
+  const run = useCallback(async (promise) => {
+    setS({ loading:true, error:'', data:null });
+    try    { setS({ loading:false, error:'', data: await promise }); }
+    catch(e){ setS({ loading:false, error:e.message||'Error', data:null }); }
+  }, []);
+  return [s.data, s.loading, s.error, run];
+}
 
 /* ─── Shared components ─── */
-function Header({ tab, setTab }) {
+function Header({ tab, setTab, period }) {
+  function excelUrl() {
+    const enc = encodeURIComponent;
+    const { tipo1, a1ini, m1ini, a1fin, m1fin, tipo2, a2ini, m2ini, a2fin, m2fin } = period;
+    return `/api/export/excel?tipo1=${enc(tipo1)}&año1_ini=${a1ini}&mes1_ini=${m1ini}&año1_fin=${a1fin}&mes1_fin=${m1fin}`
+         + `&tipo2=${enc(tipo2)}&año2_ini=${a2ini}&mes2_ini=${m2ini}&año2_fin=${a2fin}&mes2_fin=${m2fin}`;
+  }
   return (
     <div className="header">
       <div>
@@ -134,202 +189,26 @@ function Header({ tab, setTab }) {
         <p>Automatización de Reportes</p>
       </div>
       <div className="nav-tabs">
-        <button className={`nav-tab ${tab==='auto'?'active':''}`} onClick={()=>setTab('auto')}>▶ Automatización</button>
-        <button className={`nav-tab ${tab==='mapeos'?'active':''}`} onClick={()=>setTab('mapeos')}>⚙ Configurar Mapeos</button>
-        <button className={`nav-tab ${tab==='viz'?'active':''}`} onClick={()=>setTab('viz')}>📊 Visualizar</button>
-        <button className={`nav-tab ${tab==='params'?'active':''}`} onClick={()=>setTab('params')}>$ Parámetros</button>
-        <button className={`nav-tab ${tab==='formulas'?'active':''}`} onClick={()=>setTab('formulas')}>🔬 Fórmulas</button>
+        <button className={`nav-tab ${tab==='mapeos'?'active':''}`} onClick={()=>setTab('mapeos')}>Configuración</button>
+        <button className={`nav-tab ${tab==='params'?'active':''}`} onClick={()=>setTab('params')}>Parámetros</button>
+        <button className={`nav-tab ${tab==='formulas'?'active':''}`} onClick={()=>setTab('formulas')}>Fórmulas</button>
+        <button className={`nav-tab ${tab==='viz'?'active':''}`} onClick={()=>setTab('viz')}>Visualizar Input</button>
+        <button className={`nav-tab ${tab==='analisis'?'active':''}`} onClick={()=>setTab('analisis')}>Análisis Costo</button>
+        <button className={`nav-tab ${tab==='costos_aj'?'active':''}`} onClick={()=>setTab('costos_aj')}>Costos Ajustados</button>
+        <button className={`nav-tab ${tab==='cm'?'active':''}`} onClick={()=>setTab('cm')}>Costos Aj Mes (CM)</button>
+        <button className={`nav-tab ${tab==='explicaciones'?'active':''}`} onClick={()=>setTab('explicaciones')}>Explicaciones</button>
+        <a href={excelUrl()} className="btn-dl"
+           style={{padding:'6px 14px', fontSize:'.82rem', borderRadius:'6px', marginLeft:'8px'}}
+           title="Descargar reporte completo Excel (todas las compañías y secciones)">
+          ↓ Reporte
+        </a>
       </div>
     </div>
   );
 }
 
-function LogPanel({ logs }) {
-  const ref = useRef(null);
-  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [logs]);
-  return (
-    <div className="card">
-      <div className="card-title">Registro de actividad</div>
-      <div className="log-box" ref={ref}>
-        {logs.length===0 ? <span className="li">Sin actividad aún.</span>
-          : logs.map((l,i)=>(
-            <span key={i} className={l.type==='ok'?'lok':l.type==='warn'?'lw':l.type==='error'?'ler':'li'}>
-              {l.time} {l.message}
-            </span>
-          ))
-        }
-      </div>
-    </div>
-  );
-}
 
-function StatusCard({ result }) {
-  const noMap = result.companies?.reduce((s,c)=>s+c.kpis_no_mapeados,0)||0;
-  return (
-    <div className="card">
-      <div className="card-title">Resultado de la automatización</div>
-      <div className="stat-grid">
-        <div className="stat"><div className="stat-n">{result.total_escritos}</div><div className="stat-lbl">KPIs escritos</div></div>
-        <div className="stat"><div className="stat-n">{result.companies?.length||0}</div><div className="stat-lbl">Compañías</div></div>
-        <div className="stat"><div className={`stat-n ${noMap>0?'warn':''}`}>{noMap}</div><div className="stat-lbl">Sin mapear</div></div>
-      </div>
-      <div className="pills">
-        {result.companies?.map(c=>(
-          <span key={c.compania} className={`pill ${c.kpis_no_mapeados>0?'pill-warn':'pill-ok'}`}>
-            {c.compania}: {c.kpis_escritos} escritos{c.kpis_no_mapeados>0?`, ${c.kpis_no_mapeados} sin mapear`:''}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PreviewTable({ preview }) {
-  const rows = preview.kpis || [];
-  return (
-    <div className="card">
-      <div className="card-title">Vista previa — {preview.matched_kpis} mapeados, {preview.unmatched_kpis} sin mapear</div>
-      <div className="tbl-wrap">
-        <table>
-          <thead>
-            <tr><th>Compañía</th><th>KPI</th><th>Categoría</th><th>Mes</th><th>YTD</th><th>Estado</th></tr>
-          </thead>
-          <tbody>
-            {rows.slice(0,60).map((r,i)=>(
-              <tr key={i}>
-                <td>{r.compania}</td>
-                <td>{r.kpi}</td>
-                <td>{r.category}</td>
-                <td>{r.valores?.mes!=null ? Number(r.valores.mes).toLocaleString('es-CL') : '—'}</td>
-                <td>{r.valores?.ytd!=null ? Number(r.valores.ytd).toLocaleString('es-CL') : '—'}</td>
-                <td><span className={`badge ${r.matched?'badge-ok':'badge-miss'}`}>{r.matched?'Mapeado':'Sin mapear'}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {rows.length>60 && <p style={{fontSize:'.8rem',color:'#888',padding:'8px 12px'}}>Mostrando primeras 60 de {rows.length} filas</p>}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Tab: Automatización ─── */
-function AutoTab() {
-  const [periodos, setPeriodos]        = useState({ anios:[NOW.getFullYear()], tipos:['Real'] });
-  const [anio, setAnio]                = useState(NOW.getFullYear());
-  const [mes, setMes]                  = useState(NOW.getMonth()+1);
-  const [tipo, setTipo]                = useState('Real');
-  const [companies, setCompanies]      = useState([...COMPANIES]);
-  const [preview, setPreview]          = useState(null);
-  const [result, setResult]            = useState(null);
-  const [logs, setLogs]                = useState([]);
-  const [loadingP, setLoadingP]        = useState(true);
-  const [loadingPv, setLoadingPv]      = useState(false);
-  const [loadingR, setLoadingR]        = useState(false);
-
-  function addLog(msg, type='info') {
-    const time = new Date().toLocaleTimeString('es-CL');
-    setLogs(p=>[...p,{message:msg, type, time:`[${time}]`}]);
-  }
-
-  useEffect(()=>{
-    apiGet('/api/periodos')
-      .then(d=>{
-        setPeriodos(d);
-        if(d.anios?.length) setAnio(Math.max(...d.anios));
-        if(d.tipos?.length) setTipo(d.tipos.includes('Real')?'Real':d.tipos[0]);
-        addLog('Períodos cargados.','ok');
-      })
-      .catch(()=>addLog('No se pudo conectar con el servidor.','error'))
-      .finally(()=>setLoadingP(false));
-  },[]);
-
-  function toggleCo(c){ setCompanies(p=>p.includes(c)?p.filter(x=>x!==c):[...p,c]); setPreview(null); setResult(null); }
-
-  async function handlePreview(){
-    if(!companies.length){addLog('Selecciona al menos una compañía.','warn');return;}
-    setLoadingPv(true); setPreview(null); setResult(null);
-    addLog(`Vista previa — año ${anio}, mes ${MESES[mes]}, tipo ${tipo}…`);
-    try{
-      const d=await apiPost('/api/preview',{anio,mes,tipo,companies});
-      setPreview(d);
-      addLog(`${d.matched_kpis} KPIs mapeados, ${d.unmatched_kpis} sin mapear.`,d.unmatched_kpis>0?'warn':'ok');
-    }catch(e){ addLog(e.message||'Error.','error'); }
-    finally{ setLoadingPv(false); }
-  }
-
-  async function handleRun(){
-    if(!companies.length){addLog('Selecciona al menos una compañía.','warn');return;}
-    setLoadingR(true); setResult(null);
-    addLog(`Ejecutando — año ${anio}, mes ${MESES[mes]}, tipo ${tipo}…`);
-    try{
-      const d=await apiPost('/api/ejecutar',{anio,mes,tipo,companies});
-      setResult(d);
-      addLog(`✓ Excel generado: ${d.archivo_salida} — ${d.total_escritos} KPIs escritos.`,'ok');
-      d.companies?.forEach(c=>{ if(c.kpis_no_mapeados>0) addLog(`${c.compania}: ${c.kpis_no_mapeados} sin mapear.`,'warn'); });
-    }catch(e){ addLog(e.message||'Error.','error'); }
-    finally{ setLoadingR(false); }
-  }
-
-  const busy = loadingPv||loadingR;
-  return (
-    <div className="main">
-      <div className="card">
-        <div className="card-title">Configuración del período</div>
-        {loadingP ? <p style={{color:'#aaa',fontSize:'.9rem'}}><span className="spin"/>Cargando períodos…</p> : (
-          <>
-            <div className="form-row" style={{marginBottom:'18px'}}>
-              <div className="form-group">
-                <label>Año</label>
-                <select value={anio} disabled={busy} onChange={e=>{setAnio(Number(e.target.value));setPreview(null);setResult(null);}}>
-                  {(periodos.anios||[NOW.getFullYear()]).map(a=><option key={a} value={a}>{a}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Mes</label>
-                <select value={mes} disabled={busy} onChange={e=>{setMes(Number(e.target.value));setPreview(null);setResult(null);}}>
-                  {Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>{MESES[m]}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Tipo</label>
-                <select value={tipo} disabled={busy} onChange={e=>{setTipo(e.target.value);setPreview(null);setResult(null);}}>
-                  {(periodos.tipos||['Real']).map(t=><option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="divider-lbl">Compañías</div>
-            <div className="checkbox-row">
-              {COMPANIES.map(c=>(
-                <label key={c} className={`chip ${companies.includes(c)?'on':''}`}>
-                  <input type="checkbox" checked={companies.includes(c)} onChange={()=>toggleCo(c)} disabled={busy}/>{c}
-                </label>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="btn-row">
-        <button className="btn btn-secondary" onClick={handlePreview} disabled={busy||loadingP}>
-          {loadingPv?<><span className="spin"/>Cargando…</>:'🔍 Vista previa'}
-        </button>
-        <button className="btn btn-primary" onClick={handleRun} disabled={busy||loadingP}>
-          {loadingR?<><span className="spin"/>Ejecutando…</>:'▶ Ejecutar automatización'}
-        </button>
-        {result?.archivo_salida && (
-          <a href={`/api/descargar/${result.archivo_salida}`} download className="btn-dl">⬇ Descargar Excel</a>
-        )}
-      </div>
-
-      {result && <StatusCard result={result}/>}
-      {preview && !result && <PreviewTable preview={preview}/>}
-      <LogPanel logs={logs}/>
-    </div>
-  );
-}
-
-/* ─── Tab: Configurar Mapeos ─── */
+/* ─── Tab: Mapeos Excel ─── */
 function MapeosTab() {
   const [company, setCompany]        = useState('MLP');
   const [excelKpis, setExcelKpis]    = useState([]);
@@ -342,15 +221,30 @@ function MapeosTab() {
   const [saving, setSaving]          = useState(false);
   const [saved, setSaved]            = useState(false);
   const [error, setError]            = useState('');
-
+  const [selectedId, setSelectedId]  = useState(null);
+  const [pqFilter, setPqFilter]      = useState('');
+  const [pqSheet, setPqSheet]        = useState('');
+  const [activePqKpi, setActivePqKpi]= useState(null);   // KPI del parquet listo para asignar
+  const [dragOver, setDragOver]      = useState(null);
+  const [configSubTab, setConfigSubTab] = useState('kpis');
   // _id = String(array-index), _lk = "Section||Label" for backend
   const enrichedKpis = React.useMemo(() => {
-    let sec = '';
+    let sec = '', subhdr = '';
     return excelKpis.map((k, i) => {
-      if (k.type === 'header') { sec = k.label; return k; }
-      return { ...k, section: sec, _id: String(i), _lk: `${sec}||${k.label}` };
+      if (k.type === 'header')    { sec = k.label; subhdr = ''; return k; }
+      if (k.type === 'subheader') { subhdr = k.label; return k; }
+      const lk = subhdr ? `${sec}||${subhdr}||${k.label}` : `${sec}||${k.label}`;
+      return { ...k, section: sec, _id: String(i), _lk: lk };
     });
   }, [excelKpis]);
+
+  const enrichedKpisForTab = React.useMemo(() => {
+    let inCostos = false;
+    return enrichedKpis.filter(k => {
+      if (k.type === 'header') inCostos = k.label === 'Costos Ajustados';
+      return configSubTab === 'kpis' ? !inCostos : inCostos;
+    });
+  }, [enrichedKpis, configSubTab]);
 
   useEffect(() => {
     setLoading(true); setError('');
@@ -362,15 +256,18 @@ function MapeosTab() {
     .then(([excel, parquet, saved]) => {
       const kpis = excel.kpis || [];
       setExcelKpis(kpis);
-      setParquetKpis(parquet.kpis || []);
+      // parquet.kpis is [{name, hoja, title}]; build lookup map too
+      const pKpis = (parquet.kpis || []).map(k => typeof k === 'string' ? {name:k, hoja:'', title:''} : k);
+      setParquetKpis(pKpis);
       setLabelMappings(saved || {});
       // Convert label-keyed saved maps → index-keyed for UI
-      let sec = '';
+      let sec = '', subhdr = '';
       const converted = {};
       const cmap = (saved || {})[company] || {};
       kpis.forEach((k, i) => {
-        if (k.type === 'header') { sec = k.label; return; }
-        const lk = `${sec}||${k.label}`;
+        if (k.type === 'header')    { sec = k.label; subhdr = ''; return; }
+        if (k.type === 'subheader') { subhdr = k.label; return; }
+        const lk = subhdr ? `${sec}||${subhdr}||${k.label}` : `${sec}||${k.label}`;
         if (cmap[lk] !== undefined) converted[String(i)] = cmap[lk];
       });
       setUiMaps(converted);
@@ -431,25 +328,93 @@ function MapeosTab() {
     }
   }
 
-  const kpiRows  = enrichedKpis.filter(k => k.type==='kpi');
+  const kpiRows  = enrichedKpisForTab.filter(k => k.type==='kpi');
   const mapped   = kpiRows.filter(k => uiMaps[k._id] && uiMaps[k._id]!=='__NA__');
   const na       = kpiRows.filter(k => uiMaps[k._id]==='__NA__');
   const unmapped = kpiRows.filter(k => !uiMaps[k._id]);
 
+  // Build name → {hojas: Set, title} — un KPI puede aparecer en múltiples hojas
+  const hojaMap = React.useMemo(() => {
+    const m = {};
+    parquetKpis.forEach(k => {
+      if (!k.name) return;
+      if (!m[k.name]) m[k.name] = { hojas: new Set(), title: k.title||'' };
+      if (k.hoja) m[k.name].hojas.add(k.hoja);
+    });
+    return m;
+  }, [parquetKpis]);
+
+  const sheets = React.useMemo(() => {
+    const s = new Set();
+    parquetKpis.forEach(k => { if (k.hoja) s.add(k.hoja); });
+    return [...s].sort();
+  }, [parquetKpis]);
+
+  const filteredPq = React.useMemo(() => {
+    const fl = pqFilter.toLowerCase();
+    const filtered = parquetKpis.filter(k => {
+      if (pqSheet && k.hoja !== pqSheet) return false;
+      if (!fl) return true;
+      return k.name.toLowerCase().includes(fl) || (k.title||'').toLowerCase().includes(fl) || (k.hoja||'').toLowerCase().includes(fl);
+    });
+    // Sin hoja seleccionada: deduplicar por nombre (mostrar una vez cada KPI)
+    if (!pqSheet) {
+      const seen = new Set();
+      return filtered.filter(k => { if (seen.has(k.name)) return false; seen.add(k.name); return true; });
+    }
+    return filtered;
+  }, [parquetKpis, pqFilter, pqSheet]);
+
+  function assignPqKpi(name) {
+    if (!selectedId) return;
+    setKpiVal(selectedId, name);
+  }
+
+  const selectedKpiItem = selectedId ? enrichedKpis.find(k => k._id === selectedId) : null;
+
+  function handleRowClick(id, e) {
+    if (['INPUT','SELECT','BUTTON'].includes(e.target.tagName)) return;
+    setSelectedId(id === selectedId ? null : id);
+  }
+
+  function HojaLabel({src}) {
+    if (!src || typeof src !== 'string' || !src.trim()) return null;
+    const match = parquetKpis.find(k => k.name === src.trim());
+    if (!match || !match.hoja) return null;
+    return (
+      <span style={{fontSize:'.65rem', color:'#0369a1', paddingLeft:'2px', whiteSpace:'nowrap'}}>
+        {match.hoja}
+      </span>
+    );
+  }
+
   return (
-    <div className="main">
+    <div className="main" style={{maxWidth:'1500px'}}>
       <div className="card">
-        <div className="card-title">Configurar Mapeos KPI</div>
-        <p style={{fontSize:'.88rem',color:'#555',marginBottom:'16px',lineHeight:'1.5'}}>
-          Para cada KPI del Excel, elige el nombre equivalente en el Parquet (Libro_Gestion).
-          El mapeo se guarda permanentemente y se usa en todas las ejecuciones.
-        </p>
-        <div className="company-tabs">
-          {COMPANIES.map(c=>(
-            <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>
-              {c}
-            </button>
+        <div className="card-title">Configuración de KPIs</div>
+        <div style={{display:'flex',gap:'8px',marginBottom:'12px',borderBottom:'2px solid #e5e7eb'}}>
+          {[['kpis','Mapeo KPIs'],['costos_aj','Costos Ajustados']].map(([k,l])=>(
+            <button key={k} onClick={()=>{setConfigSubTab(k);setSelectedId(null);}} style={{
+              padding:'6px 16px', fontSize:'.82rem', fontWeight:'600', cursor:'pointer',
+              border:'none', borderBottom: configSubTab===k ? '2px solid var(--navy)' : '2px solid transparent',
+              background:'none', color: configSubTab===k ? 'var(--navy)' : '#6b7280',
+              marginBottom:'-2px', transition:'color .15s',
+            }}>{l}</button>
           ))}
+        </div>
+        <div style={{display:'flex',gap:'16px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}}>
+          <div className="company-tabs" style={{marginBottom:0}}>
+            {COMPANIES.map(c=>(
+              <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>{setCompany(c);setSelectedId(null);}}>
+                {c}
+              </button>
+            ))}
+          </div>
+          {!loading && !error && kpiRows.length > 0 && (
+            <p className="map-summary" style={{marginBottom:0}}>
+              <strong>{mapped.length}</strong> mapeados · <strong>{na.length}</strong> N/A · <strong style={{color:unmapped.length>0?'var(--amber)':'inherit'}}>{unmapped.length}</strong> pendientes de {kpiRows.length}
+            </p>
+          )}
         </div>
 
         {loading && <p style={{color:'#aaa'}}><span className="spin"/>Cargando KPIs de {company}…</p>}
@@ -457,53 +422,125 @@ function MapeosTab() {
 
         {!loading && !error && excelKpis.length > 0 && (
           <>
-            <p className="map-summary">
-              <strong>{mapped.length}</strong> mapeados · <strong>{na.length}</strong> no aplica · <strong style={{color:unmapped.length>0?'var(--amber)':'inherit'}}>{unmapped.length}</strong> pendientes de {kpiRows.length} KPIs en {company}.
-            </p>
+            {/* ── Layout dividido: tabla izquierda + browser parquet derecha ── */}
+            <div style={{display:'flex',gap:'12px',alignItems:'flex-start'}}>
 
-            <div className="tbl-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{width:'90px'}}>Código</th>
-                    <th>KPI en Excel</th>
-                    <th style={{width:'70px'}}>Unidad</th>
-                    <th>KPI en Parquet (busca y selecciona)</th>
-                    <th style={{width:'100px'}}>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {enrichedKpis.map((k,i)=>{
-                    if(k.type==='header') return (
-                      <tr key={`h-${i}`}>
-                        <td colSpan={5} style={{
-                          background:'var(--navy)', color:'white',
-                          fontWeight:'700', fontSize:'.82rem',
-                          padding:'8px 12px', letterSpacing:'.04em',
-                          textTransform:'uppercase'
-                        }}>{k.label}</td>
-                      </tr>
-                    );
-                    const id      = k._id;
-                    const raw     = uiMaps[id];
-                    const isNA    = raw === '__NA__';
-                    const isForm  = !isNA && typeof raw === 'object' && raw?._f;
-                    const sources = (isNA || isForm) ? [] : Array.isArray(raw) ? raw : (raw ? [raw] : ['']);
-                    const isMapped = isNA ? false : isForm ? !!(raw.a && raw.b) : sources.some(s=>s&&s.trim());
-                    const isMulti  = sources.length > 1;
-                    const selStyle = {flex:1, padding:'5px 8px', border:'2px solid #10b981', borderRadius:'5px',
-                                      fontSize:'.82rem', minWidth:'160px', background:'#f0fdf4'};
-                    return (
-                      <tr key={id}>
-                        <td style={{fontFamily:'monospace',fontSize:'.8rem',color:'#888'}}>{k.code}</td>
-                        <td style={{fontWeight:'600'}}>{k.label}</td>
-                        <td style={{color:'#888',fontSize:'.82rem'}}>{k.unit}</td>
-                        <td>
-                          {isNA ? (
+              {/* Panel izquierdo: tabla Excel KPIs */}
+              <div style={{flex:1,minWidth:0,overflowX:'auto'}}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{width:'80px'}}>Código</th>
+                      <th>KPI en Excel</th>
+                      <th style={{width:'60px'}}>Ud.</th>
+                      <th>Mapeo en Parquet</th>
+                      <th style={{width:'88px'}}>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {enrichedKpisForTab.map((k,i)=>{
+                      if(k.type==='header') return (
+                        <tr key={`h-${i}`}>
+                          <td colSpan={5} style={{
+                            background:'var(--navy)', color:'white',
+                            fontWeight:'700', fontSize:'.82rem',
+                            padding:'8px 12px', letterSpacing:'.04em',
+                            textTransform:'uppercase'
+                          }}>{k.label}</td>
+                        </tr>
+                      );
+                      if(k.type==='subheader') return (
+                        <tr key={`sh-${i}`}>
+                          <td colSpan={5} className="tbl-subhd">{k.label}</td>
+                        </tr>
+                      );
+                      const id      = k._id;
+                      const raw     = uiMaps[id];
+                      const isNA     = raw === '__NA__';
+                      const isForm   = !isNA && typeof raw === 'object' && !Array.isArray(raw) && raw?._f;
+                      const isScalar = !isNA && typeof raw === 'object' && !Array.isArray(raw) && raw?._s;
+                      const isRB     = !isNA && typeof raw === 'object' && !Array.isArray(raw) && raw?._rb;
+                      const sources  = (isNA || isForm || isScalar || isRB) ? [] : Array.isArray(raw) ? raw : (raw ? [raw] : ['']);
+                      const isMapped = isNA ? false
+                        : isForm   ? !!(raw.a && raw.b)
+                        : isScalar ? !!(raw.src && raw.src.trim() && raw.scalar != null)
+                        : isRB     ? !!(raw.real && raw.real.trim())
+                        : sources.some(s=>s&&s.trim());
+                      const isMulti  = sources.length > 1;
+                      const isSelected = selectedId === id;
+                      const isDragTarget = dragOver === id;
+                      const selStyle = {flex:1, padding:'5px 8px', border:'2px solid #10b981', borderRadius:'5px',
+                                        fontSize:'.82rem', minWidth:'160px', background:'#f0fdf4'};
+                      return (
+                        <tr key={id}
+                          onClick={e=>handleRowClick(id,e)}
+                          onDragOver={e=>{e.preventDefault();setDragOver(id);}}
+                          onDragLeave={()=>setDragOver(null)}
+                          onDrop={e=>{e.preventDefault();const name=e.dataTransfer.getData('pqKpi');if(name)setKpiVal(id,name);setDragOver(null);}}
+                          style={{
+                            cursor:'pointer',
+                            background: isDragTarget ? '#bfdbfe' : isSelected ? '#fef9c3' : undefined,
+                            outline: isDragTarget ? '2px solid #3b82f6' : undefined,
+                          }}
+                        >
+                          <td style={{fontFamily:'monospace',fontSize:'.8rem',color:'#888'}}>{k.code}</td>
+                          <td style={{fontWeight:'600'}}>{k.label}</td>
+                          <td style={{color:'#888',fontSize:'.82rem'}}>{k.unit}</td>
+                          <td>
+                            {isNA ? (
                             <span style={{fontSize:'.84rem',color:'#888',fontStyle:'italic'}}>
                               No aplica
                               <button onClick={()=>setKpiVal(id,'')} style={{marginLeft:'8px',background:'none',border:'none',cursor:'pointer',color:'var(--teal)',fontSize:'.78rem',fontWeight:'700'}}>Cambiar</button>
                             </span>
+                          ) : isRB ? (
+                            <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
+                              {[['real','Real'],['budget','Ppto']].map(([fld,lbl])=>(
+                                <div key={fld} style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
+                                  <span style={{width:'38px',fontSize:'.76rem',color:'#888',fontWeight:'600',flexShrink:0}}>{lbl}</span>
+                                  <div style={{flex:1,display:'flex',flexDirection:'column',gap:'1px'}}>
+                                    <input
+                                      className={`map-input ${raw[fld]&&raw[fld].trim()?'mapped':''}`}
+                                      list={`pq-${company}`}
+                                      value={raw[fld]||''}
+                                      placeholder="Escribe para buscar…"
+                                      autoComplete="off"
+                                      onChange={e=>setKpiVal(id,{...raw,[fld]:e.target.value})}
+                                    />
+                                    <HojaLabel src={raw[fld]||''}/>
+                                  </div>
+                                </div>
+                              ))}
+                              <div style={{display:'flex',gap:'6px'}}>
+                                <button onClick={()=>setKpiVal(id, raw.real||'')}
+                                  style={{background:'none',border:'1px solid #aaa',borderRadius:'4px',padding:'2px 7px',cursor:'pointer',fontSize:'.75rem',color:'#888'}}>Una columna</button>
+                              </div>
+                            </div>
+                          ) : isScalar ? (
+                            <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
+                              <div style={{flex:1,display:'flex',flexDirection:'column',gap:'1px'}}>
+                                <input
+                                  className={`map-input ${raw.src&&raw.src.trim()?'mapped':''}`}
+                                  list={`pq-${company}`}
+                                  value={raw.src||''}
+                                  placeholder="Escribe para buscar…"
+                                  autoComplete="off"
+                                  onChange={e=>setKpiVal(id,{...raw,src:e.target.value})}
+                                />
+                                <HojaLabel src={raw.src||''}/>
+                              </div>
+                              <select value={raw.op||'/'} onChange={e=>setKpiVal(id,{...raw,op:e.target.value})}
+                                style={{width:'46px',padding:'5px 4px',border:'2px solid #10b981',borderRadius:'5px',fontSize:'.95rem',textAlign:'center',background:'#f0fdf4',fontWeight:700}}>
+                                <option value="/">÷</option>
+                                <option value="*">×</option>
+                                <option value="+">+</option>
+                                <option value="-">−</option>
+                              </select>
+                              <input type="number" placeholder="escalar" value={raw.scalar??''}
+                                onChange={e=>setKpiVal(id,{...raw,scalar:e.target.value===''?null:Number(e.target.value)})}
+                                style={{width:'88px',padding:'5px 7px',border:'2px solid #10b981',borderRadius:'5px',fontSize:'.84rem',background:'#f0fdf4'}}/>
+                              <button onClick={()=>setKpiVal(id, raw.src||'')} title="Quitar escalar"
+                                style={{background:'none',border:'1px solid #aaa',borderRadius:'4px',padding:'3px 7px',cursor:'pointer',fontSize:'.75rem',color:'#888'}}>Quitar escalar</button>
+                            </div>
                           ) : isForm ? (
                             <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
                               <select style={selStyle} value={raw.a||''} onChange={e=>setKpiVal(id,{...raw,a:e.target.value})}>
@@ -539,17 +576,19 @@ function MapeosTab() {
                           ) : (
                             <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
                               {sources.map((s,idx)=>(
-                                <div key={idx} style={{display:'flex',gap:'4px',alignItems:'center'}}>
-                                  <input
-                                    className={`map-input ${s&&s.trim()?'mapped':''}`}
-                                    list={`pq-${company}`}
-                                    value={s}
-                                    placeholder="Escribe para buscar…"
-                                    autoComplete="off"
-                                    name={`kpi-${id}-${idx}`}
-                                    onChange={e=>setKpiSource(id, idx, e.target.value)}
-                                    style={{flex:1}}
-                                  />
+                                <div key={idx} style={{display:'flex',gap:'4px',alignItems:'center',flexWrap:'wrap'}}>
+                                  <div style={{flex:1,display:'flex',flexDirection:'column',gap:'1px'}}>
+                                    <input
+                                      className={`map-input ${s&&s.trim()?'mapped':''}`}
+                                      list={`pq-${company}`}
+                                      value={s}
+                                      placeholder="Escribe para buscar…"
+                                      autoComplete="off"
+                                      name={`kpi-${id}-${idx}`}
+                                      onChange={e=>setKpiSource(id, idx, e.target.value)}
+                                    />
+                                    <HojaLabel src={s}/>
+                                  </div>
                                   {sources.length>1 && (
                                     <button onClick={()=>removeKpiSource(id,idx)}
                                       title="Quitar esta fuente"
@@ -557,43 +596,148 @@ function MapeosTab() {
                                   )}
                                 </div>
                               ))}
-                              <div style={{display:'flex',gap:'6px'}}>
+                              <div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
                                 <button onClick={()=>addKpiSource(id)} title="Agregar otra fuente (suma)"
                                   style={{background:'none',border:'1px dashed var(--teal)',color:'var(--teal)',borderRadius:'4px',padding:'2px 8px',cursor:'pointer',fontSize:'.78rem',fontWeight:'700'}}>+ suma</button>
-                                <button onClick={()=>setKpiVal(id,{_f:true,a:'',op:'/',b:''})} title="Definir como fórmula"
+                                <button onClick={()=>setKpiVal(id,{_rb:true,real:sources[0]||'',budget:''})} title="Columnas distintas para Real y Presupuesto"
+                                  style={{background:'none',border:'1px dashed #6366f1',color:'#6366f1',borderRadius:'4px',padding:'2px 8px',cursor:'pointer',fontSize:'.78rem',fontWeight:'700'}}>Real/Ppto</button>
+                                <button onClick={()=>setKpiVal(id,{_s:true,src:sources[0]||'',op:'/',scalar:null})} title="Aplicar escalar al valor"
+                                  style={{background:'none',border:'1px dashed #10b981',color:'#10b981',borderRadius:'4px',padding:'2px 8px',cursor:'pointer',fontSize:'.78rem',fontWeight:'700'}}>÷ × escalar</button>
+                                <button onClick={()=>setKpiVal(id,{_f:true,a:'',op:'/',b:''})} title="Definir como fórmula entre dos KPIs"
                                   style={{background:'none',border:'1px dashed #10b981',color:'#10b981',borderRadius:'4px',padding:'2px 8px',cursor:'pointer',fontSize:'.78rem',fontWeight:'700'}}>÷ fórmula</button>
                               </div>
                             </div>
                           )}
-                        </td>
-                        <td style={{whiteSpace:'nowrap'}}>
-                          {isNA
-                            ? <span className="badge badge-partial">No aplica</span>
-                            : <span className={`badge ${isMapped?'badge-ok':'badge-miss'}`}>
-                                {isMapped ? (isForm ? 'Fórmula' : isMulti ? `Suma (${sources.length})` : 'Mapeado') : 'Pendiente'}
-                              </span>
-                          }
-                          {!isNA && (
-                            <button title="Marcar como No aplica" onClick={()=>setKpiVal(id,'__NA__')}
-                              style={{marginLeft:'6px',background:'none',border:'none',cursor:'pointer',color:'#aaa',fontSize:'.78rem'}}>N/A</button>
-                          )}
-                        </td>
-                      </tr>
+                          </td>
+                          <td style={{whiteSpace:'nowrap'}}>
+                            {activePqKpi && !isNA ? (
+                              <button
+                                onClick={e=>{e.stopPropagation();setKpiVal(id,activePqKpi);setActivePqKpi(null);}}
+                                style={{padding:'3px 8px',background:'#1A7080',color:'white',border:'none',borderRadius:'4px',cursor:'pointer',fontSize:'.78rem',fontWeight:700}}
+                                title={`Asignar "${activePqKpi}" a este KPI`}
+                              >← Asignar</button>
+                            ) : (
+                              <>
+                                {isNA
+                                  ? <span className="badge badge-partial">No aplica</span>
+                                  : <span className={`badge ${isMapped?'badge-ok':'badge-miss'}`}>
+                                      {isMapped ? (isForm ? 'Fórmula' : isScalar ? 'Escalar' : isRB ? 'Dual' : isMulti ? `Suma (${sources.length})` : 'Mapeado') : 'Pendiente'}
+                                    </span>
+                                }
+                                {!isNA && (
+                                  <button title="Marcar como No aplica" onClick={()=>setKpiVal(id,'__NA__')}
+                                    style={{marginLeft:'6px',background:'none',border:'none',cursor:'pointer',color:'#aaa',fontSize:'.78rem'}}>N/A</button>
+                                )}
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                <datalist id={`pq-${company}`}>
+                  {parquetKpis.map(k=><option key={k.name} value={k.name}>{k.hoja ? `[${k.hoja}] ${k.title||k.name}` : k.name}</option>)}
+                </datalist>
+              </div>
+
+              {/* Panel derecho: browser de KPIs del Parquet */}
+              <div style={{
+                width:'300px', flexShrink:0, position:'sticky', top:'16px',
+                background:'#f8fafb', borderRadius:'8px', border:'1px solid #dde3e7',
+                padding:'12px', maxHeight:'calc(100vh - 160px)', overflowY:'auto',
+                boxShadow:'0 2px 6px rgba(0,0,0,.06)', display:'flex', flexDirection:'column', gap:'8px',
+              }}>
+                <div style={{fontWeight:700, fontSize:'.85rem', color:'var(--teal)', paddingBottom:'6px', borderBottom:'2px solid var(--teal)'}}>
+                  KPIs disponibles en Parquet
+                </div>
+
+                {/* Indicador de KPI seleccionado */}
+                {/* Estado actual del panel */}
+                {activePqKpi ? (
+                  <div style={{background:'#d1fae5', border:'2px solid #10b981', borderRadius:'6px', padding:'10px', fontSize:'.82rem'}}>
+                    <div style={{color:'#065f46', fontWeight:700, fontSize:'.72rem', textTransform:'uppercase', marginBottom:'3px'}}>Listo para asignar:</div>
+                    <div style={{fontWeight:700, color:'#065f46', lineHeight:'1.3', wordBreak:'break-all'}}>{activePqKpi}</div>
+                    <div style={{color:'#047857', fontSize:'.75rem', marginTop:'4px'}}>
+                      Ahora haz clic en la fila de la tabla donde quieres asignarlo.
+                    </div>
+                    <button onClick={()=>setActivePqKpi(null)}
+                      style={{marginTop:'5px', background:'none', border:'1px solid #aaa', borderRadius:'4px', padding:'2px 7px', cursor:'pointer', color:'#666', fontSize:'.72rem'}}>
+                      Cancelar ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:'6px', padding:'8px', fontSize:'.78rem', color:'#1e40af', lineHeight:'1.5'}}>
+                    Haz clic en un KPI de la lista para cargarlo, luego haz clic en la fila del Excel para asignarlo.
+                  </div>
+                )}
+
+                {/* Filtros */}
+                <input
+                  value={pqFilter}
+                  onChange={e=>setPqFilter(e.target.value)}
+                  placeholder="Buscar KPI en parquet..."
+                  style={{padding:'6px 9px', border:'1px solid #d0d7de', borderRadius:'5px', fontSize:'.82rem', outline:'none', width:'100%'}}
+                />
+                {sheets.length > 0 && (
+                  <select value={pqSheet} onChange={e=>setPqSheet(e.target.value)}
+                    style={{padding:'6px 8px', border:'1px solid #d0d7de', borderRadius:'5px', fontSize:'.8rem', background:'white', width:'100%'}}>
+                    <option value="">Todas las hojas ({parquetKpis.length})</option>
+                    {sheets.map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+                )}
+
+                {/* Lista de KPIs del parquet */}
+                <div style={{display:'flex', flexDirection:'column', gap:'1px', overflowY:'auto', flex:1}}>
+                  {filteredPq.map(k => {
+                    const curVal = selectedId ? uiMaps[selectedId] : null;
+                    const isAssigned = typeof curVal === 'string' && curVal === k.name;
+                    const shortName  = k.name.includes('||') ? k.name.split('||').pop() : k.name;
+                    return (
+                      <div key={k.name}
+                        draggable={true}
+                        onDragStart={e=>{e.dataTransfer.setData('pqKpi', k.name); e.dataTransfer.effectAllowed='copy';}}
+                        onClick={()=>{
+                          if (selectedId) { assignPqKpi(k.name); }
+                          else { setActivePqKpi(activePqKpi === k.name ? null : k.name); }
+                        }}
+                        title={k.name + (k.title && k.title !== k.name ? ' — '+k.title : '')}
+                        style={{
+                          padding:'5px 7px', borderRadius:'4px', fontSize:'.78rem', lineHeight:'1.3',
+                          cursor: 'pointer',
+                          background: isAssigned ? '#d1fae5'
+                            : activePqKpi === k.name ? '#fef9c3'
+                            : 'transparent',
+                          border: isAssigned ? '1px solid #10b981'
+                            : activePqKpi === k.name ? '1px solid #f59e0b'
+                            : '1px solid transparent',
+                          fontWeight: activePqKpi === k.name ? 700 : undefined,
+                          transition:'background .1s',
+                        }}
+                        onMouseEnter={e=>{if(!isAssigned && activePqKpi !== k.name)e.currentTarget.style.background='#e0f2fe';}}
+                        onMouseLeave={e=>{if(!isAssigned && activePqKpi !== k.name)e.currentTarget.style.background='transparent';}}
+                      >
+                        {k.hoja && <span style={{fontSize:'.68rem', fontWeight:700, color:'#0369a1', background:'#dbeafe', padding:'0 4px', borderRadius:'8px', marginRight:'4px', whiteSpace:'nowrap'}}>{k.hoja}</span>}
+                        {shortName}
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
+                  {filteredPq.length === 0 && (
+                    <div style={{color:'#aaa', fontSize:'.8rem', textAlign:'center', padding:'16px'}}>
+                      Sin resultados
+                    </div>
+                  )}
+                </div>
+              </div>
 
-            <datalist id={`pq-${company}`}>
-              {parquetKpis.map(k=><option key={k} value={k}/>)}
-            </datalist>
+            </div>{/* fin layout dividido */}
 
-            <div style={{marginTop:'16px'}}>
+            <div style={{marginTop:'12px'}}>
               <button className="btn btn-success" onClick={handleSave} disabled={saving}>
-                {saving ? <><span className="spin"/>Guardando…</> : '💾 Guardar mapeos'}
+                {saving ? <><span className="spin"/>Guardando…</> : 'Guardar mapeos'}
               </button>
-              {saved && <span style={{marginLeft:'12px',color:'#059669',fontWeight:'600',fontSize:'.88rem'}}>✓ Guardado correctamente</span>}
+              {saved && <span style={{marginLeft:'12px',color:'#059669',fontWeight:'600',fontSize:'.88rem'}}>Guardado ✓</span>}
             </div>
           </>
         )}
@@ -606,6 +750,7 @@ function MapeosTab() {
           </p>
         )}
       </div>
+
     </div>
   );
 }
@@ -703,39 +848,119 @@ function PeriodBar({period, setters, tipos}) {
   );
 }
 
+function applyOverrides(data, overrides) {
+  if (!data || !overrides || Object.keys(overrides).length === 0) return data;
+  return {
+    ...data,
+    sections: data.sections.map(sec => ({
+      ...sec,
+      kpis: sec.kpis.map(kpi => {
+        if (kpi.type === 'subheader') return kpi;
+        const lkOvr = overrides[kpi.lk];
+        if (!lkOvr) return kpi;
+        const o1 = lkOvr[data.tipo1] || {};
+        const o2 = lkOvr[data.tipo2] || {};
+        return {
+          ...kpi,
+          vals1: kpi.vals1.map((v, i) => { const ck = `${data.cols1[i].year}_${data.cols1[i].month}`; return o1[ck] !== undefined ? o1[ck] : v; }),
+          vals2: kpi.vals2.map((v, i) => { const ck = `${data.cols2[i].year}_${data.cols2[i].month}`; return o2[ck] !== undefined ? o2[ck] : v; }),
+          mes1: o1['mes'] !== undefined ? o1['mes'] : kpi.mes1,
+          ytd1: o1['ytd'] !== undefined ? o1['ytd'] : kpi.ytd1,
+          mes2: o2['mes'] !== undefined ? o2['mes'] : kpi.mes2,
+          ytd2: o2['ytd'] !== undefined ? o2['ytd'] : kpi.ytd2,
+        };
+      })
+    }))
+  };
+}
+
 function VisualizarTab({period, tipos}) {
   const {tipo1, a1ini, m1ini, a1fin, m1fin, tipo2, a2ini, m2ini, a2fin, m2fin} = period;
-  const [company,     setCompany]     = useState('MLP');
-  const [data,        setData]        = useState(null);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState('');
-  const [hideNA,      setHideNA]      = useState(true);
-  const [calcData,    setCalcData]    = useState(null);
-  const [calcLoading, setCalcLoading] = useState(false);
-  const [calcError,   setCalcError]   = useState('');
+  const [company,   setCompany]   = useState('MLP');
+  const [hideNA,    setHideNA]    = useState(true);
+  const [data,      loading,      error,      runFetch] = useAsyncState();
+  const [calcData,  calcLoading,  calcError,  runCalc]  = useAsyncState();
+  const [overrides, setOverrides] = useState({});
+  const [editCell,  setEditCell]  = useState(null); // {lk, tipo, colkey, inputVal}
+
+  // Load overrides when company changes
+  useEffect(() => {
+    apiGet(`/api/overrides/${company}`).then(setOverrides).catch(() => setOverrides({}));
+  }, [company]);
+
+  const displayData = React.useMemo(() => applyOverrides(data, overrides), [data, overrides]);
+
+  function commitOverride(lk, tipo, colkey, rawVal) {
+    const val = parseFloat(String(rawVal).replace(',', '.'));
+    setOverrides(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      if (isNaN(val)) {
+        if (next[lk]?.[tipo]) delete next[lk][tipo][colkey];
+      } else {
+        if (!next[lk]) next[lk] = {};
+        if (!next[lk][tipo]) next[lk][tipo] = {};
+        next[lk][tipo][colkey] = val;
+      }
+      return next;
+    });
+  }
 
   function cargarCalculos() {
-    setCalcLoading(true); setCalcError(''); setCalcData(null);
-    apiGet(`/api/calculos/${company}?año_ini=${a1ini}&mes_ini=${m1ini}&año_fin=${a1fin}&mes_fin=${m1fin}`)
-      .then(setCalcData)
-      .catch(e => setCalcError(e.message || 'Error'))
-      .finally(() => setCalcLoading(false));
+    runCalc(apiGet(`/api/calculos/${company}?año_ini=${a1ini}&mes_ini=${m1ini}&año_fin=${a1fin}&mes_fin=${m1fin}`));
   }
 
   function cargar() {
-    setLoading(true); setError(''); setData(null);
+    // Save pending overrides, then reload (overrides applied client-side)
+    apiPost(`/api/overrides/${company}`, overrides).catch(e => console.error(e));
     const enc = encodeURIComponent;
     const q = `tipo1=${enc(tipo1)}&año1_ini=${a1ini}&mes1_ini=${m1ini}&año1_fin=${a1fin}&mes1_fin=${m1fin}`
             + `&tipo2=${enc(tipo2)}&año2_ini=${a2ini}&mes2_ini=${m2ini}&año2_fin=${a2fin}&mes2_fin=${m2fin}`;
-    apiGet(`/api/visualizar/${company}?${q}`)
-      .then(setData)
-      .catch(e=>setError(e.message||'Error'))
-      .finally(()=>setLoading(false));
+    runFetch(apiGet(`/api/visualizar/${company}?${q}`));
   }
 
-  const colStyle  = {padding:'3px 7px', textAlign:'right', fontSize:'.76rem', whiteSpace:'nowrap'};
-  const hColStyle = {padding:'5px 7px', textAlign:'right', fontSize:'.7rem', color:'white',
-                     background:'#1A3A4A', whiteSpace:'nowrap', fontWeight:600};
+  function cargarDeFuente() {
+    // Clear overrides for this company, then reload from parquet
+    apiDelete(`/api/overrides/${company}`).catch(e => console.error(e));
+    setOverrides({});
+    const enc = encodeURIComponent;
+    const q = `tipo1=${enc(tipo1)}&año1_ini=${a1ini}&mes1_ini=${m1ini}&año1_fin=${a1fin}&mes1_fin=${m1fin}`
+            + `&tipo2=${enc(tipo2)}&año2_ini=${a2ini}&mes2_ini=${m2ini}&año2_fin=${a2fin}&mes2_fin=${m2fin}`;
+    runFetch(apiGet(`/api/visualizar/${company}?${q}`));
+  }
+
+  // Renders an editable table cell
+  function mkCell(v, lk, tipo, colkey, className, extraStyle) {
+    const ovrVal = overrides?.[lk]?.[tipo]?.[colkey];
+    const isOvr  = ovrVal !== undefined;
+    const dispVal = isOvr ? ovrVal : v;
+    const isEdit  = editCell?.lk === lk && editCell?.tipo === tipo && editCell?.colkey === colkey;
+    const bg = isOvr ? '#fffbe6' : (extraStyle?.background);
+    if (isEdit) {
+      return (
+        <td className={className} style={{...extraStyle, background:'#fffbe6', padding:'1px', outline:'2px solid #f5a800', outlineOffset:'-2px'}}>
+          <input type="number" step="any" autoFocus
+            defaultValue={editCell.inputVal}
+            style={{width:'100%', border:'none', background:'transparent', textAlign:'right',
+                    fontSize:'.76rem', padding:'2px 8px', outline:'none'}}
+            onKeyDown={e => {
+              if (e.key === 'Enter')  { commitOverride(lk, tipo, colkey, e.target.value); setEditCell(null); }
+              if (e.key === 'Escape') { setEditCell(null); }
+            }}
+            onBlur={e => { commitOverride(lk, tipo, colkey, e.target.value); setEditCell(null); }}
+          />
+        </td>
+      );
+    }
+    return (
+      <td className={className} style={{...extraStyle, background: bg, cursor:'cell'}}
+          title="Haz clic para editar"
+          onClick={() => setEditCell({lk, tipo, colkey, inputVal: dispVal != null ? dispVal : ''})}>
+        {fmt(dispVal)}
+      </td>
+    );
+  }
+
+  const hasOverrides = Object.keys(overrides).length > 0;
 
   return (
     <div className="main">
@@ -750,114 +975,87 @@ function VisualizarTab({period, tipos}) {
           </div>
           <button className="btn btn-primary" onClick={cargar} disabled={loading}
             style={{alignSelf:'flex-end', height:'38px'}}>
-            {loading?<><span className="spin"/>Cargando…</>:'📊 Cargar'}
+            {loading?<><span className="spin"/>Cargando…</>:'Cargar'}
           </button>
+          <button onClick={cargarDeFuente} disabled={loading} style={{
+            alignSelf:'flex-end', height:'38px', padding:'0 16px', border:'2px solid #fca5a5',
+            borderRadius:'6px', fontSize:'.84rem', fontWeight:600, cursor:'pointer',
+            background:'#fee2e2', color:'#991b1b'
+          }}>Cargar de la fuente</button>
           <button onClick={()=>setHideNA(v=>!v)} style={{
             alignSelf:'flex-end', height:'38px', padding:'0 16px', border:'2px solid var(--gray)',
             borderRadius:'6px', fontSize:'.84rem', fontWeight:600, cursor:'pointer',
-            background: hideNA?'#fee2e2':'white', color: hideNA?'#991b1b':'#666',
-            borderColor: hideNA?'#fca5a5':'var(--gray)'
-          }}>{hideNA ? '👁 Mostrar N/A' : '🙈 Ocultar N/A'}</button>
+            background: hideNA?'white':'#e0f2f1', color: '#444',
+            borderColor: 'var(--gray)'
+          }}>{hideNA ? 'Mostrar N/A' : 'Ocultar N/A'}</button>
+          {hasOverrides && (
+            <span style={{alignSelf:'center', fontSize:'.75rem', color:'#92400e', background:'#fffbe6',
+                          border:'1px solid #f5a800', borderRadius:'4px', padding:'3px 8px'}}>
+              ✎ Con ediciones manuales — celdas en amarillo
+            </span>
+          )}
         </div>
 
-        {error && <p style={{color:'var(--red)',fontSize:'.88rem',marginBottom:'12px'}}>{error}</p>}
+        {error && <p className="err">{error}</p>}
 
-        {data && (() => {
-          const nc1 = data.cols1.length, nc2 = data.cols2.length;
+        {displayData && (() => {
+          const d = displayData;
+          const nc1 = d.cols1.length, nc2 = d.cols2.length;
           const ncMax = Math.max(nc1, nc2);
-          const totalCols = 3 + ncMax + 2; // KPI + Ud + Tipo + max_months + Mes + YTD
+          const totalCols = 3 + ncMax + 2;
           const pad1 = ncMax - nc1, pad2 = ncMax - nc2;
-          const thC1 = {padding:'5px 8px', textAlign:'right', fontSize:'.7rem', color:'white',
-                        background:'#1A6575', whiteSpace:'nowrap', fontWeight:600};
-          const thC2 = {padding:'5px 8px', textAlign:'right', fontSize:'.7rem', color:'white',
-                        background:'#8a6000', whiteSpace:'nowrap', fontWeight:600};
-          const kpiCellSt = (bg) => ({padding:'4px 10px', fontWeight:600,
-            position:'sticky', left:0, background:bg, zIndex:1, borderRight:'1px solid #eee',
-            verticalAlign:'middle'});
-          const unitCellSt = {padding:'4px 8px', color:'#888', textAlign:'center',
-            borderRight:'1px solid #eee', verticalAlign:'middle'};
           return (
             <div className="tbl-wrap">
               <table style={{fontSize:'.76rem', borderCollapse:'collapse'}}>
                 <thead>
-                  {/* Comp1 header row */}
                   <tr>
-                    <th rowSpan={2} style={{...hColStyle, textAlign:'left', minWidth:'170px', position:'sticky', left:0, zIndex:2}}>KPI</th>
-                    <th rowSpan={2} style={{...hColStyle, width:'42px'}}>Ud.</th>
-                    <th style={{...thC1, minWidth:'58px', borderLeft:'2px solid #4EC3C3', textAlign:'center'}}>{data.tipo1}</th>
-                    {data.cols1.map((c,i)=>(
-                      <th key={`c1-${i}`} style={{...thC1}}>{c.label}</th>
-                    ))}
-                    <th style={{...thC1, background:'#0e4e5e'}}>Mes</th>
-                    <th style={{...thC1, background:'#0e4e5e'}}>YTD</th>
+                    <th rowSpan={2} className="viz-hcol" style={{textAlign:'left', minWidth:'170px', position:'sticky', left:0, zIndex:2}}>KPI</th>
+                    <th rowSpan={2} className="viz-hcol" style={{width:'42px'}}>Ud.</th>
+                    <th className="tbl-th-c1" style={{minWidth:'58px', borderLeft:'2px solid #4EC3C3', textAlign:'center'}}>{d.tipo1}</th>
+                    {d.cols1.map((c,i)=><th key={`c1-${i}`} className="tbl-th-c1">{c.label}</th>)}
+                    <th className="tbl-th-c1" style={{background:'#0e4e5e'}}>Mes</th>
+                    <th className="tbl-th-c1" style={{background:'#0e4e5e'}}>YTD</th>
                     {Array(pad1).fill(null).map((_,i)=><th key={i} style={{background:'#1A3A4A'}}></th>)}
                   </tr>
-                  {/* Comp2 header row */}
                   <tr>
-                    <th style={{...thC2, borderLeft:'2px solid #F5A800', textAlign:'center'}}>{data.tipo2}</th>
-                    {data.cols2.map((c,i)=>(
-                      <th key={`c2-${i}`} style={{...thC2}}>{c.label}</th>
-                    ))}
-                    <th style={{...thC2, background:'#5a3c00'}}>Mes</th>
-                    <th style={{...thC2, background:'#5a3c00'}}>YTD</th>
+                    <th className="tbl-th-c2" style={{borderLeft:'2px solid #F5A800', textAlign:'center'}}>{d.tipo2}</th>
+                    {d.cols2.map((c,i)=><th key={`c2-${i}`} className="tbl-th-c2">{c.label}</th>)}
+                    <th className="tbl-th-c2" style={{background:'#5a3c00'}}>Mes</th>
+                    <th className="tbl-th-c2" style={{background:'#5a3c00'}}>YTD</th>
                     {Array(pad2).fill(null).map((_,i)=><th key={i} style={{background:'#1A3A4A'}}></th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {data.sections.map((sec,si)=>{
+                  {d.sections.map((sec,si)=>{
                     const visKpis = hideNA
                       ? sec.kpis.filter(k => k.type === 'subheader' || !k.is_na)
                       : sec.kpis;
-                    const hasData = visKpis.some(k => k.type !== 'subheader');
-                    if (hideNA && !hasData) return null;
+                    const hasVis = visKpis.some(k => k.type !== 'subheader');
+                    if (hideNA && !hasVis) return null;
                     return (
                     <React.Fragment key={si}>
-                      <tr>
-                        <td colSpan={totalCols} style={{
-                          background:'#1A3A4A', color:'white', fontWeight:700,
-                          padding:'5px 10px', fontSize:'.73rem', letterSpacing:'.05em', textTransform:'uppercase'
-                        }}>{sec.label}</td>
-                      </tr>
+                      <tr><td colSpan={totalCols} className="tbl-sec">{sec.label}</td></tr>
                       {visKpis.map((kpi,ki)=>{
                         if (kpi.type === 'subheader') {
-                          return (
-                            <tr key={ki}>
-                              <td colSpan={totalCols} style={{
-                                background:'#d4e8ee', color:'#1A3A4A', fontWeight:700,
-                                padding:'4px 14px', fontSize:'.72rem', letterSpacing:'.04em',
-                                textTransform:'uppercase', borderTop:'1px solid #9ac8d8',
-                                borderBottom:'1px solid #9ac8d8'
-                              }}>{kpi.label}</td>
-                            </tr>
-                          );
+                          return <tr key={ki}><td colSpan={totalCols} className="tbl-subhd">{kpi.label}</td></tr>;
                         }
                         const bg = ki%2===0?'white':'#f8fafb';
                         return (
                           <React.Fragment key={ki}>
-                            {/* Row 1: comp1 */}
                             <tr style={{background:bg}}>
-                              <td rowSpan={2} style={{...kpiCellSt(bg), color:kpi.mapped?'inherit':'#ccc'}}>{kpi.label}</td>
-                              <td rowSpan={2} style={unitCellSt}>{kpi.unit}</td>
-                              <td style={{padding:'4px 7px', fontSize:'.7rem', fontWeight:700, color:'#4EC3C3',
-                                borderLeft:'2px solid #4EC3C3', whiteSpace:'nowrap', textAlign:'center',
-                                background:'#f4fdfd'}}>{data.tipo1}</td>
-                              {kpi.vals1.map((v,vi)=>(
-                                <td key={vi} style={{...colStyle}}>{fmt(v)}</td>
-                              ))}
-                              <td style={{...colStyle, background:'#f0f9f9', fontWeight:600}}>{fmt(kpi.mes1)}</td>
-                              <td style={{...colStyle, background:'#f0f9f9', fontWeight:600}}>{fmt(kpi.ytd1)}</td>
+                              <td rowSpan={2} className="viz-kpi" style={{background:bg, color:kpi.mapped?'inherit':'#ccc'}}>{kpi.label}</td>
+                              <td rowSpan={2} className="viz-unit">{kpi.unit}</td>
+                              <td className="viz-tag1">{d.tipo1}</td>
+                              {kpi.vals1.map((v,vi)=> mkCell(v, kpi.lk, d.tipo1, `${d.cols1[vi].year}_${d.cols1[vi].month}`, 'viz-col', {background:bg}))}
+                              {mkCell(kpi.mes1, kpi.lk, d.tipo1, 'mes', 'viz-mes1', {})}
+                              {mkCell(kpi.ytd1, kpi.lk, d.tipo1, 'ytd', 'viz-mes1', {})}
                               {Array(pad1).fill(null).map((_,i)=><td key={i}></td>)}
                             </tr>
-                            {/* Row 2: comp2 */}
                             <tr style={{background:bg, borderBottom:'2px solid #e5e7eb'}}>
-                              <td style={{padding:'4px 7px', fontSize:'.7rem', fontWeight:700, color:'#F5A800',
-                                borderLeft:'2px solid #F5A800', whiteSpace:'nowrap', textAlign:'center',
-                                background:'#fffbf0'}}>{data.tipo2}</td>
-                              {kpi.vals2.map((v,vi)=>(
-                                <td key={vi} style={{...colStyle}}>{fmt(v)}</td>
-                              ))}
-                              <td style={{...colStyle, background:'#fef9ec', fontWeight:600}}>{fmt(kpi.mes2)}</td>
-                              <td style={{...colStyle, background:'#fef9ec', fontWeight:600}}>{fmt(kpi.ytd2)}</td>
+                              <td className="viz-tag2">{d.tipo2}</td>
+                              {kpi.vals2.map((v,vi)=> mkCell(v, kpi.lk, d.tipo2, `${d.cols2[vi].year}_${d.cols2[vi].month}`, 'viz-col', {background:bg}))}
+                              {mkCell(kpi.mes2, kpi.lk, d.tipo2, 'mes', 'viz-mes2', {})}
+                              {mkCell(kpi.ytd2, kpi.lk, d.tipo2, 'ytd', 'viz-mes2', {})}
                               {Array(pad2).fill(null).map((_,i)=><td key={i}></td>)}
                             </tr>
                           </React.Fragment>
@@ -873,223 +1071,658 @@ function VisualizarTab({period, tipos}) {
       </div>
 
       {/* ─── Cálculos ─── */}
+      <CalcDescomposicionCard
+        calcData={calcData} calcLoading={calcLoading} calcError={calcError}
+        onCargar={cargarCalculos}
+        hint="Real vs Plan/Ppto · período Comp 1 seleccionado"
+      />
+    </div>
+  );
+}
+
+/* ─── Shared calc table helpers ─── */
+const CALC_SECS_DEF = [
+  { label:'Delta Gasto (Precio)', unit:'kUS$', sec:'delta_gasto_precio',
+    rows:[['Bolas','bolas'],['Ácido','acido'],['Energía','energia'],['Combustible','combustible'],['Explosivos','explosivos']] },
+  { label:'Delta Rendimiento', unit:'kUS$', sec:'delta_rendimiento',
+    rows:[['Bolas','bolas'],['Ácido','acido'],['Energía concentradora','energia_conc'],['Energía Hidro','energia_hidro'],['Combustible','combustible'],['Explosivos','explosivos']] },
+  { label:'Delta Actividad', unit:'CU', sec:'delta_actividad',
+    rows:[['Trat. Concentradora','trat_concentradora'],['Trat. Hidro','trat_hidro'],['Rec. Concentradora','rec_concentradora'],['Rec. Hidro','rec_hidro']] },
+  { label:'Efecto Ley', unit:'CU', sec:'efecto_ley',
+    rows:[['Ley Concentradora','concentradora'],['Ley Hidro','hidro']] },
+];
+
+function calcFmtN(v) {
+  if (v == null) return <span style={{color:'#ccc'}}>—</span>;
+  const color = v < 0 ? 'var(--red)' : v > 0 ? '#059669' : 'inherit';
+  return <span style={{color}}>{v >= 0 ? '+' : ''}{v.toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>;
+}
+
+function CalcDescomposicionTable({calcData}) {
+  if (!calcData) return null;
+  const nc = calcData.cols.length;
+  const totalCols = 2 + nc + 2;
+  const fmtN = calcFmtN;
+  return (
+    <div className="tbl-wrap">
+      <table style={{fontSize:'.76rem', borderCollapse:'collapse'}}>
+        <thead>
+          <tr>
+            <th rowSpan={2} className="tbl-th-c1" style={{textAlign:'left', minWidth:'200px', position:'sticky', left:0, zIndex:2, background:'#1A3A4A'}}>Componente</th>
+            <th rowSpan={2} className="tbl-th-c1" style={{width:'44px', background:'#1A3A4A'}}>Ud.</th>
+            {calcData.cols.map((c,i)=><th key={i} className="tbl-th-c1">{c.label}</th>)}
+            <th className="tbl-th-c1" style={{background:'#0e4e5e'}}>Mes</th>
+            <th className="tbl-th-c1" style={{background:'#0e4e5e'}}>YTD</th>
+          </tr>
+          <tr>
+            {calcData.cols.map((_,i)=><th key={i} className="tbl-th-c1" style={{fontSize:'.65rem', color:'#a0d8df'}}>Real–Ppto</th>)}
+            <th className="tbl-th-c1" style={{background:'#0e4e5e', fontSize:'.65rem', color:'#a0d8df'}}>Real–Ppto</th>
+            <th className="tbl-th-c1" style={{background:'#0e4e5e', fontSize:'.65rem', color:'#a0d8df'}}>Real–Ppto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {CALC_SECS_DEF.map((sec, si) => {
+            const secData = calcData[sec.sec];
+            return (
+              <React.Fragment key={si}>
+                {si === 2 && calcData.actividad_contexto && (() => {
+                  const acData = calcData.actividad_contexto;
+                  const acRows = [
+                    { lbl:'Mov. Mina', key:'mov_mina', unit:'kt' },
+                    { lbl:'Actividad Mina', key:'actividad_mina', unit:'kUS$' },
+                    { lbl:'Actividad Concentradora', key:'actividad_conc', unit:'kUS$' },
+                    { lbl:'Actividad Hidro', key:'actividad_hidro', unit:'kUS$' },
+                  ];
+                  return (
+                    <React.Fragment>
+                      <tr><td colSpan={totalCols} className="tbl-amber">Actividad — Contexto (Real − Ppto)</td></tr>
+                      {acRows.map(({lbl, key, unit}, ri) => {
+                        const series = acData[key];
+                        if (!series) return null;
+                        const bg = ri % 2 === 0 ? '#fffbf0' : '#fef3c7';
+                        return (
+                          <tr key={ri} style={{background:bg}}>
+                            <td className="tbl-kpi" style={{background:bg, color:'#92400e', fontStyle:'italic'}}>{lbl}</td>
+                            <td className="tbl-ud" style={{color:'#92400e'}}>{unit}</td>
+                            {series.vals.map((v, vi) => <td key={vi} className="tbl-val">{fmtN(v)}</td>)}
+                            <td className="tbl-val">{fmtN(series.mes)}</td>
+                            <td className="tbl-val">{fmtN(series.ytd)}</td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })()}
+                <tr><td colSpan={totalCols} className="tbl-sec">{sec.label}</td></tr>
+                {sec.rows.map(([lbl, key], ri) => {
+                  const series = secData[key];
+                  const bg = ri % 2 === 0 ? 'white' : '#f8fafb';
+                  return (
+                    <tr key={ri} style={{background:bg}}>
+                      <td className="tbl-kpi" style={{background:bg}}>{lbl}</td>
+                      <td className="tbl-ud">{sec.unit}</td>
+                      {series.vals.map((v, vi) => <td key={vi} className="tbl-val">{fmtN(v)}</td>)}
+                      <td className="tbl-val">{fmtN(series.mes)}</td>
+                      <td className="tbl-val">{fmtN(series.ytd)}</td>
+                    </tr>
+                  );
+                })}
+                {(() => {
+                  const tot = secData['total'];
+                  return (
+                    <tr style={{borderTop:'2px solid #e0e0e0'}}>
+                      <td className="tbl-tot">Total</td>
+                      <td className="tbl-ud" style={{background:'#f0f9f9'}}>{sec.unit}</td>
+                      {tot.vals.map((v, vi) => <td key={vi} className="tbl-tot-val">{fmtN(v)}</td>)}
+                      <td className="tbl-tot-val">{fmtN(tot.mes)}</td>
+                      <td className="tbl-tot-val">{fmtN(tot.ytd)}</td>
+                    </tr>
+                  );
+                })()}
+              </React.Fragment>
+            );
+          })}
+
+          {calcData.desarrollo_mina && (() => {
+            const dm = calcData.desarrollo_mina;
+            const hasItems = dm.items && dm.items.length > 0;
+            return (
+              <React.Fragment>
+                <tr><td colSpan={totalCols} className="tbl-sec">Desarrollo Mina</td></tr>
+                {hasItems && dm.items.map(({label, vals, mes, ytd}, ri) => {
+                  const bg = ri % 2 === 0 ? 'white' : '#f8fafb';
+                  return (
+                    <tr key={ri} style={{background:bg}}>
+                      <td className="tbl-kpi" style={{background:bg}}>{label}</td>
+                      <td className="tbl-ud">kUS$</td>
+                      {vals.map((v, vi) => <td key={vi} className="tbl-val">{fmtN(v)}</td>)}
+                      <td className="tbl-val">{fmtN(mes)}</td>
+                      <td className="tbl-val">{fmtN(ytd)}</td>
+                    </tr>
+                  );
+                })}
+                {hasItems && dm.total && (
+                  <tr style={{borderTop:'2px solid #e0e0e0'}}>
+                    <td className="tbl-tot">Total</td>
+                    <td className="tbl-ud" style={{background:'#f0f9f9'}}>kUS$</td>
+                    {dm.total.vals.map((v, vi) => <td key={vi} className="tbl-tot-val">{fmtN(v)}</td>)}
+                    <td className="tbl-tot-val">{fmtN(dm.total.mes)}</td>
+                    <td className="tbl-tot-val">{fmtN(dm.total.ytd)}</td>
+                  </tr>
+                )}
+                {!hasItems && (
+                  <tr>
+                    <td colSpan={totalCols} style={{padding:'8px 12px', fontStyle:'italic'}} className="hint">
+                      Sin KPIs configurados — configura en la pestaña Fórmulas
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })()}
+
+          {calcData.variacion_inventario && (() => {
+            const series = calcData.variacion_inventario;
+            return (
+              <React.Fragment>
+                <tr><td colSpan={totalCols} className="tbl-sec">Variación Inventario</td></tr>
+                <tr>
+                  <td className="tbl-kpi" style={{background:'white'}}>Variación Inventario</td>
+                  <td className="tbl-ud">kt</td>
+                  {series.vals.map((v, vi) => <td key={vi} className="tbl-val">{fmtN(v)}</td>)}
+                  <td className="tbl-val">{fmtN(series.mes)}</td>
+                  <td className="tbl-val">{fmtN(series.ytd)}</td>
+                </tr>
+              </React.Fragment>
+            );
+          })()}
+
+          {['efecto_precio_subprod','efecto_cantidad_subprod'].map((secKey, ski) => {
+            const secData = calcData[secKey];
+            if (!secData) return null;
+            const secLabel = ski === 0 ? 'Efecto Precio Subproductos' : 'Efecto Cantidad Subproductos';
+            const metals = Object.keys(secData).filter(k => k !== 'total');
+            const tot = secData['total'];
+            return (
+              <React.Fragment key={secKey}>
+                <tr><td colSpan={totalCols} className="tbl-sec">{secLabel}</td></tr>
+                {metals.map((metal, ri) => {
+                  const series = secData[metal];
+                  const bg = ri % 2 === 0 ? 'white' : '#f8fafb';
+                  return (
+                    <tr key={metal} style={{background:bg}}>
+                      <td className="tbl-kpi" style={{background:bg}}>{metal}</td>
+                      <td className="tbl-ud">kUS$</td>
+                      {series.vals.map((v, vi) => <td key={vi} className="tbl-val">{fmtN(v)}</td>)}
+                      <td className="tbl-val">{fmtN(series.mes)}</td>
+                      <td className="tbl-val">{fmtN(series.ytd)}</td>
+                    </tr>
+                  );
+                })}
+                {tot && (
+                  <tr style={{borderTop:'2px solid #e0e0e0'}}>
+                    <td className="tbl-tot">Total</td>
+                    <td className="tbl-ud" style={{background:'#f0f9f9'}}>kUS$</td>
+                    {tot.vals.map((v, vi) => <td key={vi} className="tbl-tot-val">{fmtN(v)}</td>)}
+                    <td className="tbl-tot-val">{fmtN(tot.mes)}</td>
+                    <td className="tbl-tot-val">{fmtN(tot.ytd)}</td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
+
+          {calcData.creditos_subprod && (() => {
+            const crData = calcData.creditos_subprod;
+            const metals = Object.keys(crData).filter(k => k !== 'total');
+            const tot = crData['total'];
+            return (
+              <React.Fragment>
+                <tr><td colSpan={totalCols} className="tbl-sec">Créditos Subproductos</td></tr>
+                {metals.map((metal) => {
+                  const {real, budget} = crData[metal];
+                  return (
+                    <React.Fragment key={metal}>
+                      <tr style={{background:'white'}}>
+                        <td className="tbl-kpi" style={{background:'white'}}>
+                          {metal} <span style={{fontSize:'.72rem',color:'#888',fontWeight:400}}>Real</span>
+                        </td>
+                        <td className="tbl-ud">US$m</td>
+                        {real.vals.map((v, vi) => <td key={vi} className="tbl-val">{fmt(v)}</td>)}
+                        <td className="tbl-val">{fmt(real.mes)}</td>
+                        <td className="tbl-val">{fmt(real.ytd)}</td>
+                      </tr>
+                      <tr style={{background:'#f8fafb'}}>
+                        <td className="tbl-kpi" style={{background:'#f8fafb',paddingLeft:'28px',color:'#888',fontStyle:'italic',fontSize:'.74rem'}}>Budget</td>
+                        <td className="tbl-ud">US$m</td>
+                        {budget.vals.map((v, vi) => <td key={vi} className="tbl-val" style={{color:'#888'}}>{fmt(v)}</td>)}
+                        <td className="tbl-val" style={{color:'#888'}}>{fmt(budget.mes)}</td>
+                        <td className="tbl-val" style={{color:'#888'}}>{fmt(budget.ytd)}</td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                })}
+                {tot && (
+                  <>
+                    <tr style={{borderTop:'2px solid #e0e0e0', background:'#f0f9f9'}}>
+                      <td className="tbl-tot">Total <span style={{fontSize:'.72rem',fontWeight:400}}>Real</span></td>
+                      <td className="tbl-ud" style={{background:'#f0f9f9'}}>US$m</td>
+                      {tot.real.vals.map((v, vi) => <td key={vi} className="tbl-tot-val">{fmt(v)}</td>)}
+                      <td className="tbl-tot-val">{fmt(tot.real.mes)}</td>
+                      <td className="tbl-tot-val">{fmt(tot.real.ytd)}</td>
+                    </tr>
+                    <tr style={{background:'#f0f9f9'}}>
+                      <td className="tbl-tot" style={{paddingLeft:'28px',color:'#888',fontStyle:'italic',fontSize:'.74rem',fontWeight:400}}>Budget</td>
+                      <td className="tbl-ud" style={{background:'#f0f9f9'}}>US$m</td>
+                      {tot.budget.vals.map((v, vi) => <td key={vi} className="tbl-tot-val" style={{color:'#888'}}>{fmt(v)}</td>)}
+                      <td className="tbl-tot-val" style={{color:'#888'}}>{fmt(tot.budget.mes)}</td>
+                      <td className="tbl-tot-val" style={{color:'#888'}}>{fmt(tot.budget.ytd)}</td>
+                    </tr>
+                  </>
+                )}
+              </React.Fragment>
+            );
+          })()}
+
+          {calcData.tcrc && Object.keys(calcData.tcrc).length > 0 && (() => (
+            <React.Fragment>
+              <tr><td colSpan={totalCols} className="tbl-sec">TC/RC &amp; Comercialización</td></tr>
+              {Object.entries(calcData.tcrc).map(([subhdr, kpis], shi) => (
+                <React.Fragment key={shi}>
+                  <tr><td colSpan={totalCols} className="tbl-subhd">{subhdr}</td></tr>
+                  {Object.entries(kpis).map(([label, series], ki) => {
+                    const bg = ki % 2 === 0 ? 'white' : '#f8fafb';
+                    return (
+                      <tr key={ki} style={{background:bg}}>
+                        <td className="tbl-kpi" style={{background:bg}}>{label}</td>
+                        <td className="tbl-ud">{series.unit}</td>
+                        {series.vals.map((v, vi) => <td key={vi} className="tbl-val">{fmtN(v)}</td>)}
+                        <td className="tbl-val">{fmtN(series.mes)}</td>
+                        <td className="tbl-val">{fmtN(series.ytd)}</td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </React.Fragment>
+          ))()}
+
+
+          {[
+            { label:'Efectos TC/R',            sec:'efectos_tcrc'  },
+            { label:'Efectos Comercialización', sec:'efectos_comer' },
+          ].map((ef, efi) => {
+            const secData = calcData[ef.sec];
+            if (!secData) return null;
+            const rows = [['Cantidades','cantidades'],['Tarifas','tarifas']];
+            const tot  = secData['total'];
+            return (
+              <React.Fragment key={efi}>
+                <tr><td colSpan={totalCols} className="tbl-sec">{ef.label}</td></tr>
+                {rows.map(([lbl, key], ri) => {
+                  const series = secData[key];
+                  const bg = ri % 2 === 0 ? 'white' : '#f8fafb';
+                  return (
+                    <tr key={ri} style={{background:bg}}>
+                      <td className="tbl-kpi" style={{background:bg}}>{lbl}</td>
+                      <td className="tbl-ud">kUS$</td>
+                      {series.vals.map((v, vi) => <td key={vi} className="tbl-val">{calcFmtN(v)}</td>)}
+                      <td className="tbl-val">{calcFmtN(series.mes)}</td>
+                      <td className="tbl-val">{calcFmtN(series.ytd)}</td>
+                    </tr>
+                  );
+                })}
+                <tr style={{borderTop:'2px solid #e0e0e0'}}>
+                  <td className="tbl-tot">Total</td>
+                  <td className="tbl-ud" style={{background:'#f0f9f9'}}>kUS$</td>
+                  {tot.vals.map((v, vi) => <td key={vi} className="tbl-tot-val">{calcFmtN(v)}</td>)}
+                  <td className="tbl-tot-val">{calcFmtN(tot.mes)}</td>
+                  <td className="tbl-tot-val">{calcFmtN(tot.ytd)}</td>
+                </tr>
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CalcDescomposicionCard({calcData, calcLoading, calcError, onCargar, hint}) {
+  return (
+    <div className="card">
+      <div className="card-title">Cálculos — Descomposición de Varianzas</div>
+      <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'16px'}}>
+        <button className="btn btn-primary" onClick={onCargar} disabled={calcLoading} style={{height:'38px'}}>
+          {calcLoading?<><span className="spin"/>Calculando…</>:'Calcular'}
+        </button>
+        {hint && <span style={{fontSize:'.78rem', color:'#888', alignSelf:'center'}}>{hint}</span>}
+      </div>
+      {calcError && <p className="err">{calcError}</p>}
+      <CalcDescomposicionTable calcData={calcData}/>
+    </div>
+  );
+}
+
+/* ─── Grupo Minero aggregation for Análisis Costo ─── */
+function sumSeries(a, b) {
+  if (!a && !b) return {vals:[], mes:null, ytd:null};
+  if (!a) return b; if (!b) return a;
+  const ss = (x, y) => x != null && y != null ? x + y : (x ?? y);
+  return {
+    vals: a.vals.map((v, i) => ss(v, b.vals[i])),
+    mes: ss(a.mes, b.mes),
+    ytd: ss(a.ytd, b.ytd),
+  };
+}
+function sumSection(a, b) {
+  const keys = new Set([...Object.keys(a||{}), ...Object.keys(b||{})]);
+  const res = {};
+  for (const k of keys) res[k] = sumSeries(a?.[k], b?.[k]);
+  return res;
+}
+
+/* Aggregate waterfall panels from multiple company explicaciones responses */
+function aggregateExpResults(results) {
+  if (!results || results.length === 0) return null;
+  const ss = (a, b) => (a != null && b != null) ? a + b : (a ?? b);
+  const merged = {company: 'Grupo Minero', año: results[0].año, mes: results[0].mes, data: {}};
+  for (const panel of ['mes', 'ytd']) {
+    const panels = results.map(r => r.data?.[panel]).filter(Boolean);
+    if (!panels.length) continue;
+    const wf = {};
+    const WF_KEYS = ['c1_b','c1_r','aj_tc','aj_ipc','aj_cpi',
+      'pr_energia','pr_combustible','pr_acido','pr_bolas','pr_explosivos',
+      'ley_conc','ley_hidro','act_mina_kus','act_conc_kus',
+      'da_trat_conc','da_trat_hidro','da_rec_conc','da_rec_hidro','varinv',
+      'rend_energia_conc','rend_energia_hidro','rend_combustible','rend_acido','rend_bolas','rend_explosivos',
+      'dev_mina','tcrc_kus','comer_kus'];
+    for (const key of WF_KEYS) wf[key] = panels.reduce((acc, p) => ss(acc, p.waterfall?.[key]), null);
+    merged.data[panel] = {
+      cu_prod_real:   panels.reduce((a,p) => ss(a, p.cu_prod_real),   null),
+      cu_prod_budget: panels.reduce((a,p) => ss(a, p.cu_prod_budget), null),
+      waterfall: wf,
+    };
+  }
+  return merged;
+}
+
+/* Build ordered waterfall rows from panel data */
+const B_CLB = 2204.62;
+function toClb(kus, ktu) { return (ktu && ktu > 0) ? kus * 100 / (ktu * B_CLB) : null; }
+
+function buildWaterfall(expData, panel, tipo2) {
+  const d = expData?.data?.[panel];
+  const wf = d?.waterfall || {};
+  const t2 = tipo2 ? tipo2.charAt(0).toUpperCase() + tipo2.slice(1) : 'Ppto';
+
+  let ktu = d?.cu_prod_budget ?? null;
+  let kus = null;
+  const rows = [];
+  let baseClb = null;
+
+  const clbOf = (k, t) => (k != null && t != null && t > 0) ? k * 100 / (t * B_CLB) : null;
+
+  // Azul oscuro — muestra el kus acumulado actual
+  const pushMain = (id, label) => {
+    const clb = clbOf(kus, ktu);
+    rows.push({id, label, type:'main', kus, ktu, clb, dclb: null});
+    baseClb = clb;
+  };
+
+  // Gris claro — muestra abs_kus (null → "—"); solo actualiza kus si abs_kus != null
+  const snapGroup = (id, label, abs_kus) => {
+    const prev = baseClb;
+    if (abs_kus != null) kus = abs_kus;
+    const clb = abs_kus != null ? clbOf(abs_kus, ktu) : null;
+    rows.push({id, label, type:'group',
+      kus: abs_kus, ktu: abs_kus != null ? ktu : null, clb,
+      dclb: clb != null && prev != null ? clb - prev : null});
+    if (abs_kus != null) baseClb = clb;
+  };
+
+  // Azul oscuro — muestra abs_kus (null → "—"); solo actualiza kus si abs_kus != null
+  const snapMain = (id, label, abs_kus) => {
+    if (abs_kus != null) kus = abs_kus;
+    const clb = abs_kus != null ? clbOf(abs_kus, ktu) : null;
+    rows.push({id, label, type:'main',
+      kus: abs_kus, ktu: abs_kus != null ? ktu : null, clb, dclb: null});
+    if (abs_kus != null) baseClb = clb;
+  };
+
+  // Gris claro — aplica delta; dclb=null si ambos deltas son null
+  const applyGroup = (id, label, dkus, dktu) => {
+    const prev = baseClb;
+    if (kus != null && dkus != null) kus += dkus;
+    if (ktu != null && dktu != null) ktu += dktu;
+    const clb = clbOf(kus, ktu);
+    const hasD = dkus != null || dktu != null;
+    rows.push({id, label, type:'group', kus, ktu, clb,
+      dclb: hasD && clb != null && prev != null ? clb - prev : null});
+    baseClb = clb;
+  };
+
+  // Suma null-safe: null cuando TODOS los valores son null
+  const nsum = (...vals) => {
+    const nn = vals.filter(v => v != null);
+    return nn.length ? nn.reduce((a, b) => a + b, 0) : null;
+  };
+
+  // Grupo primero, luego sub-filas usando el estado PRE-grupo
+  const groupThenSubs = (gid, glabel, gdkus, gdktu, subfn) => {
+    const preKus = kus, preKtu = ktu, preClb = baseClb;
+    applyGroup(gid, glabel, gdkus, gdktu);
+    const sub = (id, label, dkus, dktu) => {
+      const nk = preKus != null && dkus != null ? preKus + dkus : null;
+      const np = preKtu != null && dktu != null ? preKtu + dktu : null;
+      const clb = clbOf(nk, np);
+      rows.push({id, label, type:'sub', kus:nk, ktu:np, clb,
+        dclb: clb != null && preClb != null ? clb - preClb : null, dkus, dktu});
+    };
+    subfn(sub);
+  };
+
+  // ── PREÁMBULO PRESUPUESTO ──
+  if      (wf.c3_b     != null) kus = wf.c3_b;
+  else if (wf.c2_b     != null) kus = wf.c2_b;
+  else if (wf.c1_abs_b != null) kus = wf.c1_abs_b + (wf.da_b || 0);
+  else if (wf.c1_b     != null) kus = wf.c1_b;
+  baseClb = clbOf(kus, ktu);
+
+  snapMain('c3',          `C3 ${t2}`,                   wf.c3_b);
+  snapMain('c2',          `C2 ${t2}`,                   wf.c2_b);
+  applyGroup('da',        'Depreciación / Amortización', wf.da_b      != null ? -wf.da_b      : null, 0);
+  snapMain('c1p',         `C1 ${t2}`,                   wf.c1_abs_b);
+  applyGroup('subprod',   'Subproductos',               wf.subprod_b != null ? -wf.subprod_b : null, 0);
+  pushMain('precredit',   `Pre-credit ${t2}`);
+  applyGroup('tcrc_pre',  'TC/RC',                      wf.tcrc_b_total  != null ? -wf.tcrc_b_total  : null, 0);
+  applyGroup('comer_pre', 'Comercialización',            wf.comer_b_total != null ? -wf.comer_b_total : null, 0);
+
+  if (wf.c1_b != null) { kus = wf.c1_b; baseClb = clbOf(kus, ktu); }
+  pushMain('onsite', `Costo Onsite ${t2}`);
+
+  // ── EFECTOS (grupo siempre primero, sub-filas después) ──
+
+  applyGroup('aj_mon', 'Efecto Ajuste Monetario', nsum(wf.aj_tc, wf.aj_ipc, wf.aj_cpi), 0);
+
+  groupThenSubs('pr_ins', 'Efecto precio insumos',
+    nsum(wf.pr_energia, wf.pr_combustible, wf.pr_acido, wf.pr_bolas, wf.pr_explosivos), 0,
+    sub => {
+      sub('pr_en', 'Energía',     wf.pr_energia,     0);
+      sub('pr_cb', 'Combustible', wf.pr_combustible, 0);
+      sub('pr_ac', 'Ácido',       wf.pr_acido,       0);
+      sub('pr_bo', 'Bolas',       wf.pr_bolas,       0);
+      sub('pr_ex', 'Explosivos',  wf.pr_explosivos,  0);
+    });
+
+  applyGroup('ley', 'Efecto ley', 0, nsum(wf.ley_conc, wf.ley_hidro));
+
+  groupThenSubs('act', 'Efecto actividad', nsum(wf.act_mina_kus, wf.act_conc_kus), 0, sub => {
+    sub('ac_mn', 'Mina',        wf.act_mina_kus, 0);
+    sub('ac_cn', 'Tratamiento', wf.act_conc_kus, 0);
+  });
+
+  groupThenSubs('prod_cu', 'Efecto Producción Cu', 0, nsum(wf.da_trat_conc, wf.da_rec_conc, wf.varinv), sub => {
+    sub('cu_tr', 'Tratamiento', 0, wf.da_trat_conc);
+    sub('cu_rc', 'Recuperación',0, wf.da_rec_conc);
+    sub('cu_iv', 'Inventario',  0, wf.varinv);
+  });
+
+  groupThenSubs('rend', 'Efecto rendimiento insumos',
+    nsum(wf.rend_energia_conc, wf.rend_energia_hidro, wf.rend_combustible, wf.rend_acido, wf.rend_bolas, wf.rend_explosivos), 0,
+    sub => {
+      sub('rn_ec', 'Energía Conc',  wf.rend_energia_conc,  0);
+      sub('rn_eh', 'Energía Hidro', wf.rend_energia_hidro, 0);
+      sub('rn_cb', 'Combustible',   wf.rend_combustible,   0);
+      sub('rn_ac', 'Ácido',         wf.rend_acido,         0);
+      sub('rn_bo', 'Bolas',         wf.rend_bolas,         0);
+      sub('rn_ex', 'Explosivos',    wf.rend_explosivos,    0);
+    });
+
+  groupThenSubs('dev', 'Desarrollo Mina', wf.dev_mina, 0, sub => {
+    sub('dev_p', 'Efecto P', wf.dev_mina_cu,  0);
+    sub('dev_q', 'Efecto Q', wf.dev_mina_ton, 0);
+  });
+
+  groupThenSubs('inv', 'Efecto inventarios', nsum(wf.vi_inv_mina_kus, wf.vi_inv_planta_kus), 0, sub => {
+    sub('inv_mn', 'Mina',   wf.vi_inv_mina_kus,   0);
+    sub('inv_pl', 'Planta', wf.vi_inv_planta_kus, 0);
+  });
+
+  applyGroup('ifrs16', 'IFRS16', wf.ifrs16_kus, 0);
+
+  const efic = wf.c1_r != null && kus != null ? wf.c1_r - kus : null;
+  applyGroup('efic', 'Eficiencia / desfases', efic, 0);
+
+  pushMain('onsite_r', 'On Site Real');
+
+  // ── CIERRE REAL ──
+  applyGroup('tcrc_r',    'TC/RC',                      wf.tcrc_r_total  != null ? -wf.tcrc_r_total  : null, 0);
+  applyGroup('comer_r',   'Comercialización',            wf.comer_r_total != null ? -wf.comer_r_total : null, 0);
+  pushMain('precredit_r', 'Pre-credit Real');
+  applyGroup('subprod_r', 'Subproductos',               wf.subprod_r,    0);
+  if (wf.c1_r_costo != null) snapMain('c1_real', 'C1 Real', wf.c1_r_costo);
+  else pushMain('c1_real', 'C1 Real');
+  applyGroup('da_r_row',  'Depreciación / Amortización', wf.da_r,         0);
+  if (wf.c2_r != null) snapMain('c2_real', 'C2 Real', wf.c2_r);
+  else pushMain('c2_real', 'C2 Real');
+  applyGroup('otros_fin',     'Otros Items Financieros',        wf.otros_fin_r,     0);
+  applyGroup('dif_cambio',    'Diferencias de cambio',          wf.dif_cambio_r,    0);
+  applyGroup('donaciones',    'Donaciones',                     wf.donaciones_r,    0);
+  applyGroup('gasto_expl',    'Gastos Exploraciones',           wf.gasto_expl_r,    0);
+  applyGroup('ing_gasto_fin', 'Ingresos y Gastos Financieros',  wf.ing_gasto_fin_r, 0);
+  applyGroup('ing_no_op',     'Ingresos No Operacionales',      wf.ing_no_op_r,     0);
+  applyGroup('otros_egr',     'Otros egresos operacionales',    wf.otros_egr_op_r,  0);
+  if (wf.c3_r != null) snapMain('c3_real', 'C3 Real', wf.c3_r);
+  else pushMain('c3_real', 'C3 Real');
+
+  return rows;
+}
+
+/* Waterfall table component */
+const AC_N = (v, dec=0) => v == null ? <span style={{color:'#ccc'}}>—</span>
+  : v.toLocaleString('es-CL', {minimumFractionDigits:dec, maximumFractionDigits:dec});
+const AC_DCLB = (v) => {
+  if (v == null) return <span style={{color:'#ccc'}}>—</span>;
+  const col = v < -0.005 ? '#059669' : v > 0.005 ? 'var(--red)' : '#888';
+  return <span style={{color:col}}>{v >= 0 ? '+' : ''}{v.toFixed(2)}</span>;
+};
+
+function WaterfallTable({rows}) {
+  const thS = {background:'#1A3A4A', color:'white', padding:'6px 10px', fontSize:'.74rem', fontWeight:600, textAlign:'right', whiteSpace:'nowrap'};
+  const thL = {...thS, textAlign:'left', minWidth:'200px'};
+  const tdR = {padding:'3px 10px', textAlign:'right', fontSize:'.78rem', whiteSpace:'nowrap'};
+  const tdL = {padding:'3px 10px', fontSize:'.79rem', whiteSpace:'nowrap'};
+
+  return (
+    <div className="tbl-wrap">
+      <table style={{width:'100%', borderCollapse:'collapse', tableLayout:'fixed'}}>
+        <colgroup>
+          <col style={{width:'220px'}}/>
+          <col style={{width:'110px'}}/>
+          <col style={{width:'75px'}}/>
+          <col style={{width:'90px'}}/>
+          <col style={{width:'90px'}}/>
+        </colgroup>
+        <thead>
+          <tr>
+            <th style={thL}>Concepto</th>
+            <th style={thS}>US$k</th>
+            <th style={thS}>ktCuf</th>
+            <th style={thS}>c/lb</th>
+            <th style={thS}>Δ c/lb</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => {
+            const isMain  = r.type === 'main';
+            const isGroup = r.type === 'group';
+            const isSub   = r.type === 'sub';
+            const bg = isMain ? '#1A3A4A' : isGroup ? '#d4e8ee' : 'white';
+            const fg = isMain ? 'white' : '#1A3A4A';
+            const fw = (isMain || isGroup) ? 700 : 400;
+            const indent = isSub ? '20px' : '0';
+            const rowBorderTop = isMain ? '2px solid #1A3A4A' : isGroup ? '1px solid #9ac8d8' : '1px solid #f0f0f0';
+            return (
+              <tr key={r.id} style={{background:bg, borderTop:rowBorderTop}}>
+                <td style={{...tdL, color:fg, fontWeight:fw, paddingLeft:indent}}>{r.label}</td>
+                <td style={{...tdR, color:fg, fontWeight:fw}}>{AC_N(r.kus, 0)}</td>
+                <td style={{...tdR, color:fg, fontWeight:fw}}>{r.ktu != null ? r.ktu.toFixed(2) : '—'}</td>
+                <td style={{...tdR, color:fg, fontWeight:fw}}>{r.clb != null ? r.clb.toFixed(2) : '—'}</td>
+                <td style={{...tdR}}>{isMain ? null : AC_DCLB(r.dclb)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ─── Tab: Análisis Costo ─── */
+function AnalisisCostoTab({period}) {
+  const {a1fin, m1fin, tipo2} = period;
+  const [company, setCompany] = useState('Grupo Minero');
+  const [panel,   setPanel]   = useState('mes');
+  const [expData, expLoading, expError, runExp] = useAsyncState();
+
+  function cargar() {
+    const url = co => `/api/explicaciones/${co}?año=${a1fin}&mes=${m1fin}`;
+    if (company === 'Grupo Minero') {
+      runExp(Promise.all(COMPANIES.map(co => apiGet(url(co)))).then(aggregateExpResults));
+    } else {
+      runExp(apiGet(url(company)));
+    }
+  }
+
+  const rows = React.useMemo(() => buildWaterfall(expData, panel, tipo2), [expData, panel, tipo2]);
+
+  return (
+    <div className="main">
       <div className="card">
-        <div className="card-title">Cálculos — Descomposición de Varianzas</div>
-        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'16px'}}>
-          <button className="btn btn-primary" onClick={cargarCalculos} disabled={calcLoading}
-            style={{height:'38px'}}>
-            {calcLoading?<><span className="spin"/>Calculando…</>:'⚡ Calcular'}
+        <div className="card-title">Análisis Costo — {a1fin}/{String(m1fin).padStart(2,'0')}</div>
+        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'center', marginBottom:'16px'}}>
+          <div className="company-tabs" style={{marginBottom:0}}>
+            {['Grupo Minero', ...COMPANIES].map(c => (
+              <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>{c}</button>
+            ))}
+          </div>
+          <div style={{display:'flex', gap:'4px', border:'2px solid var(--gray)', borderRadius:'6px', overflow:'hidden'}}>
+            {['mes','ytd'].map(p => (
+              <button key={p} onClick={()=>setPanel(p)}
+                style={{padding:'5px 18px', border:'none', fontWeight:700, fontSize:'.85rem', cursor:'pointer',
+                  background: panel===p ? 'var(--teal)' : 'white',
+                  color: panel===p ? 'white' : 'var(--navy)'}}>
+                {p === 'mes' ? 'Mes' : 'YTD'}
+              </button>
+            ))}
+          </div>
+          <button className="btn btn-primary" onClick={cargar} disabled={expLoading} style={{height:'36px'}}>
+            {expLoading ? <><span className="spin"/>Calculando…</> : 'Calcular'}
           </button>
-          <span style={{fontSize:'.78rem', color:'#888', alignSelf:'center'}}>
-            Real vs Plan/Ppto · período Comp 1 seleccionado
-          </span>
         </div>
-
-        {calcError && <p style={{color:'var(--red)',fontSize:'.88rem',marginBottom:'12px'}}>{calcError}</p>}
-
-        {calcData && (() => {
-          const nc = calcData.cols.length;
-          const thC = {padding:'5px 7px', textAlign:'right', fontSize:'.7rem', color:'white',
-                       background:'#1A6575', whiteSpace:'nowrap', fontWeight:600};
-          const thS = {background:'#1A3A4A', color:'white', fontWeight:700,
-                       padding:'5px 10px', fontSize:'.73rem', letterSpacing:'.05em', textTransform:'uppercase'};
-          const tdKpi = {padding:'4px 10px', fontWeight:600, position:'sticky', left:0,
-                         background:'inherit', zIndex:1, borderRight:'1px solid #eee', whiteSpace:'nowrap', minWidth:'200px'};
-          const tdUd  = {padding:'4px 8px', color:'#888', textAlign:'center',
-                         borderRight:'1px solid #eee', fontSize:'.76rem'};
-          const colSt = {padding:'3px 7px', textAlign:'right', fontSize:'.76rem', whiteSpace:'nowrap'};
-          const totSt = {padding:'4px 10px', fontWeight:700, background:'#f0f9f9',
-                         position:'sticky', left:0, zIndex:1, borderRight:'1px solid #eee', whiteSpace:'nowrap'};
-          const totV  = {padding:'3px 7px', textAlign:'right', fontSize:'.76rem',
-                         fontWeight:700, background:'#f0f9f9', whiteSpace:'nowrap'};
-
-          const fmtN = v => {
-            if (v == null) return <span style={{color:'#ccc'}}>—</span>;
-            const color = v < 0 ? 'var(--red)' : v > 0 ? '#059669' : 'inherit';
-            return <span style={{color}}>{v >= 0 ? '+' : ''}{v.toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>;
-          };
-
-          const calcSections = [
-            { label:'Delta Gasto (Precio)', unit:'kUS$', sec:'delta_gasto_precio',
-              rows:[['Bolas','bolas'],['Ácido','acido'],['Energía','energia'],['Combustible','combustible'],['Explosivos','explosivos']] },
-            { label:'Delta Rendimiento', unit:'kUS$', sec:'delta_rendimiento',
-              rows:[['Bolas','bolas'],['Ácido','acido'],['Energía concentradora','energia_conc'],['Energía Hidro','energia_hidro'],['Combustible','combustible'],['Explosivos','explosivos']] },
-            { label:'Delta Actividad', unit:'CU', sec:'delta_actividad',
-              rows:[['Trat. Concentradora','trat_concentradora'],['Trat. Hidro','trat_hidro'],['Rec. Concentradora','rec_concentradora'],['Rec. Hidro','rec_hidro']] },
-            { label:'Efecto Ley', unit:'CU', sec:'efecto_ley',
-              rows:[['Ley Concentradora','concentradora'],['Ley Hidro','hidro']] },
-          ];
-
-          // Simple series — single row each
-          const simpleSections = [
-            { label:'Variación Inventario',  unit:'kt',  key:'variacion_inventario' },
-          ];
-
-          const totalCols = 2 + nc + 2; // label + ud + months + Mes + YTD
-
-          return (
-            <div className="tbl-wrap">
-              <table style={{fontSize:'.76rem', borderCollapse:'collapse'}}>
-                <thead>
-                  <tr>
-                    <th rowSpan={2} style={{...thC, textAlign:'left', minWidth:'200px',
-                      position:'sticky', left:0, zIndex:2, background:'#1A3A4A'}}>Componente</th>
-                    <th rowSpan={2} style={{...thC, width:'44px', background:'#1A3A4A'}}>Ud.</th>
-                    {calcData.cols.map((c,i)=>(
-                      <th key={i} style={thC}>{c.label}</th>
-                    ))}
-                    <th style={{...thC, background:'#0e4e5e'}}>Mes</th>
-                    <th style={{...thC, background:'#0e4e5e'}}>YTD</th>
-                  </tr>
-                  <tr>
-                    {calcData.cols.map((_,i)=><th key={i} style={{...thC, fontSize:'.65rem', color:'#a0d8df'}}>Real–Ppto</th>)}
-                    <th style={{...thC, background:'#0e4e5e', fontSize:'.65rem', color:'#a0d8df'}}>Real–Ppto</th>
-                    <th style={{...thC, background:'#0e4e5e', fontSize:'.65rem', color:'#a0d8df'}}>Real–Ppto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {calcSections.map((sec, si) => {
-                    const secData = calcData[sec.sec];
-                    return (
-                      <React.Fragment key={si}>
-                        <tr>
-                          <td colSpan={totalCols} style={thS}>{sec.label}</td>
-                        </tr>
-                        {sec.rows.map(([lbl, key], ri) => {
-                          const series = secData[key];
-                          const bg = ri % 2 === 0 ? 'white' : '#f8fafb';
-                          return (
-                            <tr key={ri} style={{background: bg}}>
-                              <td style={{...tdKpi, background: bg}}>{lbl}</td>
-                              <td style={tdUd}>{sec.unit}</td>
-                              {series.vals.map((v, vi) => (
-                                <td key={vi} style={colSt}>{fmtN(v)}</td>
-                              ))}
-                              <td style={colSt}>{fmtN(series.mes)}</td>
-                              <td style={colSt}>{fmtN(series.ytd)}</td>
-                            </tr>
-                          );
-                        })}
-                        {/* Total row */}
-                        {(() => {
-                          const tot = secData['total'];
-                          return (
-                            <tr style={{borderTop:'2px solid #e0e0e0'}}>
-                              <td style={totSt}>Total</td>
-                              <td style={{...tdUd, background:'#f0f9f9'}}>{sec.unit}</td>
-                              {tot.vals.map((v, vi) => (
-                                <td key={vi} style={totV}>{fmtN(v)}</td>
-                              ))}
-                              <td style={totV}>{fmtN(tot.mes)}</td>
-                              <td style={totV}>{fmtN(tot.ytd)}</td>
-                            </tr>
-                          );
-                        })()}
-                      </React.Fragment>
-                    );
-                  })}
-                  {/* Desarrollo Mina — IFRIC20 / Efecto P / Efecto Q */}
-                  {calcData.desarrollo_mina && (() => {
-                    const dm = calcData.desarrollo_mina;
-                    const hasItems = dm.items && dm.items.length > 0;
-                    return (
-                      <React.Fragment>
-                        <tr><td colSpan={totalCols} style={thS}>Desarrollo Mina</td></tr>
-                        {hasItems && dm.items.map(({label, vals, mes, ytd}, ri) => {
-                          const bg = ri % 2 === 0 ? 'white' : '#f8fafb';
-                          return (
-                            <tr key={ri} style={{background: bg}}>
-                              <td style={{...tdKpi, background: bg}}>{label}</td>
-                              <td style={tdUd}>kUS$</td>
-                              {vals.map((v, vi) => <td key={vi} style={colSt}>{fmtN(v)}</td>)}
-                              <td style={colSt}>{fmtN(mes)}</td>
-                              <td style={colSt}>{fmtN(ytd)}</td>
-                            </tr>
-                          );
-                        })}
-                        {hasItems && dm.total && (
-                          <tr style={{borderTop:'2px solid #e0e0e0'}}>
-                            <td style={totSt}>Total</td>
-                            <td style={{...tdUd, background:'#f0f9f9'}}>kUS$</td>
-                            {dm.total.vals.map((v, vi) => <td key={vi} style={totV}>{fmtN(v)}</td>)}
-                            <td style={totV}>{fmtN(dm.total.mes)}</td>
-                            <td style={totV}>{fmtN(dm.total.ytd)}</td>
-                          </tr>
-                        )}
-                        {!hasItems && (
-                          <tr style={{background:'white'}}>
-                            <td colSpan={totalCols} style={{padding:'8px 12px', color:'#aaa', fontSize:'.8rem', fontStyle:'italic'}}>
-                              Sin KPIs configurados — configura en la pestaña Fórmulas
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })()}
-
-                  {/* Simple sections: Variación Inventario */}
-                  {simpleSections.map((sec, si) => {
-                    const series = calcData[sec.key];
-                    if (!series) return null;
-                    return (
-                      <React.Fragment key={`s-${si}`}>
-                        <tr>
-                          <td colSpan={totalCols} style={thS}>{sec.label}</td>
-                        </tr>
-                        <tr style={{background:'white'}}>
-                          <td style={{...tdKpi, background:'white'}}>{sec.label}</td>
-                          <td style={tdUd}>{sec.unit}</td>
-                          {series.vals.map((v, vi) => (
-                            <td key={vi} style={colSt}>{fmtN(v)}</td>
-                          ))}
-                          <td style={colSt}>{fmtN(series.mes)}</td>
-                          <td style={colSt}>{fmtN(series.ytd)}</td>
-                        </tr>
-                      </React.Fragment>
-                    );
-                  })}
-
-                  {/* Actividad Contexto: Mov Mina, Actividad Mina/Conc/Hidro */}
-                  {calcData.actividad_contexto && (() => {
-                    const acData = calcData.actividad_contexto;
-                    const acRows = [
-                      { lbl:'Mov. Mina (sin IFRIC20 ni VarInv)', key:'mov_mina',       unit:'kt'   },
-                      { lbl:'Actividad Mina',                    key:'actividad_mina',  unit:'kUS$' },
-                      { lbl:'Actividad Concentradora',           key:'actividad_conc',  unit:'kUS$' },
-                      { lbl:'Actividad Hidro',                   key:'actividad_hidro', unit:'kUS$' },
-                    ];
-                    const thAmber = {
-                      background:'#92400e', color:'white', fontWeight:700,
-                      padding:'7px 12px', fontSize:'.75rem', letterSpacing:'.04em',
-                      textTransform:'uppercase',
-                    };
-                    return (
-                      <React.Fragment>
-                        <tr><td colSpan={totalCols} style={thAmber}>Actividad — Contexto (Real − Ppto)</td></tr>
-                        {acRows.map(({lbl, key, unit}, ri) => {
-                          const series = acData[key];
-                          if (!series) return null;
-                          const bg = ri % 2 === 0 ? '#fffbf0' : '#fef3c7';
-                          return (
-                            <tr key={ri} style={{background: bg}}>
-                              <td style={{...tdKpi, background: bg, color:'#92400e', fontStyle:'italic'}}>{lbl}</td>
-                              <td style={{...tdUd, color:'#92400e'}}>{unit}</td>
-                              {series.vals.map((v, vi) => (
-                                <td key={vi} style={colSt}>{fmtN(v)}</td>
-                              ))}
-                              <td style={colSt}>{fmtN(series.mes)}</td>
-                              <td style={colSt}>{fmtN(series.ytd)}</td>
-                            </tr>
-                          );
-                        })}
-                      </React.Fragment>
-                    );
-                  })()}
-                </tbody>
-              </table>
-            </div>
-          );
-        })()}
+        {expError && <p className="err">{expError}</p>}
+        <WaterfallTable rows={rows}/>
       </div>
     </div>
   );
@@ -1104,18 +1737,19 @@ const PARAM_ROWS = [
 
 function ParamsTab({period}) {
   const {tipo1, a1ini, m1ini, a1fin, m1fin, tipo2, a2ini, m2ini, a2fin, m2fin} = period;
-  const [params, setParams] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [saved,  setSaved]  = useState(false);
+  const [params,    setParams]    = useState(null);
+  const [saving,    setSaving]    = useState(false);
+  const [saved,     setSaved]     = useState(false);
+  const [fvCompany, setFvCompany] = useState('MLP');
 
   React.useEffect(() => {
     apiGet('/api/params').then(d => setParams(d)).catch(()=>{});
   }, []);
 
-  if (!params) return <div style={{padding:'32px',color:'#888'}}>Cargando...</div>;
+  const cols1 = useMemo(() => buildColumns(a1ini, m1ini, a1fin, m1fin), [a1ini, m1ini, a1fin, m1fin]);
+  const cols2 = useMemo(() => buildColumns(a2ini, m2ini, a2fin, m2fin), [a2ini, m2ini, a2fin, m2fin]);
 
-  const cols1 = buildColumns(a1ini, m1ini, a1fin, m1fin);
-  const cols2 = buildColumns(a2ini, m2ini, a2fin, m2fin);
+  if (!params) return <div style={{padding:'32px'}} className="hint">Cargando...</div>;
 
   const getVal = (field, year, month) => {
     const v = params.kpis?.[year]?.[month]?.[field];
@@ -1149,6 +1783,16 @@ function ParamsTab({period}) {
     setSaved(false);
   };
 
+  const setFijoVar = (idx, raw) => {
+    const val = raw === '' ? null : Math.min(1, Math.max(0, parseFloat(raw) / 100));
+    setParams(p => {
+      const arr = [...(p.costos_fijo_var?.[fvCompany] || [])];
+      arr[idx] = { ...arr[idx], fijo: isNaN(val) ? arr[idx].fijo : val };
+      return { ...p, costos_fijo_var: { ...(p.costos_fijo_var || {}), [fvCompany]: arr } };
+    });
+    setSaved(false);
+  };
+
   const handleSave = () => {
     setSaving(true);
     apiPost('/api/params', params)
@@ -1157,55 +1801,47 @@ function ParamsTab({period}) {
       .finally(() => setSaving(false));
   };
 
-  const inpSt = { width:'68px', padding:'3px 5px', border:'1px solid #ddd', borderRadius:'4px', fontSize:'.8rem', textAlign:'right' };
-  const thC1  = { padding:'5px 8px', textAlign:'center', fontSize:'.72rem', color:'white', background:'#1A6575', whiteSpace:'nowrap', fontWeight:600 };
-  const thC2  = { padding:'5px 8px', textAlign:'center', fontSize:'.72rem', color:'white', background:'#8a6000', whiteSpace:'nowrap', fontWeight:600 };
-  const thKpi = { padding:'6px 10px', textAlign:'left', fontSize:'.8rem', color:'white', background:'var(--navy)', whiteSpace:'nowrap', fontWeight:600, minWidth:'70px' };
-  const tdSt  = { padding:'4px 6px', textAlign:'center', borderBottom:'1px solid #f0f0f0' };
-
   return (
     <div className="main">
       <div className="card">
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px'}}>
         <div className="card-title" style={{margin:0}}>Parámetros Económicos</div>
-        <button onClick={handleSave} disabled={saving}
-          style={{padding:'7px 20px', background:'var(--teal)', color:'white', border:'none', borderRadius:'6px', fontWeight:700, cursor:'pointer', fontSize:'.88rem'}}>
+        <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{fontSize:'.88rem'}}>
           {saving ? 'Guardando...' : saved ? '✓ Guardado' : 'Guardar'}
         </button>
       </div>
 
-      {/* KPI table */}
       <div className="tbl-wrap" style={{marginBottom:'28px'}}>
         <table>
           <thead>
             <tr>
-              <th rowSpan={2} style={{...thKpi, verticalAlign:'middle'}}>KPI</th>
-              <th style={{...thC1, borderLeft:'2px solid #4EC3C3'}}>{tipo1||'Comp 1'}</th>
-              {cols1.map((c,i)=><th key={i} style={thC1}>{c.label}</th>)}
+              <th rowSpan={2} style={{verticalAlign:'middle', minWidth:'70px'}}>KPI</th>
+              <th className="tbl-th-c1" style={{textAlign:'center', borderLeft:'2px solid #4EC3C3'}}>{tipo1||'Comp 1'}</th>
+              {cols1.map((c,i)=><th key={i} className="tbl-th-c1" style={{textAlign:'center'}}>{c.label}</th>)}
             </tr>
             <tr>
-              <th style={{...thC2, borderLeft:'2px solid #F5A800'}}>{tipo2||'Comp 2'}</th>
-              {cols2.map((c,i)=><th key={i} style={thC2}>{c.label}</th>)}
+              <th className="tbl-th-c2" style={{textAlign:'center', borderLeft:'2px solid #F5A800'}}>{tipo2||'Comp 2'}</th>
+              {cols2.map((c,i)=><th key={i} className="tbl-th-c2" style={{textAlign:'center'}}>{c.label}</th>)}
             </tr>
           </thead>
           <tbody>
             {PARAM_ROWS.map(({kpi, realField, budgetField}, ri) => (
               <React.Fragment key={kpi}>
                 <tr style={{background: ri%2===0?'white':'#f8fafb'}}>
-                  <td rowSpan={2} style={{...tdSt, fontWeight:700, verticalAlign:'middle', borderRight:'2px solid #e0e0e0'}}>{kpi}</td>
-                  <td style={{...tdSt, color:'#4EC3C3', fontWeight:600, fontSize:'.78rem', borderLeft:'2px solid #4EC3C3', textAlign:'center', background:'#f4fdfd'}}>{tipo1||'Comp 1'}</td>
+                  <td rowSpan={2} className="params-td" style={{fontWeight:700, verticalAlign:'middle', borderRight:'2px solid #e0e0e0'}}>{kpi}</td>
+                  <td className="viz-tag1" style={{fontWeight:600, fontSize:'.78rem'}}>{tipo1||'Comp 1'}</td>
                   {cols1.map((c,i)=>(
-                    <td key={i} style={tdSt}>
-                      <input type="number" style={inpSt} value={getVal(realField, c.year, c.month)}
+                    <td key={i} className="params-td">
+                      <input type="number" className="params-inp" value={getVal(realField, c.year, c.month)}
                         onChange={e=>setVal(realField, c.year, c.month, e.target.value)}/>
                     </td>
                   ))}
                 </tr>
                 <tr style={{background: ri%2===0?'white':'#f8fafb', borderBottom:'2px solid #e5e7eb'}}>
-                  <td style={{...tdSt, color:'#F5A800', fontWeight:600, fontSize:'.78rem', borderLeft:'2px solid #F5A800', textAlign:'center', background:'#fffbf0'}}>{tipo2||'Comp 2'}</td>
+                  <td className="viz-tag2" style={{fontWeight:600, fontSize:'.78rem'}}>{tipo2||'Comp 2'}</td>
                   {cols2.map((c,i)=>(
-                    <td key={i} style={tdSt}>
-                      <input type="number" style={inpSt} value={getVal(budgetField, c.year, c.month)}
+                    <td key={i} className="params-td">
+                      <input type="number" className="params-inp" value={getVal(budgetField, c.year, c.month)}
                         onChange={e=>setVal(budgetField, c.year, c.month, e.target.value)}/>
                     </td>
                   ))}
@@ -1216,16 +1852,15 @@ function ParamsTab({period}) {
         </table>
       </div>
 
-      {/* Exposición TC */}
       <h3 style={{color:'var(--navy)', fontSize:'.95rem', marginBottom:'12px'}}>Exposición a Tipo de Cambio</h3>
-      <div style={{display:'flex', gap:'20px', flexWrap:'wrap'}}>
+      <div style={{display:'flex', gap:'20px', flexWrap:'wrap', marginBottom:'28px'}}>
         {COMPANIES.map(co => (
           <div key={co} style={{display:'flex', flexDirection:'column', gap:'4px', alignItems:'center',
             background:'white', border:'1px solid #e0e0e0', borderRadius:'8px', padding:'12px 18px', minWidth:'90px'}}>
             <span style={{fontWeight:700, color:'var(--navy)', fontSize:'.9rem'}}>{co}</span>
             <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
               <input type="number" min="0" max="100" step="0.1"
-                style={{...inpSt, width:'60px'}}
+                className="params-inp" style={{width:'60px'}}
                 value={params.exp_tc?.[co] == null ? '' : params.exp_tc[co]}
                 onChange={e=>setExpTc(co, e.target.value)}/>
               <span style={{fontSize:'.85rem', color:'#666'}}>%</span>
@@ -1233,6 +1868,98 @@ function ParamsTab({period}) {
           </div>
         ))}
       </div>
+
+      <h3 style={{color:'var(--navy)', fontSize:'.95rem', marginBottom:'4px'}}>Estructura Fijo / Variable por Área de Costo</h3>
+      <p style={{fontSize:'.8rem', color:'#888', marginBottom:'10px'}}>
+        Proporción fija del presupuesto (no escala con volumen). Variable = 100% − Fijo. Varía por compañía.
+      </p>
+      <div className="company-tabs" style={{marginBottom:'10px'}}>
+        {COMPANIES.map(co => (
+          <button key={co} className={`company-tab ${fvCompany===co?'active':''}`} onClick={()=>setFvCompany(co)}>{co}</button>
+        ))}
+      </div>
+      <table style={{width:'100%', borderCollapse:'collapse', fontSize:'.84rem', maxWidth:'480px'}}>
+        <thead>
+          <tr style={{background:'#f3f4f6'}}>
+            <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151'}}>Área</th>
+            <th style={{padding:'7px 14px', textAlign:'center', fontWeight:600, color:'#374151', width:'100px'}}>% Fijo</th>
+            <th style={{padding:'7px 14px', textAlign:'center', fontWeight:600, color:'#374151', width:'100px'}}>% Variable</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(params.costos_fijo_var?.[fvCompany] || []).map((row, idx) => {
+            const fijoDisplay = row.fijo == null ? '' : Math.round(row.fijo * 1000) / 10;
+            const varDisplay  = row.fijo == null ? '' : Math.round((1 - row.fijo) * 1000) / 10;
+            return (
+              <tr key={row.key} style={{borderTop:'1px solid #f0f0f0', background: idx%2===0?'white':'#fafafa'}}>
+                <td style={{padding:'7px 14px', color:'#374151', fontWeight:500}}>{row.label}</td>
+                <td style={{padding:'5px 14px', textAlign:'center'}}>
+                  <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:'3px'}}>
+                    <input type="number" min="0" max="100" step="1"
+                      className="params-inp" style={{width:'58px', textAlign:'right'}}
+                      value={fijoDisplay}
+                      onChange={e => setFijoVar(idx, e.target.value)}/>
+                    <span style={{fontSize:'.8rem', color:'#888'}}>%</span>
+                  </div>
+                </td>
+                <td style={{padding:'7px 14px', textAlign:'center', color:'#666', fontStyle:'italic'}}>
+                  {varDisplay !== '' ? `${varDisplay}%` : '—'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <h3 style={{color:'var(--navy)', fontSize:'.95rem', margin:'24px 0 4px'}}>% Fijo por Sub-área — Costos Ajustados</h3>
+      <p style={{fontSize:'.8rem', color:'#888', marginBottom:'10px'}}>
+        % Fijo aplicado al presupuesto antes de ajustar por FX/IPC. El componente variable no se ajusta.
+      </p>
+      <table style={{width:'100%', borderCollapse:'collapse', fontSize:'.84rem', maxWidth:'520px'}}>
+        <thead>
+          <tr style={{background:'#f3f4f6'}}>
+            <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151'}}>Grupo / Sub-área</th>
+            <th style={{padding:'7px 14px', textAlign:'center', fontWeight:600, color:'#374151', width:'100px'}}>% Fijo</th>
+            <th style={{padding:'7px 14px', textAlign:'center', fontWeight:600, color:'#374151', width:'100px'}}>% Variable</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(params.costos_aj_grupos?.[fvCompany] || []).flatMap((grp, gi) =>
+            (grp.subareas || []).map((sa, si) => {
+              const fd = sa.fijo == null ? '' : Math.round(sa.fijo * 1000) / 10;
+              const vd = sa.fijo == null ? '' : Math.round((1 - sa.fijo) * 1000) / 10;
+              return (
+                <tr key={`${gi}-${si}`} style={{borderTop:'1px solid #f0f0f0', background: si%2===0?'white':'#fafafa'}}>
+                  <td style={{padding:'7px 14px', color:'#374151', fontWeight:500}}>
+                    <span style={{fontSize:'.72rem', color:'#aaa', marginRight:'6px'}}>{grp.label}</span>{sa.label}
+                  </td>
+                  <td style={{padding:'5px 14px', textAlign:'center'}}>
+                    <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:'3px'}}>
+                      <input type="number" min="0" max="100" step="1" className="params-inp" style={{width:'58px', textAlign:'right'}}
+                        value={fd}
+                        onChange={e => {
+                          const val = e.target.value === '' ? null : Math.min(1, Math.max(0, parseFloat(e.target.value) / 100));
+                          setParams(p => {
+                            const gs = JSON.parse(JSON.stringify(p.costos_aj_grupos || {}));
+                            if (!gs[fvCompany]) return p;
+                            if (!gs[fvCompany][gi]?.subareas?.[si]) return p;
+                            gs[fvCompany][gi].subareas[si].fijo = isNaN(val) ? sa.fijo : val;
+                            return {...p, costos_aj_grupos: gs};
+                          });
+                          setSaved(false);
+                        }}/>
+                      <span style={{fontSize:'.8rem', color:'#888'}}>%</span>
+                    </div>
+                  </td>
+                  <td style={{padding:'7px 14px', textAlign:'center', color:'#666', fontStyle:'italic'}}>
+                    {vd !== '' ? `${vd}%` : '—'}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
       </div>
     </div>
   );
@@ -1243,44 +1970,104 @@ const FORMULA_META = [
   { group:'Delta Gasto (Precio)',
     formula:'(Tarifa_r − Tarifa_p) × Consumo_r  [× escala según insumo]',
     vars:[
-      { key:'tarifa_bolas',        label:'Tarifa Bolas' },
-      { key:'tarifa_energia',      label:'Tarifa Energía' },
-      { key:'tarifa_combustible',  label:'Tarifa Combustible' },
-      { key:'tarifa_explosivos',   label:'Tarifa Explosivos' },
-      { key:'consumo_bolas',       label:'Consumo Bolas' },
-      { key:'consumo_energia',     label:'Consumo Energía' },
-      { key:'consumo_combustible', label:'Consumo Combustible' },
-      { key:'consumo_explosivos',  label:'Consumo Explosivos' },
+      { key:'tarifa_bolas',        label:'Tarifa Bolas',        required:true },
+      { key:'tarifa_energia',      label:'Tarifa Energía',      required:true },
+      { key:'tarifa_combustible',  label:'Tarifa Combustible',  required:true },
+      { key:'tarifa_explosivos',   label:'Tarifa Explosivos',   required:true },
+      { key:'consumo_bolas',       label:'Consumo Bolas',       required:true },
+      { key:'consumo_energia',     label:'Consumo Energía',     required:true },
+      { key:'consumo_combustible', label:'Consumo Combustible', required:true },
+      { key:'consumo_explosivos',  label:'Consumo Explosivos',  required:true },
     ]
   },
   { group:'Delta Rendimiento',
     formula:'(Rendimiento_r − Rendimiento_b) × Base_r × Tarifa_p  [Rendimiento = Consumo / Base]',
     vars:[
-      { key:'tarifa_bolas',        label:'Tarifa Bolas (precio base)' },
-      { key:'tarifa_energia',      label:'Tarifa Energía (precio base)' },
-      { key:'tarifa_combustible',  label:'Tarifa Combustible (precio base)' },
-      { key:'tarifa_explosivos',   label:'Tarifa Explosivos (precio base)' },
-      { key:'consumo_bolas',       label:'Consumo Bolas (numerador)' },
-      { key:'consumo_energia',     label:'Consumo Energía (numerador)' },
-      { key:'consumo_combustible', label:'Consumo Combustible (numerador)' },
-      { key:'consumo_explosivos',  label:'Consumo Explosivos (numerador)' },
-      { key:'tratamiento',         label:'Tratamiento (base Bolas/Energía)' },
-      { key:'horas_efectivas',     label:'Horas Efectivas (base Combustible)' },
-      { key:'tronadura',           label:'Tronadura (base Explosivos)', multi:true },
+      { key:'tarifa_bolas',        label:'Tarifa Bolas (precio base)',        required:true },
+      { key:'tarifa_energia',      label:'Tarifa Energía (precio base)',      required:true },
+      { key:'tarifa_combustible',  label:'Tarifa Combustible (precio base)',  required:true },
+      { key:'tarifa_explosivos',   label:'Tarifa Explosivos (precio base)',   required:true },
+      { key:'consumo_bolas',       label:'Consumo Bolas (numerador)',         required:true },
+      { key:'consumo_energia',     label:'Consumo Energía (numerador)',       required:true },
+      { key:'consumo_combustible', label:'Consumo Combustible (numerador)',   required:true },
+      { key:'consumo_explosivos',  label:'Consumo Explosivos (numerador)',    required:true },
+      { key:'tratamiento',         label:'Tratamiento (base Bolas/Energía)', required:true },
+      { key:'horas_efectivas',     label:'Horas Efectivas (base Combustible)',required:true },
+      { key:'tronadura',           label:'Tronadura (base Explosivos)',       required:true, multi:true },
     ]
   },
   { group:'Delta Actividad & Efecto Ley',
     formula:'Fórmula trilineal: dp×dl×dr sobre Tratamiento, Ley y Recuperación',
     vars:[
-      { key:'tratamiento',  label:'Tratamiento' },
-      { key:'ley_cu',       label:'Ley de Cu' },
-      { key:'recuperacion', label:'Recuperación' },
+      { key:'tratamiento',  label:'Tratamiento',    required:true },
+      { key:'ley_cu',       label:'Ley de Cu',      required:true },
+      { key:'recuperacion', label:'Recuperación',   required:true },
+    ]
+  },
+  { group:'Efectos TC/R & Comercialización',
+    formula:'Efecto Cantidades = (Q_r − Q_b) × T_b / 1000  |  Efecto Tarifas = (T_r − T_b) × Q_r / 1000  [kUS$]',
+    vars:[
+      { key:'tcrc_q',        label:'Cu pag. embarcado (cantidad, ton)' },
+      { key:'tcrc_tarifa_u', label:'TC/RC unitario (US$/t)' },
+      { key:'comer_tarifa_u', label:'Comercialización unitaria (US/t)' },
+    ]
+  },
+  { group:'Ajuste Monetario / Análisis Costo',
+    formula:'Efecto TC = Gasto_b × exp_tc × (TC_b/TC_r − 1)  |  Efecto IPC = Gasto_b × exp_tc × (IPC_r/IPC_b − 1)  |  Efecto CPI = Gasto_b × (1−exp_tc) × (CPI_r/CPI_b − 1)  [kUS$]',
+    vars:[
+      { key:'gasto_operacional',      label:'C1 On-Site Presupuesto (kUS$)', required:true },
+      { key:'gasto_operacional_real', label:'C1 On-Site Real (kUS$)' },
+    ]
+  },
+  { group:'Desarrollo Mina — P×Q',
+    formula:'Efecto Tonelaje = (Vol_r − Vol_b) × CU_b  |  Efecto CU = (CU_r − CU_b) × Vol_r  [kUS$]',
+    vars:[
+      { key:'dev_mina_vol', label:'Volumen Desarrollo Mina (kt)', required:true },
+    ]
+  },
+  { group:'Estructura C3 → Costo Onsite Ppto',
+    formula:'C3 → (−Sustaining) → C2 → (−D&A) → C1 → (−Subprod) → Pre-credit → (−TC/RC) → (−Comer) → Costo Onsite Ppto',
+    vars:[
+      { key:'c3',           label:'C3 Ppto total (kUS$)',                required:true },
+      { key:'c2',           label:'C2 Ppto (kUS$)',                      required:true },
+      { key:'da',           label:'Depreciación / Amortización (kUS$)',  required:true },
+      { key:'c1_abs',       label:'C1 Ppto antes créditos (kUS$)',       required:true },
+      { key:'subprod_b',    label:'Subproductos Ppto (kUS$, negativo)',  required:true },
+      { key:'tcrc_b_total', label:'TC/RC Ppto total (kUS$)',             required:true },
+      { key:'comer_b_total',label:'Comercialización Ppto total (kUS$)',  required:true },
+    ]
+  },
+  { group:'Efectos operacionales (Análisis Costo)',
+    formula:'Δ real − ppto para cada efecto (kUS$)',
+    vars:[
+      { key:'vi_inv_mina',   label:'Var. Inventario Mina (kUS$)',   required:false },
+      { key:'vi_inv_planta', label:'Var. Inventario Planta (kUS$)', required:false },
+      { key:'ifrs16',        label:'IFRS16 (kUS$)',                  required:false },
+    ]
+  },
+  { group:'Estructura Real (cierre waterfall)',
+    formula:'On Site Real → TC/RC → Comer → Pre-credit Real → Subprod → C1 Real → D&A → C2 Real → otros → C3 Real',
+    vars:[
+      { key:'tcrc_r_total',    label:'TC/RC Real total (kUS$, negativo)',            required:true },
+      { key:'comer_r_total',   label:'Comercialización Real total (kUS$, negativo)', required:true },
+      { key:'subprod_r',       label:'Subproductos Real (kUS$, negativo)',            required:true },
+      { key:'c1_r_costo',      label:'C1 Real (kUS$)',                               required:true },
+      { key:'da_r',            label:'D&A Real (kUS$)',                              required:true },
+      { key:'c2_r',            label:'C2 Real (kUS$)',                               required:true },
+      { key:'c3_r',            label:'C3 Real (kUS$)',                               required:true },
+      { key:'otros_fin_r',     label:'Otros Items Financieros (kUS$)',               required:false },
+      { key:'dif_cambio_r',    label:'Diferencias de cambio (kUS$)',                 required:false },
+      { key:'donaciones_r',    label:'Donaciones (kUS$)',                            required:false },
+      { key:'gasto_expl_r',    label:'Gastos Exploraciones (kUS$)',                  required:false },
+      { key:'ing_gasto_fin_r', label:'Ingresos y Gastos Financieros (kUS$)',         required:false },
+      { key:'ing_no_op_r',     label:'Ingresos No Operacionales (kUS$)',             required:false },
+      { key:'otros_egr_op_r',  label:'Otros egresos operacionales (kUS$)',           required:false },
     ]
   },
 ];
 
 const SIMPLE_META = [
-  { key:'variacion_inventario', label:'Variación Inventario',
+  { key:'variacion_inventario', label:'Variación Inventario', required:true,
     desc:'Delta real − presupuesto (suma de KPIs seleccionados)', unit:'kt' },
 ];
 
@@ -1290,26 +2077,41 @@ function FormulasTab() {
   const [saved,   setSaved]   = useState(false);
   const [error,   setError]   = useState('');
   const [pqKpis,  setPqKpis]  = useState([]);
+  const [lkMap,   setLkMap]   = useState({}); // {lk_label: parquet_kpi_name}
 
   useEffect(() => {
     Promise.all([
       apiGet('/api/calculos/formula-params'),
       apiGet('/api/setup/parquet-kpis/MLP'),
-    ]).then(([fp, pq]) => {
+      apiGet('/api/setup/mappings'),
+    ]).then(([fp, pq, mappings]) => {
       setParams(fp);
       setPqKpis(pq.kpis || []);
+      // Build lk→parquet map (first company wins for duplicate lk keys)
+      const lk = {};
+      for (const cm of Object.values(mappings)) {
+        for (const [k, val] of Object.entries(cm)) {
+          if (lk[k]) continue;
+          if (typeof val === 'string' && val !== '__NA__') lk[k] = val;
+          else if (val?._s && val.src) lk[k] = val.src;
+        }
+      }
+      setLkMap(lk);
     }).catch(e => setError(e.message || 'Error cargando parámetros'));
   }, []);
 
+  // If the user typed/selected a Mapeos template label, resolve to parquet name
+  function resolveLk(v) { return lkMap[v] !== undefined ? lkMap[v] : v; }
+
   function setKey(k, v) {
-    setParams(p => ({ ...p, kpi_keys: { ...p.kpi_keys, [k]: v } }));
+    setParams(p => ({ ...p, kpi_keys: { ...p.kpi_keys, [k]: resolveLk(v) } }));
     setSaved(false);
   }
 
   function setTronItem(idx, v) {
     setParams(p => {
       const arr = Array.isArray(p.kpi_keys.tronadura) ? [...p.kpi_keys.tronadura] : [p.kpi_keys.tronadura];
-      arr[idx] = v;
+      arr[idx] = resolveLk(v);
       return { ...p, kpi_keys: { ...p.kpi_keys, tronadura: arr } };
     });
     setSaved(false);
@@ -1374,17 +2176,12 @@ function FormulasTab() {
     finally { setSaving(false); }
   }
 
-  const inpSt = { flex:1, padding:'5px 9px', border:'2px solid #10b981', borderRadius:'5px',
-                  fontSize:'.82rem', minWidth:'220px', background:'#f0fdf4' };
-  const grpHd = { background:'#1A3A4A', color:'white', fontWeight:700, padding:'8px 14px',
-                  fontSize:'.8rem', letterSpacing:'.04em', textTransform:'uppercase' };
-
   if (!params) return (
     <div className="main">
       <div className="card">
         {error
-          ? <p style={{color:'var(--red)'}}>{error}</p>
-          : <p style={{color:'#aaa'}}><span className="spin"/>Cargando parámetros…</p>
+          ? <p className="err">{error}</p>
+          : <p className="hint"><span className="spin"/>Cargando parámetros…</p>
         }
       </div>
     </div>
@@ -1395,87 +2192,23 @@ function FormulasTab() {
       <div className="card">
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'18px'}}>
           <div className="card-title" style={{margin:0}}>Fórmulas de Cálculo — Variables Configurables</div>
-          <button onClick={handleSave} disabled={saving}
-            style={{padding:'8px 22px', background:'var(--teal)', color:'white', border:'none',
-                    borderRadius:'6px', fontWeight:700, cursor:'pointer', fontSize:'.88rem'}}>
-            {saving ? 'Guardando…' : saved ? '✓ Guardado' : '💾 Guardar'}
+          <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{fontSize:'.88rem'}}>
+            {saving ? 'Guardando…' : saved ? 'Guardado' : 'Guardar'}
           </button>
         </div>
-        {error && <p style={{color:'var(--red)', fontSize:'.85rem', marginBottom:'10px'}}>{error}</p>}
+        {error && <p className="err" style={{fontSize:'.85rem'}}>{error}</p>}
 
         <p style={{fontSize:'.83rem', color:'#666', marginBottom:'18px', lineHeight:'1.5'}}>
-          Aquí puedes ver y editar qué KPI del Parquet alimenta cada variable de los cálculos.
-          Los cambios se aplican la próxima vez que calcules.
+          Las variables de fórmula (KPIs del Parquet) se configuran en la pestaña <strong>Configurar Mapeos</strong>.
+          Aquí solo se gestionan los items de Desarrollo Mina, Variación Inventario y contexto de Actividad.
         </p>
-
-        <datalist id="pq-all">
-          {pqKpis.map(k => <option key={k} value={k}/>)}
-        </datalist>
-
-        {/* Formula sections */}
-        {FORMULA_META.map((grp, gi) => (
-          <div key={gi} style={{marginBottom:'20px', border:'1px solid #e5e7eb', borderRadius:'8px', overflow:'hidden'}}>
-            <div style={grpHd}>{grp.group}</div>
-            <div style={{background:'#f8f9fa', padding:'8px 14px', fontSize:'.75rem', color:'#666',
-                         borderBottom:'1px solid #e5e7eb', fontStyle:'italic'}}>
-              {grp.formula}
-            </div>
-            <table style={{width:'100%', borderCollapse:'collapse', fontSize:'.83rem'}}>
-              <thead>
-                <tr style={{background:'#f3f4f6'}}>
-                  <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151', width:'240px'}}>Variable</th>
-                  <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151'}}>KPI en Parquet</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grp.vars.map((v, vi) => {
-                  const isMulti = v.multi;
-                  const val = params.kpi_keys[v.key];
-                  const arr = isMulti ? (Array.isArray(val) ? val : [val || '']) : null;
-                  return (
-                    <tr key={vi} style={{borderTop:'1px solid #f0f0f0', background: vi%2===0?'white':'#fafafa'}}>
-                      <td style={{padding:'7px 14px', color:'#374151', fontWeight:500}}>{v.label}</td>
-                      <td style={{padding:'6px 14px'}}>
-                        {isMulti ? (
-                          <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
-                            {arr.map((item, idx) => (
-                              <div key={idx} style={{display:'flex', gap:'6px', alignItems:'center'}}>
-                                <input list="pq-all" value={item} onChange={e => setTronItem(idx, e.target.value)}
-                                  style={inpSt} placeholder="KPI en parquet…"/>
-                                {arr.length > 1 && (
-                                  <button onClick={() => {
-                                    const next = arr.filter((_,i)=>i!==idx);
-                                    setKey(v.key, next.length === 1 ? next[0] : next);
-                                  }} style={{background:'var(--red)',color:'white',border:'none',
-                                    borderRadius:'4px',width:'22px',height:'22px',cursor:'pointer',fontWeight:700}}>−</button>
-                                )}
-                              </div>
-                            ))}
-                            <button onClick={() => setKey(v.key, [...arr, ''])}
-                              style={{alignSelf:'flex-start', background:'none', border:'1px dashed var(--teal)',
-                                      color:'var(--teal)', borderRadius:'4px', padding:'2px 8px',
-                                      cursor:'pointer', fontSize:'.75rem', fontWeight:700}}>+ agregar</button>
-                          </div>
-                        ) : (
-                          <input list="pq-all" value={val || ''} onChange={e => setKey(v.key, e.target.value)}
-                            style={inpSt} placeholder="KPI en parquet…"/>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ))}
 
         {/* Desarrollo Mina — items configurables */}
         {(() => {
           const dmItems = params.desarrollo_mina_items || [];
-          const tealHd  = { ...grpHd };
           return (
             <div style={{marginBottom:'20px', border:'1px solid #e5e7eb', borderRadius:'8px', overflow:'hidden'}}>
-              <div style={tealHd}>Desarrollo Mina — IFRIC20 / Efecto P / Efecto Q <span style={{fontWeight:400, fontSize:'.75rem', marginLeft:'8px'}}>kUS$</span></div>
+              <div className="fm-grp-hd">Desarrollo Mina — IFRIC20 / Efecto P / Efecto Q <span style={{fontWeight:400, fontSize:'.75rem', marginLeft:'8px'}}>kUS$</span></div>
               <div style={{background:'#f8f9fa', padding:'8px 14px', fontSize:'.75rem', color:'#666',
                            borderBottom:'1px solid #e5e7eb', fontStyle:'italic'}}>
                 Cada fila es la suma de sus KPIs (real − presupuesto). Configura los KPIs del parquet para IFRIC20, Efecto P y Efecto Q.
@@ -1506,7 +2239,7 @@ function FormulasTab() {
                                   setParams(p => ({...p, desarrollo_mina_items: next}));
                                   setSaved(false);
                                 }}
-                                style={inpSt} placeholder="KPI en parquet…"/>
+                                className="fm-inp" placeholder="KPI en parquet…"/>
                               <button onClick={() => {
                                 const next = dmItems.map((it, idx) => {
                                   if (idx !== ii) return it;
@@ -1539,16 +2272,21 @@ function FormulasTab() {
         })()}
 
         {/* Simple sections: Variación Inventario */}
-        {SIMPLE_META.map((sec, si) => (
-          <div key={si} style={{marginBottom:'20px', border:'1px solid #e5e7eb', borderRadius:'8px', overflow:'hidden'}}>
-            <div style={grpHd}>{sec.label} <span style={{fontWeight:400, fontSize:'.75rem', marginLeft:'8px'}}>{sec.unit}</span></div>
+        {SIMPLE_META.map((sec, si) => {
+          const listEmpty = sec.required && (!(params[sec.key]||[]).length || (params[sec.key]||[]).every(x=>!x));
+          return (
+          <div key={si} style={{marginBottom:'20px', border:`1px solid ${listEmpty?'#f59e0b':'#e5e7eb'}`, borderRadius:'8px', overflow:'hidden'}}>
+            <div className="fm-grp-hd">
+              {sec.label} <span style={{fontWeight:400, fontSize:'.75rem', marginLeft:'8px'}}>{sec.unit}</span>
+              {listEmpty && <span style={{marginLeft:'10px', color:'#fcd34d', fontWeight:700, fontSize:'.72rem'}}>● sin configurar</span>}
+            </div>
             <div style={{background:'#f8f9fa', padding:'8px 14px', fontSize:'.75rem', color:'#666',
                          borderBottom:'1px solid #e5e7eb', fontStyle:'italic'}}>{sec.desc}</div>
             <div style={{padding:'12px 14px', display:'flex', flexDirection:'column', gap:'6px'}}>
               {(params[sec.key] || []).map((item, idx) => (
                 <div key={idx} style={{display:'flex', gap:'6px', alignItems:'center'}}>
                   <input list="pq-all" value={item} onChange={e => setSimpleItem(sec.key, idx, e.target.value)}
-                    style={inpSt} placeholder="KPI en parquet…"/>
+                    className="fm-inp" placeholder="KPI en parquet…"/>
                   <button onClick={() => removeSimpleItem(sec.key, idx)}
                     style={{background:'var(--red)',color:'white',border:'none',
                             borderRadius:'4px',width:'22px',height:'22px',cursor:'pointer',fontWeight:700}}>−</button>
@@ -1560,19 +2298,16 @@ function FormulasTab() {
                         cursor:'pointer', fontSize:'.78rem', fontWeight:700}}>+ agregar KPI</button>
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {/* Actividad Contexto */}
         {(() => {
           const ac = params.actividad_contexto || {};
           const movKpis = ac.mov_mina_kpis || [];
-          const amberHd = { background:'#92400e', color:'white', fontWeight:700, padding:'8px 14px',
-                            fontSize:'.8rem', letterSpacing:'.04em', textTransform:'uppercase' };
-          const numInp = { padding:'5px 9px', border:'2px solid #f59e0b', borderRadius:'5px',
-                           fontSize:'.82rem', width:'130px', background:'#fffbf0' };
           return (
             <div style={{marginBottom:'20px', border:'1px solid #f59e0b', borderRadius:'8px', overflow:'hidden'}}>
-              <div style={amberHd}>Actividad Contexto — Mov Mina & Costos Unitarios</div>
+              <div className="fm-amber-hd">Actividad Contexto — Mov Mina & Costos Unitarios</div>
               <div style={{background:'#fffbf0', padding:'8px 14px', fontSize:'.75rem', color:'#92400e',
                            borderBottom:'1px solid #f59e0b', fontStyle:'italic'}}>
                 Act. Mina = ΔMovMina × CostoUnit_Mina × (exp_TC×TC_ppto/TC_real + (1−exp_TC)) — análogo para Concentradora
@@ -1587,7 +2322,7 @@ function FormulasTab() {
                     {movKpis.map((item, idx) => (
                       <div key={idx} style={{display:'flex', gap:'6px', alignItems:'center'}}>
                         <input list="pq-all" value={item} onChange={e => setActCtxKpiItem(idx, e.target.value)}
-                          style={{...inpSt, border:'2px solid #f59e0b', background:'#fffbf0'}} placeholder="KPI en parquet…"/>
+                          className="fm-amber-inp" placeholder="KPI en parquet…"/>
                         {movKpis.length > 1 && (
                           <button onClick={() => removeActCtxKpiItem(idx)}
                             style={{background:'var(--red)',color:'white',border:'none',
@@ -1608,7 +2343,7 @@ function FormulasTab() {
                     KPI Procesamiento (base Concentradora)
                   </div>
                   <input list="pq-all" value={ac.procesamiento_kpi || ''} onChange={e => setActCtx('procesamiento_kpi', e.target.value)}
-                    style={{...inpSt, border:'2px solid #f59e0b', background:'#fffbf0'}} placeholder="KPI en parquet…"/>
+                    className="fm-amber-inp" placeholder="KPI en parquet…"/>
                 </div>
 
                 {/* Unit costs */}
@@ -1626,7 +2361,7 @@ function FormulasTab() {
                       <input type="number" step="0.01"
                         value={ac[field] == null ? '' : ac[field]}
                         onChange={e => setActCtx(field, e.target.value === '' ? null : parseFloat(e.target.value))}
-                        style={numInp} placeholder="no configurado"/>
+                        className="fm-num-inp" placeholder="no configurado"/>
                     </div>
                   ))}
                 </div>
@@ -1639,9 +2374,638 @@ function FormulasTab() {
   );
 }
 
+/* ─── Explicaciones: module-level helpers (stable references across renders) ─── */
+const EXP_TBL = {width:'100%', borderCollapse:'collapse', fontSize:'.8rem', tableLayout:'fixed'};
+const EXP_CKpi  = {padding:'4px 8px', fontWeight:500, fontSize:'.8rem'};
+const EXP_CUnit = {padding:'3px 6px', color:'#888', textAlign:'center', fontSize:'.73rem', whiteSpace:'nowrap'};
+const EXP_CVal  = {padding:'3px 8px', textAlign:'right', fontSize:'.79rem', whiteSpace:'nowrap'};
+const EXP_CEf   = {padding:'3px 8px', textAlign:'right', fontSize:'.79rem', whiteSpace:'nowrap', width:'90px'};
+
+function expFmtN(v) {
+  if (v == null) return <span style={{color:'#bbb'}}>—</span>;
+  return Number(v).toLocaleString('es-CL', {maximumFractionDigits:3});
+}
+
+function ExpTblHead({title}) {
+  const thSt = {padding:'5px 8px', fontSize:'.72rem', color:'white', background:'#2d5a6e', fontWeight:700, whiteSpace:'nowrap'};
+  return (
+    <thead>
+      <tr>
+        <th style={{...thSt, textAlign:'left', minWidth:'140px', fontSize:'.8rem', background:'#1A3A4A', padding:'7px 10px', letterSpacing:'.03em'}}>{title}</th>
+        <th style={{...thSt, textAlign:'center', width:'64px'}}>Ud.</th>
+        <th style={{...thSt, textAlign:'right', width:'88px'}}>Real</th>
+        <th style={{...thSt, textAlign:'right', width:'88px'}}>Ppto</th>
+        <th style={{...thSt, textAlign:'right', width:'90px'}}>Efecto</th>
+      </tr>
+    </thead>
+  );
+}
+
+function ExpSecHd({label, total, cols=5}) {
+  return (
+    <tr>
+      <td colSpan={cols} style={{
+        background:'#1A3A4A', color:'white', fontWeight:700,
+        padding:'5px 8px 5px 10px', fontSize:'.72rem',
+        letterSpacing:'.05em', textTransform:'uppercase',
+      }}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <span>{label}</span>
+          {total != null && <span style={{fontWeight:700, fontSize:'.79rem', textTransform:'none', letterSpacing:0}}>{total}</span>}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function ExpRow({label, unit, real, ppto, efNode, alt, indent}) {
+  const bg = alt ? '#f8fafb' : 'white';
+  return (
+    <tr style={{background:bg}}>
+      <td style={{...EXP_CKpi, background:bg, paddingLeft: indent ? '28px' : undefined}}>{label}</td>
+      <td style={EXP_CUnit}>{unit}</td>
+      <td style={EXP_CVal}>{expFmtN(real)}</td>
+      <td style={EXP_CVal}>{expFmtN(ppto)}</td>
+      <td style={EXP_CEf}>{efNode}</td>
+    </tr>
+  );
+}
+
+/* ─── Tab: Explicaciones ─── */
+function ExplicacionesTab({period}) {
+  const {a1fin, m1fin} = period;
+  const [company, setCompany] = useState('MLP');
+  const [año, setAño] = useState(a1fin);
+  const [mes, setMes] = useState(m1fin);
+  const [pnl, setPnl] = useState('ytd');
+  const [data, loading, error, run] = useAsyncState();
+
+  function cargar() {
+    run(apiGet(`/api/explicaciones/${company}?año=${año}&mes=${mes}`));
+  }
+
+  const pd     = data?.data?.[pnl];
+  const cuProd = pd?.cu_prod_real;
+
+  const toCLB = efKUS => {
+    if (efKUS == null || cuProd == null || cuProd === 0) return null;
+    return efKUS * 100 / (cuProd * 2204.62);
+  };
+
+  const sumCLB = rows => {
+    let tot = null;
+    for (const r of rows) {
+      const v = toCLB(r.efecto_kus);
+      if (v != null) tot = (tot||0) + v;
+    }
+    return tot;
+  };
+  const sumKtCuf = rows => {
+    let tot = null;
+    for (const r of rows) {
+      if (r.efecto_ktcuf != null) tot = (tot||0) + r.efecto_ktcuf;
+    }
+    return tot;
+  };
+
+  const fmtCLB = v => {
+    if (v == null) return <span style={{color:'#bbb'}}>—</span>;
+    const color = v < 0 ? 'var(--red)' : v > 0 ? '#059669' : 'inherit';
+    return <span style={{color, fontWeight:700}}>{v >= 0 ? '+' : ''}{v.toFixed(1)} c/lb</span>;
+  };
+  const fmtKtCuf = v => {
+    if (v == null) return <span style={{color:'#bbb'}}>—</span>;
+    const color = v < 0 ? 'var(--red)' : v > 0 ? '#059669' : 'inherit';
+    return <span style={{color, fontWeight:700}}>{v >= 0 ? '+' : ''}{v.toFixed(1)} ktCuf</span>;
+  };
+
+  return (
+    <div className="main">
+      {/* Controls */}
+      <div className="card">
+        <div className="card-title">Explicaciones</div>
+        <div className="company-tabs">
+          {COMPANIES.map(c => (
+            <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>{c}</button>
+          ))}
+        </div>
+        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginTop:'12px'}}>
+          <div className="form-group">
+            <label>Año</label>
+            <select value={año} onChange={e=>setAño(Number(e.target.value))}>
+              {RANGE_YEARS.map(a=><option key={a}>{a}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Mes</label>
+            <select value={mes} onChange={e=>setMes(Number(e.target.value))}>
+              {MESES.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+            </select>
+          </div>
+          <button className="btn btn-primary" onClick={cargar} disabled={loading} style={{height:'38px'}}>
+            {loading ? <><span className="spin"/>Cargando…</> : 'Cargar'}
+          </button>
+          {data && (
+            <div style={{display:'flex', gap:'6px', alignSelf:'flex-end'}}>
+              {[['ytd','YTD'],['mes','Mes']].map(([k,lbl]) => (
+                <button key={k} onClick={()=>setPnl(k)} style={{
+                  padding:'6px 18px', border:'2px solid', borderRadius:'6px',
+                  cursor:'pointer', fontWeight:700, fontSize:'.86rem',
+                  borderColor: pnl===k ? 'var(--teal)' : '#ddd',
+                  background:  pnl===k ? 'var(--teal)' : 'white',
+                  color:       pnl===k ? 'white' : '#666',
+                }}>{lbl}</button>
+              ))}
+            </div>
+          )}
+        </div>
+        {error && <p className="err" style={{marginTop:'12px'}}>{error}</p>}
+      </div>
+
+      {pd && (() => {
+        const piTot   = sumCLB(pd.precio_insumos);
+        const rendTot = sumCLB(pd.rendimiento);
+        const prodTot = sumKtCuf(pd.produccion);
+        return (
+          <div className="card">
+            <div style={{overflowX:'auto'}}>
+              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', minWidth:'640px'}}>
+
+                {/* ── INSUMOS ── */}
+                <table style={EXP_TBL}>
+                  <ExpTblHead title="Insumos"/>
+                  <tbody>
+                    <ExpSecHd label="Ajuste Monetario"/>
+                    {pd.ajuste_monetario.map((r,i) => (
+                      <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit}
+                        real={r.real} ppto={r.ppto} efNode={fmtCLB(toCLB(r.efecto_kus))}/>
+                    ))}
+
+                    <ExpSecHd label="Precio Insumos" total={fmtCLB(piTot)}/>
+                    {pd.precio_insumos.map((r,i) => (
+                      <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit}
+                        real={r.real} ppto={r.ppto} efNode={fmtCLB(toCLB(r.efecto_kus))}/>
+                    ))}
+
+                    <ExpSecHd label="Rendimiento" total={fmtCLB(rendTot)}/>
+                    {pd.rendimiento.map((r,i) => (
+                      <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit}
+                        real={r.real} ppto={r.ppto} efNode={fmtCLB(toCLB(r.efecto_kus))}/>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* ── ACTIVIDAD ── */}
+                <table style={EXP_TBL}>
+                  <ExpTblHead title="Actividad"/>
+                  <tbody>
+                    <ExpSecHd label="Producción" total={fmtKtCuf(prodTot)}/>
+                    {pd.produccion.map((r,i) => (
+                      <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit}
+                        real={r.real} ppto={r.ppto} efNode={fmtKtCuf(r.efecto_ktcuf)}/>
+                    ))}
+
+                    <ExpSecHd label="Movimiento Mina" total={fmtCLB(toCLB(pd.mov_mina.efecto_kus))}/>
+                    <ExpRow label="Movimiento total Mina" unit="kt"
+                      real={pd.mov_mina.real} ppto={pd.mov_mina.ppto}
+                      efNode={fmtCLB(toCLB(pd.mov_mina.efecto_kus))}/>
+
+                    <ExpSecHd label="Desarrollo Mina" total={fmtCLB(toCLB(pd.desarrollo_mina.efecto_kus))}/>
+                    <ExpRow label="Tonelaje" unit="kt"
+                      real={pd.desarrollo_mina.tonelaje_real} ppto={pd.desarrollo_mina.tonelaje_ppto}
+                      efNode={fmtCLB(toCLB(pd.desarrollo_mina.tonelaje_efecto_kus))}/>
+                    <ExpRow label="Costo unitario" unit="US$/t"
+                      real={pd.desarrollo_mina.cu_real} ppto={pd.desarrollo_mina.cu_ppto}
+                      efNode={fmtCLB(toCLB(pd.desarrollo_mina.cu_efecto_kus))}/>
+                  </tbody>
+                </table>
+
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+/* ─── Tab: Costos Ajustados ─── */
+function CostosAjustadosTab({period}) {
+  const {a1fin, m1fin} = period;
+  const [company, setCompany] = useState('MLP');
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+
+  useEffect(() => {
+    if (!a1fin || !m1fin) return;
+    setLoading(true); setError(''); setData(null);
+    apiGet(`/api/costos-ajustados/${company}?año=${a1fin}&mes=${m1fin}`)
+      .then(d => setData(d))
+      .catch(e => setError(e.message || 'Error'))
+      .finally(() => setLoading(false));
+  }, [company, a1fin, m1fin]);
+
+  const fmtV = v => {
+    if (v == null) return <span style={{color:'#ccc'}}>—</span>;
+    const n = Number(v) / 1000;
+    if (isNaN(n)) return '—';
+    return n.toLocaleString('es-CL', {minimumFractionDigits:1, maximumFractionDigits:1});
+  };
+  const fmtD = v => {
+    if (v == null) return <span style={{color:'#ccc'}}>—</span>;
+    const n = Number(v) / 1000;
+    if (isNaN(n)) return '—';
+    const color = n < 0 ? '#059669' : n > 0 ? '#dc2626' : '#555';
+    return <span style={{color, fontWeight:'700'}}>{n.toLocaleString('es-CL', {minimumFractionDigits:1, maximumFractionDigits:1})}</span>;
+  };
+
+  const TH  = {background:'var(--navy)', color:'white', padding:'6px 8px', textAlign:'right', fontSize:'.75rem', whiteSpace:'nowrap', fontWeight:'600'};
+  const TD  = {padding:'4px 8px', textAlign:'right', fontSize:'.8rem', whiteSpace:'nowrap', borderLeft:'1px solid #f0f0f0'};
+  const SEP = {borderRight:'3px solid #9ca3af'};
+
+  function Cells({m, y, bold=false, bg}) {
+    const s = bold ? {...TD, fontWeight:'700'} : TD;
+    const bs = bg ? {...s, background:bg} : s;
+    return <>
+      <td style={bs}>{fmtV(m?.real)}</td>
+      <td style={bs}>{fmtV(m?.ppto)}</td>
+      <td style={{...bs, fontWeight: bold ? '800' : '600'}}>{fmtV(m?.ppto_aj_tot)}</td>
+      <td style={{...bs, ...SEP}}>{fmtD(m?.dif)}</td>
+      <td style={bs}>{fmtV(y?.real)}</td>
+      <td style={bs}>{fmtV(y?.ppto)}</td>
+      <td style={{...bs, fontWeight: bold ? '800' : '600'}}>{fmtV(y?.ppto_aj_tot)}</td>
+      <td style={bs}>{fmtD(y?.dif)}</td>
+    </>;
+  }
+
+  return (
+    <div className="main">
+      <div className="card">
+        <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'12px', flexWrap:'wrap'}}>
+          <div className="card-title" style={{margin:0}}>Costos Ajustados por FX / IPC</div>
+          <div className="company-tabs" style={{margin:0}}>
+            {COMPANIES.map(c=>(
+              <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>{c}</button>
+            ))}
+          </div>
+        </div>
+        <p style={{fontSize:'.78rem', color:'#888', marginBottom:'12px'}}>
+          <strong>{MESES[m1fin]} {a1fin}</strong> · adj_factor = (FX_r/FX_b)×(IPC_r/IPC_b) · PptoAjTot = Ppto×%F×adj + Ppto×%V · Dif = Real − PptoAjTot · <em>US$m</em>
+        </p>
+
+        {loading && <p style={{color:'#aaa'}}><span className="spin"/>Calculando…</p>}
+        {error   && <p className="err">{error}</p>}
+
+        {!loading && !error && data && (
+          <div className="tbl-wrap">
+            <table style={{fontSize:'.8rem', borderCollapse:'collapse'}}>
+              <thead>
+                <tr>
+                  <th style={{...TH, textAlign:'left', position:'sticky', left:0, zIndex:2, minWidth:'230px', background:'var(--navy)', borderRight:'1px solid #2a4a5a'}} rowSpan={2}>Sub-área</th>
+                  <th style={{...TH, textAlign:'center', background:'#1A5F6E'}} colSpan={4}>Mes {MESES[m1fin]} {a1fin}</th>
+                  <th style={{...TH, textAlign:'center', background:'#1A4E5A'}} colSpan={4}>YTD {a1fin}</th>
+                </tr>
+                <tr>
+                  {['Real','Ppto','Ppto Aj Tot','Dif.','Real','Ppto','Ppto Aj Tot','Dif.'].map((h,i)=>(
+                    <th key={i} style={{...TH, background: i<4 ? '#1A5F6E' : '#1A4E5A', ...(i===3?SEP:{})}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(data.grupos || []).map(grp => {
+                  const sas = grp.subareas || [];
+                  // Single-subarea groups (leaf nodes): show only the group row, no indent
+                  const isLeaf = sas.length <= 1;
+                  return (
+                  <React.Fragment key={grp.key}>
+                    <tr>
+                      <td style={{background:'#1A3A4A', color:'white', fontWeight:'700', padding:'6px 10px', position:'sticky', left:0, zIndex:1, borderRight:'1px solid #2a4a5a', fontSize:'.82rem'}}>
+                        {grp.label}
+                      </td>
+                      <Cells m={grp.total?.mes} y={grp.total?.ytd} bold={true} bg='#1A3A4A'/>
+                    </tr>
+                    {!isLeaf && sas.map(sa => {
+                      const dim = !sa.mapped;
+                      const lblSt = {padding:'4px 10px 4px 24px', fontSize:'.8rem', position:'sticky', left:0, zIndex:1,
+                        background:'white', borderRight:'1px solid #eee',
+                        color: dim ? '#bbb' : '#374151', fontStyle: dim ? 'italic' : 'normal', whiteSpace:'nowrap'};
+                      const tdSt = dim ? {...TD, color:'#ccc'} : TD;
+                      return (
+                        <tr key={sa.key}>
+                          <td style={lblSt}>{sa.label}</td>
+                          <td style={tdSt}>{fmtV(sa.mes?.real)}</td>
+                          <td style={tdSt}>{fmtV(sa.mes?.ppto)}</td>
+                          <td style={{...tdSt, fontWeight:'600'}}>{fmtV(sa.mes?.ppto_aj_tot)}</td>
+                          <td style={{...tdSt, ...SEP}}>{fmtD(sa.mes?.dif)}</td>
+                          <td style={tdSt}>{fmtV(sa.ytd?.real)}</td>
+                          <td style={tdSt}>{fmtV(sa.ytd?.ppto)}</td>
+                          <td style={{...tdSt, fontWeight:'600'}}>{fmtV(sa.ytd?.ppto_aj_tot)}</td>
+                          <td style={tdSt}>{fmtD(sa.ytd?.dif)}</td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                  );
+                })}
+
+                {/* Costo On Site */}
+                <tr style={{borderTop:'2px solid #e5e7eb'}}>
+                  <td style={{padding:'6px 10px', fontWeight:'700', position:'sticky', left:0, zIndex:1, background:'#dbeafe', borderRight:'1px solid #eee', fontSize:'.82rem'}}>
+                    Costo On Site
+                  </td>
+                  <Cells m={data.totales?.costo_onsite?.mes} y={data.totales?.costo_onsite?.ytd} bold={true} bg='#dbeafe'/>
+                </tr>
+
+                {/* Summary rows */}
+                <tr>
+                  <td colSpan={9} style={{background:'#f3f4f6', padding:'4px 10px', fontWeight:'600', fontSize:'.72rem', color:'#6b7280', borderTop:'2px solid #e5e7eb', letterSpacing:'.04em', textTransform:'uppercase'}}>
+                    Otros conceptos
+                  </td>
+                </tr>
+                {(data.summary || []).map(sr => {
+                  const dim = !sr.mapped;
+                  const lblSt = {padding:'4px 10px', fontSize:'.8rem', position:'sticky', left:0, zIndex:1,
+                    background:'#fffbf0', borderRight:'1px solid #eee',
+                    color: dim ? '#bbb' : '#374151', fontStyle: dim ? 'italic' : 'normal', whiteSpace:'nowrap'};
+                  const tdSt = {...TD, background:'#fffbf0', ...(dim ? {color:'#ccc'} : {})};
+                  return (
+                    <tr key={sr.key}>
+                      <td style={lblSt}>{sr.label}</td>
+                      <td style={tdSt}>{fmtV(sr.mes?.real)}</td>
+                      <td style={tdSt}>{fmtV(sr.mes?.ppto)}</td>
+                      <td style={{...tdSt, fontWeight:'600'}}>{fmtV(sr.mes?.ppto_aj_tot)}</td>
+                      <td style={{...tdSt, ...SEP}}>{fmtD(sr.mes?.dif)}</td>
+                      <td style={tdSt}>{fmtV(sr.ytd?.real)}</td>
+                      <td style={tdSt}>{fmtV(sr.ytd?.ppto)}</td>
+                      <td style={{...tdSt, fontWeight:'600'}}>{fmtV(sr.ytd?.ppto_aj_tot)}</td>
+                      <td style={tdSt}>{fmtD(sr.ytd?.dif)}</td>
+                    </tr>
+                  );
+                })}
+
+                {/* Computed totals */}
+                <tr><td colSpan={9} style={{padding:'2px', borderTop:'2px solid #e5e7eb'}}></td></tr>
+                {[
+                  {key:'pre_credito', label:'On Site + TC/RC + Comercialización', bg:'#f8fafc'},
+                  {key:'c1',          label:'C1 (Pre-crédito − Subproductos)',    bg:'#f0f9f9'},
+                  {key:'c2',          label:'C2 (C1 + D&A)',                      bg:'#ecfdf5'},
+                  {key:'c3',          label:'C3 (C2 + Otros Fin.)',               bg:'#d1fae5'},
+                ].map(({key, label, bg}) => (
+                  <tr key={key}>
+                    <td style={{padding:'6px 10px', fontWeight:'700', position:'sticky', left:0, zIndex:1, background:bg, borderRight:'1px solid #eee', fontSize:'.82rem'}}>
+                      {label}
+                    </td>
+                    <Cells m={data.totales?.[key]?.mes} y={data.totales?.[key]?.ytd} bold={true} bg={bg}/>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!loading && !error && !data && (
+          <p style={{color:'#aaa', fontSize:'.9rem'}}>Selecciona período para calcular.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Tab: Costos Ajustados Mes (CM) ─── */
+function CostosAjMesTab({period}) {
+  const {a1fin, m1fin} = period;
+  const [company, setCompany] = useState('MLP');
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+
+  useEffect(() => {
+    if (!a1fin || !m1fin) return;
+    setLoading(true); setError(''); setData(null);
+    apiGet(`/api/costos-ajustados/${company}/monthly?año=${a1fin}&mes_cierre=${m1fin}`)
+      .then(d => setData(d))
+      .catch(e => setError(e.message || 'Error'))
+      .finally(() => setLoading(false));
+  }, [company, a1fin, m1fin]);
+
+  const MO_S = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const FS   = '.68rem';
+
+  const fmtV = v => {
+    if (v == null) return <span style={{color:'#ccc'}}>—</span>;
+    const n = Number(v) / 1000;
+    return isNaN(n) ? '—' : n.toLocaleString('es-CL', {minimumFractionDigits:1, maximumFractionDigits:1});
+  };
+  const fmtE = v => {
+    if (v == null) return <span style={{color:'#ccc'}}>—</span>;
+    const n = Number(v) / 1000;
+    if (isNaN(n)) return '—';
+    const c = n < 0 ? '#059669' : n > 0 ? '#dc2626' : '#555';
+    return <span style={{color:c, fontWeight:'700'}}>{n.toLocaleString('es-CL', {minimumFractionDigits:1, maximumFractionDigits:1})}</span>;
+  };
+  const fmtPct = v => v == null ? '' : `${Math.round((v || 0) * 100)}%`;
+
+  const TDB = {padding:'2px 4px', textAlign:'right', whiteSpace:'nowrap', fontSize:FS, borderLeft:'1px solid #f0f0f0'};
+  const THB = {padding:'3px 5px', textAlign:'right', whiteSpace:'nowrap', fontWeight:'600', fontSize:FS, color:'white'};
+  const BDR = {borderRight:'2px solid #9ca3af'};
+
+  const C_PPTO = '#1A3A4A'; const C_TC = '#1A5F6E'; const C_IPC = '#3d5a80'; const C_CPI = '#6b4c99';
+
+  // 2(%F/%V) + 14(PPTO) + 16(TC) + 16(IPC) + 16(CPI) = 64 data cols
+  const DATA_COLS = 64;
+
+  function RowData({row, fijo, bold=false, bg}) {
+    const bs = bold ? {...TDB, fontWeight:'700', background:bg} : (bg ? {...TDB, background:bg} : TDB);
+    if (!row || !row.mapped) {
+      return <>
+        <td style={{...TDB, background:'#f9fafb'}}></td>
+        <td style={{...TDB, background:'#f9fafb', ...BDR}}></td>
+        <td colSpan={62} style={{...TDB, color:'#ccc', textAlign:'center', fontStyle:'italic'}}>—</td>
+      </>;
+    }
+    const p   = row.ppto    || Array(12).fill(null);
+    const atc = row.aj_tc   || Array(12).fill(null);
+    const ai  = row.aj_ipc  || Array(12).fill(null);
+    const ac  = row.aj_cpi  || Array(12).fill(null);
+    const mc1 = m1fin - 1; // 0-indexed current month
+
+    return <>
+      {/* %Fijo / %Var */}
+      <td style={{...bs, textAlign:'center', background:(bg||'#f9fafb')}}>{fmtPct(fijo)}</td>
+      <td style={{...bs, textAlign:'center', background:(bg||'#f9fafb'), ...BDR}}>{fmtPct(fijo == null ? null : 1 - fijo)}</td>
+      {/* PPTO */}
+      {p.map((v,i) => <td key={`p${i}`} style={{...bs, ...(i===mc1?{background:'#d4e8ee'}:{})}}>{fmtV(v)}</td>)}
+      <td style={{...bs, background:'#c8e0e8', fontWeight:'700'}}>{fmtV(row.ppto_mes)}</td>
+      <td style={{...bs, background:'#c8e0e8', fontWeight:'700', ...BDR}}>{fmtV(row.ppto_acum)}</td>
+      {/* Aj TC */}
+      {atc.map((v,i) => <td key={`tc${i}`} style={{...bs, ...(i===mc1?{background:'#d4ede8'}:{})}}>{fmtV(v)}</td>)}
+      <td style={{...bs, background:'#b8dfd8', fontWeight:'700'}}>{fmtV(row.aj_tc_mes)}</td>
+      <td style={{...bs, background:'#b8dfd8', fontWeight:'700'}}>{fmtV(row.aj_tc_acum)}</td>
+      <td style={bs}>{fmtE(row.ef_tc_mes)}</td>
+      <td style={{...bs, ...BDR}}>{fmtE(row.ef_tc_acum)}</td>
+      {/* Aj IPC */}
+      {ai.map((v,i) => <td key={`ipc${i}`} style={{...bs, ...(i===mc1?{background:'#dce8f5'}:{})}}>{fmtV(v)}</td>)}
+      <td style={{...bs, background:'#c8daf0', fontWeight:'700'}}>{fmtV(row.aj_ipc_mes)}</td>
+      <td style={{...bs, background:'#c8daf0', fontWeight:'700'}}>{fmtV(row.aj_ipc_acum)}</td>
+      <td style={bs}>{fmtE(row.ef_ipc_mes)}</td>
+      <td style={{...bs, ...BDR}}>{fmtE(row.ef_ipc_acum)}</td>
+      {/* Aj CPI */}
+      {ac.map((v,i) => <td key={`cpi${i}`} style={{...bs, ...(i===mc1?{background:'#ece5f8'}:{})}}>{fmtV(v)}</td>)}
+      <td style={{...bs, background:'#ddd0f0', fontWeight:'700'}}>{fmtV(row.aj_cpi_mes)}</td>
+      <td style={{...bs, background:'#ddd0f0', fontWeight:'700'}}>{fmtV(row.aj_cpi_acum)}</td>
+      <td style={bs}>{fmtE(row.ef_cpi_mes)}</td>
+      <td style={{...bs, ...BDR}}>{fmtE(row.ef_cpi_acum)}</td>
+    </>;
+  }
+
+  return (
+    <div className="main">
+      <div className="card" style={{overflow:'hidden'}}>
+        <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'12px', flexWrap:'wrap'}}>
+          <div className="card-title" style={{margin:0}}>Costos Ajustados Mes (CM)</div>
+          <div className="company-tabs" style={{margin:0}}>
+            {COMPANIES.map(c=>(
+              <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>{c}</button>
+            ))}
+          </div>
+        </div>
+        <p style={{fontSize:'.75rem', color:'#888', marginBottom:'10px'}}>
+          PPTO mensual {a1fin} + Ajuste TC/IPC/CPI · mes cierre: <strong>{MESES[m1fin]}</strong> · <em>US$m</em> ·
+          adj_tc = exp×TC_b/TC_r+(1-exp) · adj_ipc = exp×IPC_r/IPC_b+(1-exp) · adj_cpi = exp+(1-exp)×CPI_r/CPI_b
+        </p>
+
+        {loading && <p style={{color:'#aaa'}}><span className="spin"/>Calculando…</p>}
+        {error   && <p className="err">{error}</p>}
+
+        {!loading && !error && data && (() => {
+          const LBL = {padding:'3px 8px', fontWeight:'600', position:'sticky', left:0, zIndex:1,
+                       background:'white', borderRight:'1px solid #eee', whiteSpace:'nowrap', fontSize:FS};
+          const GRP = {padding:'4px 8px', fontWeight:'700', position:'sticky', left:0, zIndex:1,
+                       color:'white', background:C_PPTO, borderRight:'1px solid #2a4a5a', whiteSpace:'nowrap', fontSize:FS};
+          const TOT = {padding:'4px 8px', fontWeight:'700', position:'sticky', left:0, zIndex:1,
+                       borderRight:'1px solid #eee', whiteSpace:'nowrap', fontSize:FS};
+
+          return (
+            <div style={{overflowX:'auto'}}>
+              <table style={{fontSize:FS, borderCollapse:'collapse', minWidth:'2200px'}}>
+                <colgroup>
+                  <col style={{minWidth:'200px'}}/>
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th rowSpan={2} style={{...THB, textAlign:'left', position:'sticky', left:0, zIndex:3,
+                      background:C_PPTO, minWidth:'200px', padding:'4px 8px', borderRight:'1px solid #2a4a5a'}}>
+                      Sub-área
+                    </th>
+                    <th colSpan={2} style={{...THB, background:'#374151', textAlign:'center', ...BDR}}>%</th>
+                    <th colSpan={14} style={{...THB, background:C_PPTO, textAlign:'center', ...BDR}}>PPTO {a1fin}</th>
+                    <th colSpan={16} style={{...THB, background:C_TC,  textAlign:'center', ...BDR}}>PPTO Ajustado TC + Efecto TC</th>
+                    <th colSpan={16} style={{...THB, background:C_IPC, textAlign:'center', ...BDR}}>PPTO Ajustado IPC + Efecto IPC</th>
+                    <th colSpan={16} style={{...THB, background:C_CPI, textAlign:'center', ...BDR}}>PPTO Ajustado CPI + Efecto CPI</th>
+                  </tr>
+                  <tr>
+                    <th style={{...THB, background:'#374151', textAlign:'center'}}>Fijo</th>
+                    <th style={{...THB, background:'#374151', textAlign:'center', ...BDR}}>Var</th>
+                    {MO_S.map((m,i)=><th key={`hp${i}`} style={{...THB, background:i===m1fin-1?'#27687a':C_PPTO}}>{m}</th>)}
+                    <th style={{...THB, background:'#1A5080'}}>Mes</th>
+                    <th style={{...THB, background:'#1A5080', ...BDR}}>Acum</th>
+                    {MO_S.map((m,i)=><th key={`htc${i}`} style={{...THB, background:i===m1fin-1?'#2e8090':C_TC}}>{m}</th>)}
+                    <th style={{...THB, background:'#0d5060'}}>Mes</th>
+                    <th style={{...THB, background:'#0d5060'}}>Acum</th>
+                    <th style={{...THB, background:'#0a4050'}}>Ef Mes</th>
+                    <th style={{...THB, background:'#0a4050', ...BDR}}>Ef Acum</th>
+                    {MO_S.map((m,i)=><th key={`hipc${i}`} style={{...THB, background:i===m1fin-1?'#4a6a90':C_IPC}}>{m}</th>)}
+                    <th style={{...THB, background:'#2d4a70'}}>Mes</th>
+                    <th style={{...THB, background:'#2d4a70'}}>Acum</th>
+                    <th style={{...THB, background:'#1d3a60'}}>Ef Mes</th>
+                    <th style={{...THB, background:'#1d3a60', ...BDR}}>Ef Acum</th>
+                    {MO_S.map((m,i)=><th key={`hcpi${i}`} style={{...THB, background:i===m1fin-1?'#7a5ca9':C_CPI}}>{m}</th>)}
+                    <th style={{...THB, background:'#5a3c80'}}>Mes</th>
+                    <th style={{...THB, background:'#5a3c80'}}>Acum</th>
+                    <th style={{...THB, background:'#4a2c70'}}>Ef Mes</th>
+                    <th style={{...THB, background:'#4a2c70', ...BDR}}>Ef Acum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.grupos || []).map(grp => {
+                    const sas    = grp.subareas || [];
+                    const isLeaf = sas.length <= 1;
+                    return (
+                      <React.Fragment key={grp.key}>
+                        <tr>
+                          <td style={GRP}>{grp.label}</td>
+                          <RowData row={grp.total} fijo={null} bold={true} bg='#1A3A4A'/>
+                        </tr>
+                        {!isLeaf && sas.map(sa => {
+                          const dim = !sa.mapped;
+                          return (
+                            <tr key={sa.key}>
+                              <td style={{...LBL, paddingLeft:'18px', color: dim?'#bbb':'#374151', fontStyle: dim?'italic':'normal'}}>
+                                {sa.label}
+                              </td>
+                              <RowData row={sa} fijo={sa.fijo} bold={false}/>
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  })}
+
+                  {/* Costo On Site */}
+                  <tr style={{borderTop:'2px solid #e5e7eb'}}>
+                    <td style={{...TOT, background:'#dbeafe'}}>Costo On Site</td>
+                    <RowData row={data.totales?.costo_onsite} fijo={null} bold={true} bg='#dbeafe'/>
+                  </tr>
+
+                  {/* Summary separator */}
+                  <tr>
+                    <td colSpan={DATA_COLS+1} style={{background:'#f3f4f6', padding:'2px 8px', fontSize:'.65rem',
+                      fontWeight:'600', color:'#6b7280', borderTop:'2px solid #e5e7eb',
+                      letterSpacing:'.04em', textTransform:'uppercase'}}>Otros conceptos</td>
+                  </tr>
+
+                  {(data.summary || []).map(sr => {
+                    const dim = !sr.mapped;
+                    return (
+                      <tr key={sr.key}>
+                        <td style={{...LBL, background:'#fffbf0', color: dim?'#bbb':'#374151', fontStyle: dim?'italic':'normal'}}>
+                          {sr.label}
+                        </td>
+                        <RowData row={sr} fijo={sr.fijo} bold={false} bg='#fffbf0'/>
+                      </tr>
+                    );
+                  })}
+
+                  <tr><td colSpan={DATA_COLS+1} style={{padding:'2px', borderTop:'2px solid #e5e7eb'}}></td></tr>
+                  {[
+                    {key:'pre_credito', label:'On Site + TC/RC + Comercialización', bg:'#f8fafc'},
+                    {key:'c1',          label:'C1 (Pre-crédito − Subproductos)',    bg:'#f0f9f9'},
+                    {key:'c2',          label:'C2 (C1 + D&A)',                      bg:'#ecfdf5'},
+                    {key:'c3',          label:'C3 (C2 + Otros Fin.)',               bg:'#d1fae5'},
+                  ].map(({key, label, bg}) => (
+                    <tr key={key}>
+                      <td style={{...TOT, background:bg}}>{label}</td>
+                      <RowData row={data.totales?.[key]} fijo={null} bold={true} bg={bg}/>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+
+        {!loading && !error && !data && (
+          <p style={{color:'#aaa', fontSize:'.9rem'}}>Selecciona período para calcular.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Root App ─── */
 function App() {
-  const [tab,   setTab]   = useState('auto');
+  const [tab,   setTab]   = useState('viz');
   const [tipos, setTipos] = useState([]);
   const [tipo1, setTipo1] = useState('');
   const [a1ini, setA1ini] = useState(DEFAULT_YR);
@@ -1672,13 +3036,16 @@ function App() {
 
   return (
     <>
-      <Header tab={tab} setTab={setTab}/>
-      {(tab==='viz' || tab==='params') && <PeriodBar period={period} setters={setters} tipos={tipos}/>}
-      {tab==='auto'     && <AutoTab/>}
-      {tab==='mapeos'   && <MapeosTab/>}
-      {tab==='viz'      && <VisualizarTab period={period} tipos={tipos}/>}
-      {tab==='params'   && <ParamsTab period={period}/>}
-      {tab==='formulas' && <FormulasTab/>}
+      <Header tab={tab} setTab={setTab} period={period}/>
+      {(tab==='viz' || tab==='analisis' || tab==='params' || tab==='costos_aj' || tab==='cm') && <PeriodBar period={period} setters={setters} tipos={tipos}/>}
+      {tab==='mapeos'        && <MapeosTab/>}
+      {tab==='viz'           && <VisualizarTab period={period} tipos={tipos}/>}
+      {tab==='analisis'      && <AnalisisCostoTab period={period}/>}
+      {tab==='costos_aj'     && <CostosAjustadosTab period={period}/>}
+      {tab==='cm'            && <CostosAjMesTab period={period}/>}
+      {tab==='params'        && <ParamsTab period={period}/>}
+      {tab==='formulas'      && <FormulasTab/>}
+      {tab==='explicaciones' && <ExplicacionesTab period={period}/>}
     </>
   );
 }

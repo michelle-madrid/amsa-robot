@@ -1,17 +1,172 @@
 {
   "kpis": {
+    "2025": {
+      "1": {
+        "dolar_real": 1000.21,
+        "dolar_budget": 900,
+        "ipc_real": 106.74,
+        "ipc_budget": 105.93,
+        "cpi_real": 317.67,
+        "cpi_budget": 316.2
+      },
+      "2": {
+        "dolar_real": 955.12,
+        "dolar_budget": 900,
+        "ipc_real": 107.16,
+        "ipc_budget": 106.24,
+        "cpi_real": 319.08,
+        "cpi_budget": 1316.8
+      },
+      "3": {
+        "dolar_real": 932.5,
+        "dolar_budget": 900,
+        "ipc_real": 107.7,
+        "ipc_budget": 106.56,
+        "cpi_real": 319.8,
+        "cpi_budget": 317.4
+      },
+      "4": {
+        "dolar_real": 962.08,
+        "dolar_budget": 900,
+        "ipc_real": 107.91,
+        "ipc_budget": 106.87,
+        "cpi_real": 320.8,
+        "cpi_budget": 318.01
+      },
+      "5": {
+        "dolar_real": 940.33,
+        "dolar_budget": 900,
+        "ipc_real": 108.12,
+        "ipc_budget": 107.19,
+        "cpi_real": 321.47,
+        "cpi_budget": 318.61
+      },
+      "6": {
+        "dolar_real": 937.61,
+        "dolar_budget": 900,
+        "ipc_real": 107.68,
+        "ipc_budget": 107.5,
+        "cpi_real": 322.56,
+        "cpi_budget": 319.21
+      },
+      "7": {
+        "dolar_real": 953.52,
+        "dolar_budget": 900,
+        "ipc_real": 108.62,
+        "ipc_budget": 107.82,
+        "cpi_real": 323.05,
+        "cpi_budget": 319.82
+      },
+      "8": {
+        "dolar_real": 965.73,
+        "dolar_budget": 900,
+        "ipc_real": 108.66,
+        "ipc_budget": 108.14,
+        "cpi_real": 323.98,
+        "cpi_budget": 320.43
+      },
+      "9": {
+        "dolar_real": 960.22,
+        "dolar_budget": 900,
+        "ipc_real": 109.14,
+        "ipc_budget": 108.46,
+        "cpi_real": 324.8,
+        "cpi_budget": 321.03
+      },
+      "10": {
+        "dolar_real": 953.12,
+        "dolar_budget": 900,
+        "ipc_real": 109.19,
+        "ipc_budget": 108.78,
+        "cpi_real": 324.46,
+        "cpi_budget": 321.64
+      },
+      "11": {
+        "dolar_real": 934.92,
+        "dolar_budget": 900,
+        "ipc_real": 109.47,
+        "ipc_budget": 109.1,
+        "cpi_real": 324.12,
+        "cpi_budget": 322.25
+      },
+      "12": {
+        "dolar_real": 915.112,
+        "dolar_budget": 900,
+        "ipc_real": 109.26,
+        "ipc_budget": 109.42,
+        "cpi_real": 324.05,
+        "cpi_budget": 322.86
+      }
+    },
     "2026": {
       "1": {
         "dolar_real": 881.96,
-        "dolar_budget": 910
+        "dolar_budget": 910,
+        "ipc_real": 109.71,
+        "ipc_budget": 109.56,
+        "cpi_real": 325.25,
+        "cpi_budget": 324.67
       },
       "2": {
         "dolar_real": 862.34,
-        "dolar_budget": 910
+        "dolar_budget": 910,
+        "ipc_real": 109.7,
+        "ipc_budget": 109.87,
+        "cpi_real": 326.79,
+        "cpi_budget": 325.28
       },
       "3": {
         "dolar_real": 912.44,
-        "dolar_budget": 910
+        "dolar_budget": 910,
+        "ipc_real": 110.75,
+        "ipc_budget": 110.18,
+        "cpi_real": 330.21,
+        "cpi_budget": 325.9
+      },
+      "4": {
+        "dolar_budget": 910,
+        "ipc_budget": 110.48,
+        "cpi_budget": 326.52
+      },
+      "5": {
+        "dolar_budget": 910,
+        "ipc_budget": 110.79,
+        "cpi_budget": 327.14
+      },
+      "6": {
+        "dolar_budget": 910,
+        "ipc_budget": 111.1,
+        "cpi_budget": 327.76
+      },
+      "7": {
+        "dolar_budget": 910,
+        "ipc_budget": 111.41,
+        "cpi_budget": 328.38
+      },
+      "8": {
+        "dolar_budget": 910,
+        "ipc_budget": 111.72,
+        "cpi_budget": 329
+      },
+      "9": {
+        "dolar_budget": 910,
+        "ipc_budget": 112.03,
+        "cpi_budget": 329.63
+      },
+      "10": {
+        "dolar_budget": 910,
+        "ipc_budget": 112.35,
+        "cpi_budget": 330.25
+      },
+      "11": {
+        "dolar_budget": 910,
+        "ipc_budget": 112.66,
+        "cpi_budget": 330.88
+      },
+      "12": {
+        "dolar_budget": 910,
+        "ipc_budget": 112.97,
+        "cpi_budget": 331.51
       }
     }
   },
@@ -20,5 +175,189 @@
     "CEN": 55,
     "ANT": 51,
     "CMZ": 49.8
-  }
+  },
+  "costos_fijo_var": {
+    "MLP": [
+      { "key": "mina",   "label": "Mina y sub-áreas",           "fijo": 0.30 },
+      { "key": "planta", "label": "Planta Concentradora",        "fijo": 0.35 },
+      { "key": "ga",     "label": "G&A y otros",                 "fijo": 1.00 }
+    ],
+    "CEN": [
+      { "key": "mina",      "label": "Mina y sub-áreas",         "fijo": 0.49 },
+      { "key": "planta_c",  "label": "Planta Concentradora",     "fijo": 0.29 },
+      { "key": "planta_sx", "label": "Planta SX-EW",             "fijo": 0.40 },
+      { "key": "ga",        "label": "G&A y otros",              "fijo": 1.00 }
+    ],
+    "ANT": [
+      { "key": "mina",      "label": "Mina y sub-áreas",         "fijo": 0.50 },
+      { "key": "planta_sx", "label": "Planta SX-EW",             "fijo": 0.60 },
+      { "key": "ga",        "label": "G&A y otros",              "fijo": 1.00 }
+    ],
+    "CMZ": [
+      { "key": "mina",      "label": "Mina y sub-áreas",         "fijo": 0.50 },
+      { "key": "planta_sx", "label": "Planta SX-EW",             "fijo": 0.60 },
+      { "key": "ga",        "label": "G&A y otros",              "fijo": 1.00 }
+    ]
+  },
+  "costos_aj_grupos": {
+    "MLP": [
+      {"key":"mina","label":"Mina","subareas":[
+        {"key":"perforacion",  "label":"Perforación",            "fijo":0.30},
+        {"key":"tronadura",    "label":"Tronadura",              "fijo":0.30},
+        {"key":"carguio",      "label":"Carguío",                "fijo":0.30},
+        {"key":"transporte",   "label":"Transporte",             "fijo":0.30},
+        {"key":"serv_apoyo",   "label":"Servicios de Apoyo Mina","fijo":0.30},
+        {"key":"adm_op",       "label":"Adm. Operación y Gestión","fijo":0.30}
+      ]},
+      {"key":"planta_conc","label":"Planta Concentradora + Puerto","subareas":[
+        {"key":"chancado_c",   "label":"Chancado",              "fijo":0.35},
+        {"key":"molienda",     "label":"Molienda",              "fijo":0.35},
+        {"key":"flotacion",    "label":"Flotación",             "fijo":0.35},
+        {"key":"planta_moly",  "label":"Planta Molibdeno",      "fijo":0.35},
+        {"key":"tft",          "label":"TFT",                   "fijo":0.35},
+        {"key":"puerto",       "label":"Puerto",                "fijo":0.35},
+        {"key":"adm_serv_c",   "label":"Adm. y Servicios",      "fijo":0.35}
+      ]},
+      {"key":"planta_sx","label":"Planta SX-EW","subareas":[
+        {"key":"chancado_sx",  "label":"Chancado",                      "fijo":0.35},
+        {"key":"aglom_ap",     "label":"Aglomeración / Apilamiento",    "fijo":0.35},
+        {"key":"lixiv",        "label":"Lixiviación",                   "fijo":0.35},
+        {"key":"rom_sl",       "label":"ROM / SL",                      "fijo":0.35},
+        {"key":"sxew",         "label":"SX-EW",                        "fijo":0.35},
+        {"key":"adm_sx",       "label":"Admin.",                        "fijo":0.35},
+        {"key":"otros_sx",     "label":"Otros costos planta SX-EW",     "fijo":0.35}
+      ]},
+      {"key":"ga","label":"G&A","subareas":[
+        {"key":"ga_mlp","label":"G&A","fijo":1.00}
+      ]},
+      {"key":"serv_apoyo_grp","label":"Servicios de Apoyo","subareas":[
+        {"key":"plan_des",    "label":"Planificación y Desarrollo",    "fijo":1.00},
+        {"key":"serv_op",     "label":"Servicios de la Operación",     "fijo":1.00},
+        {"key":"ger_op",      "label":"Gerencia de Operaciones",       "fijo":1.00},
+        {"key":"plan_prod",   "label":"Planificación de la Producción","fijo":1.00},
+        {"key":"campamentos", "label":"Campamentos",                   "fijo":1.00},
+        {"key":"gest_mant",   "label":"Gestión del Mantención",        "fijo":1.00}
+      ]},
+      {"key":"vi_grp","label":"Var. Inv.","subareas":[
+        {"key":"vi_mina",   "label":"Var. Inv. Mina",  "fijo":1.00},
+        {"key":"vi_planta", "label":"Var. Inv. Planta", "fijo":1.00}
+      ]},
+      {"key":"dev_mina_grp","label":"Desarrollo Mina","subareas":[
+        {"key":"vi_devmina","label":"Desarrollo Mina","fijo":1.00}
+      ]},
+      {"key":"ifrs16_grp","label":"IFRS16","subareas":[
+        {"key":"vi_ifrs16","label":"IFRS16","fijo":1.00}
+      ]}
+    ],
+    "CEN": [
+      {"key":"mina","label":"Mina","subareas":[
+        {"key":"perforacion",  "label":"Perforación",            "fijo":0.49},
+        {"key":"tronadura",    "label":"Tronadura",              "fijo":0.49},
+        {"key":"carguio",      "label":"Carguío",                "fijo":0.49},
+        {"key":"transporte",   "label":"Transporte",             "fijo":0.49},
+        {"key":"serv_apoyo",   "label":"Servicios de Apoyo Mina","fijo":0.49},
+        {"key":"adm_op",       "label":"Adm. Operación y Gestión","fijo":0.49}
+      ]},
+      {"key":"planta_conc","label":"Planta Concentradora","subareas":[
+        {"key":"chancado_c",   "label":"Chancado",              "fijo":0.29},
+        {"key":"molienda",     "label":"Molienda",              "fijo":0.29},
+        {"key":"flotacion",    "label":"Flotación",             "fijo":0.29},
+        {"key":"adm_serv_c",   "label":"Adm. y Servicios",      "fijo":0.29}
+      ]},
+      {"key":"planta_sx","label":"Planta SX-EW","subareas":[
+        {"key":"chancado_sx",  "label":"Chancado",                      "fijo":0.40},
+        {"key":"aglom_ap",     "label":"Aglomeración / Apilamiento",    "fijo":0.40},
+        {"key":"lixiv",        "label":"Lixiviación",                   "fijo":0.40},
+        {"key":"rom_sl",       "label":"ROM / SL",                      "fijo":0.40},
+        {"key":"sxew",         "label":"SX-EW",                        "fijo":0.40},
+        {"key":"adm_sx",       "label":"Admin.",                        "fijo":0.40}
+      ]},
+      {"key":"ga","label":"G&A","subareas":[
+        {"key":"ga_cen","label":"G&A","fijo":1.00}
+      ]},
+      {"key":"vi_grp","label":"Var. Inv.","subareas":[
+        {"key":"vi_mina",   "label":"Var. Inv. Mina",  "fijo":1.00},
+        {"key":"vi_planta", "label":"Var. Inv. Planta", "fijo":1.00}
+      ]},
+      {"key":"dev_mina_grp","label":"Desarrollo Mina","subareas":[
+        {"key":"vi_devmina","label":"Desarrollo Mina","fijo":1.00}
+      ]},
+      {"key":"ifrs16_grp","label":"IFRS16","subareas":[
+        {"key":"vi_ifrs16","label":"IFRS16","fijo":1.00}
+      ]}
+    ],
+    "ANT": [
+      {"key":"mina","label":"Mina","subareas":[
+        {"key":"perforacion",  "label":"Perforación",            "fijo":0.50},
+        {"key":"tronadura",    "label":"Tronadura",              "fijo":0.50},
+        {"key":"carguio",      "label":"Carguío",                "fijo":0.50},
+        {"key":"transporte",   "label":"Transporte",             "fijo":0.50},
+        {"key":"serv_apoyo",   "label":"Servicios de Apoyo Mina","fijo":0.50},
+        {"key":"adm_op",       "label":"Adm. Operación y Gestión","fijo":0.50}
+      ]},
+      {"key":"planta_sx","label":"Planta SX-EW","subareas":[
+        {"key":"aglom_ap",     "label":"Aglomeración / Apilamiento",    "fijo":0.60},
+        {"key":"lixiv",        "label":"Lixiviación",                   "fijo":0.60},
+        {"key":"rom_sl",       "label":"ROM / SL",                      "fijo":0.60},
+        {"key":"sxew",         "label":"SX-EW",                        "fijo":0.60},
+        {"key":"adm_sx",       "label":"Admin.",                        "fijo":0.60}
+      ]},
+      {"key":"ga","label":"G&A","subareas":[
+        {"key":"ga_ant","label":"G&A","fijo":1.00}
+      ]},
+      {"key":"vi_grp","label":"Var. Inv.","subareas":[
+        {"key":"vi_mina",   "label":"Var. Inv. Mina",  "fijo":1.00},
+        {"key":"vi_planta", "label":"Var. Inv. Planta", "fijo":1.00}
+      ]},
+      {"key":"dev_mina_grp","label":"Desarrollo Mina","subareas":[
+        {"key":"vi_devmina","label":"Desarrollo Mina","fijo":1.00}
+      ]},
+      {"key":"ifrs16_grp","label":"IFRS16","subareas":[
+        {"key":"vi_ifrs16","label":"IFRS16","fijo":1.00}
+      ]}
+    ],
+    "CMZ": [
+      {"key":"mina","label":"Mina","subareas":[
+        {"key":"perforacion",  "label":"Perforación",            "fijo":0.50},
+        {"key":"tronadura",    "label":"Tronadura",              "fijo":0.50},
+        {"key":"carguio",      "label":"Carguío",                "fijo":0.50},
+        {"key":"transporte",   "label":"Transporte",             "fijo":0.50},
+        {"key":"serv_apoyo",   "label":"Servicios de Apoyo Mina","fijo":0.50},
+        {"key":"adm_op",       "label":"Adm. Operación y Gestión","fijo":0.50}
+      ]},
+      {"key":"planta_sx","label":"Planta SX-EW","subareas":[
+        {"key":"aglom_ap",     "label":"Aglomeración / Apilamiento",    "fijo":0.60},
+        {"key":"lixiv",        "label":"Lixiviación",                   "fijo":0.60},
+        {"key":"rom_sl",       "label":"ROM / SL",                      "fijo":0.60},
+        {"key":"sxew",         "label":"SX-EW",                        "fijo":0.60},
+        {"key":"adm_sx",       "label":"Admin.",                        "fijo":0.60}
+      ]},
+      {"key":"ga","label":"G&A","subareas":[
+        {"key":"ga_cmz","label":"G&A","fijo":1.00}
+      ]},
+      {"key":"vi_grp","label":"Var. Inv.","subareas":[
+        {"key":"vi_mina",   "label":"Var. Inv. Mina",  "fijo":1.00},
+        {"key":"vi_planta", "label":"Var. Inv. Planta", "fijo":1.00}
+      ]},
+      {"key":"dev_mina_grp","label":"Desarrollo Mina","subareas":[
+        {"key":"vi_devmina","label":"Desarrollo Mina","fijo":1.00}
+      ]},
+      {"key":"ifrs16_grp","label":"IFRS16","subareas":[
+        {"key":"vi_ifrs16","label":"IFRS16","fijo":1.00}
+      ]}
+    ]
+  },
+  "costos_aj_summary": [
+    {"key":"tcrc",          "label":"TC/RC",                          "fijo":0.0},
+    {"key":"comer",         "label":"Comercialización",               "fijo":0.0},
+    {"key":"da",            "label":"Depreciación / Amortización",    "fijo":1.0},
+    {"key":"credito_subp",  "label":"Crédito Subproductos",           "fijo":0.0},
+    {"key":"otros_fin",     "label":"Otros Items Financieros",        "fijo":0.0},
+    {"key":"dif_cambio",    "label":"Diferencias de cambio",          "fijo":0.0},
+    {"key":"donaciones",    "label":"Donaciones",                     "fijo":0.0},
+    {"key":"gasto_expl",    "label":"Gastos Exploraciones",           "fijo":0.0},
+    {"key":"ing_gasto_fin", "label":"Ingresos y Gastos Financieros",  "fijo":0.0},
+    {"key":"ing_no_op",     "label":"Ingresos No Operacionales",      "fijo":0.0},
+    {"key":"otros_egr_op",  "label":"Otros egresos operacionales",    "fijo":0.0}
+  ]
 }

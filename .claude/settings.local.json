@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(npx skills --help; Write-Host \"---EXIT:$LASTEXITCODE---\")"
+      "PowerShell(npx skills --help; Write-Host \"---EXIT:$LASTEXITCODE---\")",
+      "Bash(python3 -c \"import json; data=json.load\\(open\\('c:/Users/amsmmadrida/Repositorios Personales Control Gestion/amsa-robot/data/kpi_structure.json'\\)\\); print\\(list\\(data.keys\\(\\)\\)\\)\")"
     ]
   }
 }

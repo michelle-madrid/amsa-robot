@@ -41,7 +41,76 @@ def _load_structure(company: str) -> list | None:
         else:
             kpi_id = f"{current_section}||{item['label']}"
             result.append({**item, "section": current_section, "id": kpi_id})
+    _append_costos_aj(company, result)
     return result
+
+
+def _append_costos_aj(company: str, result: list) -> None:
+    """Append Costos Ajustados section to structure, sourced from params_financieros.json."""
+    params_path = KPI_STRUCTURE_FILE.parent / "params_financieros.json"
+    if not params_path.exists():
+        return
+    fin = json.loads(params_path.read_text(encoding="utf-8"))
+    grupos  = fin.get("costos_aj_grupos", {}).get(company, [])
+    summary = fin.get("costos_aj_summary", [])
+    if not grupos and not summary:
+        return
+
+    existing = mapping_store.load_mappings().get(company, {})
+
+    def _has_auto_match(label: str) -> bool:
+        """True if exactly one mapping outside Costos Ajustados resolves this label."""
+        matches = [k for k in existing
+                   if k.endswith(f"||{label}") and not k.startswith("Costos Ajustados")]
+        return len(matches) == 1
+
+    section = "Costos Ajustados"
+    header_added = False
+    seen_labels: set[str] = set()
+
+    def _ensure_header():
+        nonlocal header_added
+        if not header_added:
+            result.append({"type": "header", "label": section})
+            header_added = True
+
+    # Grupos: always show all items (user wants full visibility)
+    for grp in grupos:
+        grp_items = []
+        for sa in grp.get("subareas", []):
+            if sa["label"] in seen_labels:
+                continue
+            seen_labels.add(sa["label"])
+            grp_items.append({
+                "type": "kpi",
+                "id": f"{section}||{grp['label']}||{sa['label']}",
+                "section": section,
+                "code": sa["key"], "label": sa["label"], "unit": "kUS$", "row": None,
+            })
+        if grp_items:
+            _ensure_header()
+            result.append({"type": "subheader", "label": grp["label"]})
+            result.extend(grp_items)
+
+    # Summary items: skip those already uniquely resolved from another section
+    sum_items = []
+    for sr in summary:
+        if sr["label"] in seen_labels:
+            continue
+        seen_labels.add(sr["label"])
+        if _has_auto_match(sr["label"]):
+            continue
+        sum_items.append({
+            "type": "kpi",
+            "id": f"{section}||{sr['label']}",
+            "section": section,
+            "code": sr["key"], "label": sr["label"], "unit": "kUS$", "row": None,
+        })
+
+    if sum_items:
+        _ensure_header()
+        result.append({"type": "subheader", "label": "Ajustes Financieros"})
+        result.extend(sum_items)
 
 
 @router.get("/excel-kpis/{company}")
@@ -61,21 +130,37 @@ def get_excel_kpis(company: str):
 
 @router.get("/parquet-kpis/{company}")
 def get_parquet_kpis(company: str):
-    """All unique KPI names in the parquet for this company.
-    Returns 'subcategory||kpi' when subcategory exists, plain 'kpi' otherwise.
+    """All unique (kpi_name, hoja) combinations in the parquet for this company.
+    Returns list of {name, hoja, title} sorted by (hoja, name).
+    A KPI that appears in multiple hojas generates one entry per hoja.
+    name = 'subcategory||kpi' when subcategory exists, plain 'kpi' otherwise.
     """
     df = _get_df()
     company_df = df[df["compania"] == company]
-    names: set[str] = set()
+    seen: set[tuple] = set()
+    result: list[dict] = []
     if "kpi" in company_df.columns:
-        cols = ["kpi"] + (["subcategory"] if "subcategory" in company_df.columns else [])
+        has_sub   = "subcategory" in company_df.columns
+        has_hoja  = "hoja"  in company_df.columns
+        has_title = "title" in company_df.columns
+        cols = ["kpi"]
+        if has_sub:   cols.append("subcategory")
+        if has_hoja:  cols.append("hoja")
+        if has_title: cols.append("title")
         for _, row in company_df[cols].drop_duplicates().iterrows():
-            kpi_name = str(row.get("kpi", "") or "").strip()
+            kpi_name    = str(row.get("kpi", "")         or "").strip()
             subcategory = str(row.get("subcategory", "") or "").strip()
+            hoja        = str(row.get("hoja",  "") or "").strip() if has_hoja  else ""
+            title       = str(row.get("title", "") or "").strip() if has_title else ""
             if not kpi_name:
                 continue
-            names.add(f"{subcategory}||{kpi_name}" if subcategory else kpi_name)
-    return {"company": company, "kpis": sorted(names)}
+            name = f"{subcategory}||{kpi_name}" if subcategory else kpi_name
+            key = (name, hoja)
+            if key not in seen:
+                seen.add(key)
+                result.append({"name": name, "hoja": hoja, "title": title})
+    result.sort(key=lambda x: (x["hoja"], x["name"]))
+    return {"company": company, "kpis": result}
 
 
 @router.get("/parquet-snapshot/{company}")
@@ -150,3 +235,32 @@ def get_mappings():
 def save_mappings(data: dict):
     mapping_store.save_mappings(data)
     return {"ok": True}
+
+
+@router.get("/sheet-dump/{sheet_name}")
+def dump_sheet(sheet_name: str):
+    """Temporary: dumps a sheet's non-empty cell content as JSON."""
+    if not settings.template_path.exists():
+        raise HTTPException(404, "Template no encontrado")
+    try:
+        wb = openpyxl.load_workbook(settings.template_path, data_only=True)
+    except Exception as e:
+        raise HTTPException(500, f"Error abriendo Excel: {e}")
+    if sheet_name not in wb.sheetnames:
+        raise HTTPException(404, f"Hoja '{sheet_name}' no encontrada. Hojas: {wb.sheetnames}")
+    ws = wb[sheet_name]
+    rows = []
+    try:
+        for row in ws.iter_rows():
+            cells = []
+            for c in row:
+                try:
+                    if c.value is not None:
+                        cells.append({"col": c.column, "val": str(c.value)})
+                except Exception:
+                    pass
+            if cells:
+                rows.append({"row": row[0].row, "cells": cells})
+    except Exception as e:
+        return {"sheet": sheet_name, "error": str(e), "rows": rows}
+    return {"sheet": sheet_name, "rows": rows}

@@ -8,6 +8,10 @@ from .routes.setup import router as setup_router
 from .routes.visualizar import router as viz_router
 from .routes.params import router as params_router
 from .routes.calculos import router as calculos_router
+from .routes.explicaciones import router as explicaciones_router
+from .routes.overrides import router as overrides_router
+from .routes.costos_ajustados import router as ca_router
+from .routes.export import router as export_router
 
 FRONTEND_INDEX = Path(__file__).resolve().parents[2] / "frontend" / "index.html"
 
@@ -28,6 +32,10 @@ app.include_router(setup_router)
 app.include_router(viz_router)
 app.include_router(params_router)
 app.include_router(calculos_router)
+app.include_router(explicaciones_router)
+app.include_router(overrides_router)
+app.include_router(ca_router)
+app.include_router(export_router)
 
 
 @app.get("/health")
