@@ -33,8 +33,14 @@ _FORMULA_VAR_TO_LK: dict[str, str] = {
     "tronadura":           "Variables Mineras||Total Tronado/Quebrado",
     "ley_cu":              "Variables Mineras||Ley sulfuros",
     "recuperacion":        "Variables Mineras||Recuperación sulfuros",
-    "vi_inv_mina":         "Variables Mineras||Var. Inv. Mina",
-    "vi_inv_planta":       "Variables Mineras||Var. Inv. Planta",
+    "vi_inv":              "Variables Mineras||Var. Inv.",
+    "cu_fino":             "Variables Mineras||CuFino",
+    "mov_mina_sulf":       "Variables Mineras||Movimiento mina sulfuros",
+    "mov_mina_ox":         "Variables Mineras||Movimiento mina óxidos",
+    "mov_mina_total":      "Variables Mineras||Movimiento mina total",
+    "dev_mina_sulf":       "Variables Mineras||Desarrollo mina sulfuros",
+    "dev_mina_ox":         "Variables Mineras||Desarrollo mina óxidos",
+    "dev_mina_total_vol":  "Variables Mineras||Desarrollo mina total",
     "tcrc_q":              "TC/RC & Comercialización||Unidades||CuFino",
     "tcrc_total":          "TC/RC & Comercialización||Gasto||TC/RC",
     "comer_total":         "TC/RC & Comercialización||Gasto||Comercialización",
@@ -107,7 +113,7 @@ DEFAULT_PARAMS: dict = {
         {"key": "efecto_p", "label": "Efecto P",  "kpis": []},
         {"key": "efecto_q", "label": "Efecto Q",  "kpis": []},
     ],
-    "variacion_inventario": ["Var. Inv. Mina", "Var. Inv. Planta"],
+    "variacion_inventario": ["Var. Inv."],
     "kpi_keys_per_company": {},
     "subprod_precio_scale": 1.0,
     "actividad_contexto": {
@@ -125,28 +131,26 @@ def _apply_formula_var_mappings(kpi_keys: dict, company: str) -> dict:
     all_maps = load_mappings()
     company_map = all_maps.get(company, {})
     result = dict(kpi_keys)
+
+    def _assign(var_key, raw):
+        if not raw or raw == "__NA__":
+            return
+        if isinstance(raw, str):
+            result[var_key] = raw
+        elif isinstance(raw, list):
+            non_empty = [x for x in raw if x and x != "__NA__"]
+            if non_empty:
+                result[var_key] = non_empty if len(non_empty) > 1 else non_empty[0]
+        elif isinstance(raw, dict) and (raw.get("_s") or raw.get("_rb")):
+            # Scalar or real/budget-split mapping — pass through so _resolve can handle it
+            result[var_key] = raw
+
     # 1. Static auto-resolution via _FORMULA_VAR_TO_LK
     for var_key, lk in _FORMULA_VAR_TO_LK.items():
-        raw = company_map.get(lk)
-        if not raw or raw == "__NA__":
-            continue
-        if isinstance(raw, str):
-            result[var_key] = raw
-        elif isinstance(raw, list):
-            non_empty = [x for x in raw if x and x != "__NA__"]
-            if non_empty:
-                result[var_key] = non_empty if len(non_empty) > 1 else non_empty[0]
+        _assign(var_key, company_map.get(lk))
     # 2. Explicit _formula_vars overrides (manual assignments, higher priority)
     for var_key, lk in all_maps.get("_formula_vars", {}).get(company, {}).items():
-        raw = company_map.get(lk)
-        if not raw or raw == "__NA__":
-            continue
-        if isinstance(raw, str):
-            result[var_key] = raw
-        elif isinstance(raw, list):
-            non_empty = [x for x in raw if x and x != "__NA__"]
-            if non_empty:
-                result[var_key] = non_empty if len(non_empty) > 1 else non_empty[0]
+        _assign(var_key, company_map.get(lk))
     return result
 
 
@@ -168,6 +172,10 @@ def _load_params() -> dict:
                 **DEFAULT_PARAMS["actividad_contexto"],
                 **saved["actividad_contexto"],
             }
+        if "kpi_scales_per_company" in saved:
+            result["kpi_scales_per_company"] = saved["kpi_scales_per_company"]
+        if "kpi_scales_mes_ytd_per_company" in saved:
+            result["kpi_scales_mes_ytd_per_company"] = saved["kpi_scales_mes_ytd_per_company"]
         return result
     return DEFAULT_PARAMS
 
@@ -226,7 +234,23 @@ def _fetch_snapshot(df_co, tipo: str, year: int, month: int) -> dict[str, dict]:
     return result
 
 
-def _resolve(snapshot: dict, src: str, field: str):
+def _resolve(snapshot: dict, src, field: str):
+    # Handle list: sum all resolved values
+    if isinstance(src, list):
+        return _sum_resolve(snapshot, src, field)
+    # Handle _s (scalar) or _rb (real/budget split) dict format from kpi_mappings
+    scalar_op, scalar_val = None, None
+    if isinstance(src, dict):
+        if src.get("_s"):
+            scalar_op  = src.get("op", "*")
+            scalar_val = src.get("scalar")
+            src = src.get("src", "") or ""
+        elif src.get("_rb"):
+            src = src.get("src", src.get("real", "")) or ""
+        else:
+            src = src.get("src", "") or ""
+    if not src:
+        return None
     data = snapshot.get(src)
     if data is None:
         suffix = f"||{src}"
@@ -235,7 +259,14 @@ def _resolve(snapshot: dict, src: str, field: str):
     if data is None:
         return None
     val = data.get(field)
-    return float(val) if val is not None else None
+    if val is None:
+        return None
+    result = float(val)
+    if scalar_op is not None and scalar_val is not None:
+        sc = float(scalar_val)
+        result = {"+": result + sc, "-": result - sc, "*": result * sc,
+                  "/": result / sc if sc != 0 else None}.get(scalar_op, result)
+    return result
 
 
 def _sum_resolve(snapshot: dict, keys: list[str], field: str):
@@ -306,15 +337,27 @@ def _efecto_ley(dp, dl, dr_, proc_b, rec_b):
 def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
     """Compute all formula-driven deltas for a single time field."""
     k = p["kpi_keys"]
+    _sc     = p.get("kpi_scales", {})
+    _sc_myt = set(p.get("kpi_scales_mes_ytd", []))  # scales solo activos en campos mes/ytd
 
     def r(key): return _resolve(r_snap, key, field)
     def b(key): return _resolve(b_snap, key, field)
+    def rs(var, key):
+        v = r(key); sc = _sc.get(var)
+        if sc is None or v is None: return v
+        if var in _sc_myt and field not in ("mes", "ytd"): return v
+        return v * sc
+    def bs(var, key):
+        v = b(key); sc = _sc.get(var)
+        if sc is None or v is None: return v
+        if var in _sc_myt and field not in ("mes", "ytd"): return v
+        return v * sc
 
     tron_keys = k["tronadura"] if isinstance(k["tronadura"], list) else [k["tronadura"]]
 
-    proc_r = r(k["tratamiento"]);          proc_b = b(k["tratamiento"])
-    _ley_r = r(k["ley_cu"]);               _ley_b = b(k["ley_cu"])
-    _rec_r = r(k["recuperacion"]);         _rec_b = b(k["recuperacion"])
+    proc_r = rs("tratamiento", k["tratamiento"]); proc_b = bs("tratamiento", k["tratamiento"])
+    _ley_r = rs("ley_cu",      k["ley_cu"]);      _ley_b = bs("ley_cu",      k["ley_cu"])
+    _rec_r = rs("recuperacion",k["recuperacion"]); _rec_b = bs("recuperacion",k["recuperacion"])
     # ley stored as % (e.g. 0.52), rec stored as % (e.g. 89.7) → convert to fractions
     ley_r  = _ley_r / 100 if _ley_r is not None else None
     ley_b  = _ley_b / 100 if _ley_b is not None else None
@@ -377,6 +420,18 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
     vals_el  = [el_conc, el_hidro]
     el_total = sum(_s(x) for x in vals_el if x is not None) or None
 
+    # Inventarios y otros — residuo de la bridge de producción (ktCuf)
+    # ΔCu_actual (CuFino KPI, en kt) − efectos explicados = efecto inventarios
+    cu_fino_r = r(k.get("cu_fino", ""))
+    cu_fino_b = b(k.get("cu_fino", ""))
+    _cu_delta = _n(cu_fino_r, cu_fino_b)
+    if _cu_delta is not None:
+        _explained = sum(_s(v) for v in [da_trat_c, da_rec_c, el_conc,
+                                          da_trat_h, da_rec_h, el_hidro] if v is not None)
+        varinv_residual = round(_cu_delta - _explained, 4)
+    else:
+        varinv_residual = None
+
     # Efectos TC/RC y Comercialización — unitarios calculados inline (TC/RC total / cantidad)
     tcrc_q_r    = r(k.get("tcrc_q", ""))
     tcrc_q_b    = b(k.get("tcrc_q", ""))
@@ -423,6 +478,7 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
         "efectos_comer": {
             "cantidades": fmt(comer_cant), "tarifas": fmt(comer_tar), "total": fmt(comer_tot),
         },
+        "varinv_residual": varinv_residual,
     }
 
 
@@ -757,7 +813,9 @@ def get_calculos(
     per_co_keys = p.get("kpi_keys_per_company", {}).get(company, {})
     if per_co_keys:
         p["kpi_keys"] = {**p["kpi_keys"], **per_co_keys}
-    p["kpi_keys"] = _apply_formula_var_mappings(p["kpi_keys"], company)
+    p["kpi_keys"]        = _apply_formula_var_mappings(p["kpi_keys"], company)
+    p["kpi_scales"]      = p.get("kpi_scales_per_company", {}).get(company, {})
+    p["kpi_scales_mes_ytd"] = p.get("kpi_scales_mes_ytd_per_company", {}).get(company, [])
 
     params_fin: dict = {}
     if PARAMS_FIN_PATH.exists():
@@ -798,10 +856,11 @@ def get_calculos(
         yr, mo = col["year"], col["month"]
         field  = MONTH_BY_NUM[mo]
         rs, bs = real_snaps.get(yr, {}), budget_snaps.get(yr, {})
-        col_deltas.append(_compute_deltas(rs, bs, field, p))
+        _d = _compute_deltas(rs, bs, field, p)
+        col_deltas.append(_d)
         col_dev.append(_compute_simple_delta(rs, bs, field, p["desarrollo_mina"]))
         col_dev_items.append({it["key"]: _compute_dm_item(rs, bs, field, it) for it in dm_items})
-        col_varinv.append(_compute_simple_delta(rs, bs, field, p["variacion_inventario"]))
+        col_varinv.append(_d.get("varinv_residual"))
         col_act_ctx.append(_compute_actividad_contexto(rs, bs, field, p, _tc_factor(yr, mo)))
 
     # Mes + YTD

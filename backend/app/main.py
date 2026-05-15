@@ -12,6 +12,7 @@ from .routes.explicaciones import router as explicaciones_router
 from .routes.overrides import router as overrides_router
 from .routes.costos_ajustados import router as ca_router
 from .routes.export import router as export_router
+from .routes.flash import router as flash_router
 
 FRONTEND_INDEX = Path(__file__).resolve().parents[2] / "frontend" / "index.html"
 
@@ -36,6 +37,7 @@ app.include_router(explicaciones_router)
 app.include_router(overrides_router)
 app.include_router(ca_router)
 app.include_router(export_router)
+app.include_router(flash_router)
 
 
 @app.get("/health")

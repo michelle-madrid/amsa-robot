@@ -11,6 +11,7 @@ from .calculos import (
     _fetch_snapshot, _resolve, _sum_resolve,
     _safe_div, _n, _m, _compute_deltas, _compute_actividad_contexto,
 )
+from .costos_ajustados import get_costos_ajustados
 
 router = APIRouter(prefix="/api/explicaciones", tags=["explicaciones"])
 
@@ -24,13 +25,27 @@ def get_explicaciones(company: str, año: int, mes: int):
     per_co_keys = p.get("kpi_keys_per_company", {}).get(company, {})
     if per_co_keys:
         p["kpi_keys"] = {**p["kpi_keys"], **per_co_keys}
-    p["kpi_keys"] = _apply_formula_var_mappings(p["kpi_keys"], company)
+    p["kpi_keys"]           = _apply_formula_var_mappings(p["kpi_keys"], company)
+    p["kpi_scales"]         = p.get("kpi_scales_per_company", {}).get(company, {})
+    p["kpi_scales_mes_ytd"] = p.get("kpi_scales_mes_ytd_per_company", {}).get(company, [])
     params_fin: dict = {}
     if PARAMS_FIN_PATH.exists():
         params_fin = json.loads(PARAMS_FIN_PATH.read_text(encoding="utf-8"))
 
     exp_tc_frac = params_fin.get("exp_tc", {}).get(company, 0) / 100.0
     year_kpis = params_fin.get("kpis", {}).get(str(año), {})
+
+    # Onsite cost budget (base for monetary adjustment effects)
+    _ca_onsite: dict = {}
+    try:
+        _ca = get_costos_ajustados(company=company, año=año, mes=mes)
+        _ca_onsite = (_ca or {}).get("totales", {}).get("costo_onsite", {})
+    except Exception:
+        pass
+    _gasto_b = {
+        "mes": (_ca_onsite.get("mes") or {}).get("ppto"),
+        "ytd": (_ca_onsite.get("ytd") or {}).get("ppto"),
+    }
 
     def _avg_fin(key: str):
         vals = [
@@ -65,23 +80,50 @@ def get_explicaciones(company: str, año: int, mes: int):
 
     k = p["kpi_keys"]
 
+    def _scale_snap(snap: dict, panel: str) -> dict:
+        """Devuelve snapshot con valores de proc/ley/rec ya escalados, para que
+        _compute_deltas opere siempre en unidades correctas (kt, %, %)."""
+        scales  = p.get("kpi_scales", {})
+        myt_set = set(p.get("kpi_scales_mes_ytd", []))
+        if not scales:
+            return snap
+        result = dict(snap)
+        for var, sc in scales.items():
+            if var in myt_set and panel not in ("mes", "ytd"):
+                continue
+            kpi_key = k.get(var, "")
+            if not kpi_key or not isinstance(kpi_key, str):
+                continue
+            data = snap.get(kpi_key)
+            if data is None:
+                suffix = f"||{kpi_key}"
+                matches = [(ck, cv) for ck, cv in snap.items() if ck.endswith(suffix)]
+                if len(matches) == 1:
+                    kpi_key, data = matches[0]
+            if data is not None:
+                result[kpi_key] = {f: (v * sc if v is not None else None) for f, v in data.items()}
+        return result
+
     panels: dict = {}
     for panel in ("mes", "ytd"):
         mo_fin     = mo_mes if panel == "mes" else mo_ytd
         tc_factor  = _tc_factor(mo_fin)
-        deltas = _compute_deltas(r_snap, b_snap, panel, p)
+        r_scaled   = _scale_snap(r_snap, panel)
+        b_scaled   = _scale_snap(b_snap, panel)
+        _p_calc    = {**p, "kpi_scales": {}, "kpi_scales_mes_ytd": []}
+        deltas = _compute_deltas(r_scaled, b_scaled, panel, _p_calc)
         dg  = deltas["delta_gasto_precio"]
         dr  = deltas["delta_rendimiento"]
         da  = deltas["delta_actividad"]
         el  = deltas["efecto_ley"]
-        ac  = _compute_actividad_contexto(r_snap, b_snap, panel, p, tc_factor)
+        ac  = _compute_actividad_contexto(r_scaled, b_scaled, panel, _p_calc, tc_factor)
 
-        def rv(key, _p=panel): return _resolve(r_snap, key, _p) if key else None
-        def bv(key, _p=panel): return _resolve(b_snap, key, _p) if key else None
+        def rv(key, _p=panel, _snap=r_scaled): return _resolve(_snap, key, _p) if key else None
+        def bv(key, _p=panel, _snap=b_scaled): return _resolve(_snap, key, _p) if key else None
 
-        proc_r = rv(k["tratamiento"]);         proc_b = bv(k["tratamiento"])
-        ley_rr = rv(k["ley_cu"]);              ley_rb = bv(k["ley_cu"])
-        rec_rr = rv(k["recuperacion"]);        rec_rb = bv(k["recuperacion"])
+        proc_r = rv(k["tratamiento"]); proc_b = bv(k["tratamiento"])
+        ley_rr = rv(k["ley_cu"]);      ley_rb = bv(k["ley_cu"])
+        rec_rr = rv(k["recuperacion"]); rec_rb = bv(k["recuperacion"])
         hef_r  = rv(k["horas_efectivas"]);     hef_b  = bv(k["horas_efectivas"])
         tron_keys = k["tronadura"] if isinstance(k["tronadura"], list) else [k["tronadura"]]
         tron_r = _sum_resolve(r_snap, tron_keys, panel)
@@ -91,38 +133,68 @@ def get_explicaciones(company: str, año: int, mes: int):
         rend_bolas_b = _m(_safe_div(bv(k["consumo_bolas"]),       proc_b), 1000.0)
         rend_energ_r = _safe_div(rv(k["consumo_energia"]),         proc_r)
         rend_energ_b = _safe_div(bv(k["consumo_energia"]),         proc_b)
-        rend_comb_r  = _safe_div(rv(k["consumo_combustible"]),     hef_r)
-        rend_comb_b  = _safe_div(bv(k["consumo_combustible"]),     hef_b)
+        rend_comb_r  = _m(_safe_div(rv(k["consumo_combustible"]),  hef_r), 1000.0)
+        rend_comb_b  = _m(_safe_div(bv(k["consumo_combustible"]),  hef_b), 1000.0)
         rend_expl_r  = _m(_safe_div(rv(k["consumo_explosivos"]),   tron_r), 1000.0)
         rend_expl_b  = _m(_safe_div(bv(k["consumo_explosivos"]),   tron_b), 1000.0)
 
-        # Cu production in ktCuf: proc(kt) × ley(%)/100 × rec(%)/100  →  × 1e-4
+        # Cu production in ktCuf: use actual CuFino KPI when available, fallback to proc×ley×rec
         _all = lambda *args: None not in args
-        cu_r = _m(proc_r, ley_rr, rec_rr, 1e-4) if _all(proc_r, ley_rr, rec_rr) else None
-        cu_b = _m(proc_b, ley_rb, rec_rb, 1e-4) if _all(proc_b, ley_rb, rec_rb) else None
+        _cu_fino_r = rv(k.get("cu_fino", "")) if k.get("cu_fino") else None
+        _cu_fino_b = bv(k.get("cu_fino", "")) if k.get("cu_fino") else None
+        cu_r = _cu_fino_r if _cu_fino_r is not None else (_m(proc_r, ley_rr, rec_rr, 1e-4) if _all(proc_r, ley_rr, rec_rr) else None)
+        cu_b = _cu_fino_b if _cu_fino_b is not None else (_m(proc_b, ley_rb, rec_rb, 1e-4) if _all(proc_b, ley_rb, rec_rb) else None)
 
-        mov_kpis = p.get("actividad_contexto", {}).get("mov_mina_kpis", [])
+        _mov_sulf  = k.get("mov_mina_sulf",  "")
+        _mov_ox    = k.get("mov_mina_ox",    "")
+        _mov_total = k.get("mov_mina_total", "")
+        _mov_from_keys = [x for x in [_mov_sulf, _mov_ox] if x]
+        if not _mov_from_keys and _mov_total:
+            _mov_from_keys = [_mov_total]
+        mov_kpis = _mov_from_keys if _mov_from_keys else p.get("actividad_contexto", {}).get("mov_mina_kpis", [])
         mov_r = _sum_resolve(r_snap, mov_kpis, panel) if mov_kpis else None
         mov_b = _sum_resolve(b_snap, mov_kpis, panel) if mov_kpis else None
-        dm_r  = _sum_resolve(r_snap, p["desarrollo_mina"], panel) if p.get("desarrollo_mina") else None
-        dm_b  = _sum_resolve(b_snap, p["desarrollo_mina"], panel) if p.get("desarrollo_mina") else None
-        vi_r  = _sum_resolve(r_snap, p["variacion_inventario"], panel) if p.get("variacion_inventario") else None
-        vi_b  = _sum_resolve(b_snap, p["variacion_inventario"], panel) if p.get("variacion_inventario") else None
 
-        dev_vol_key = k.get("dev_mina_vol", "")
-        dev_vol_r = rv(dev_vol_key) if dev_vol_key else None
-        dev_vol_b = bv(dev_vol_key) if dev_vol_key else None
-        cu_dev_r = (dm_r / dev_vol_r) if (dev_vol_r and dm_r is not None and dev_vol_r != 0) else None
-        cu_dev_b = (dm_b / dev_vol_b) if (dev_vol_b and dm_b is not None and dev_vol_b != 0) else None
+        # Desarrollo mina: volume (kt) — usa keys mapeados si existen, si no el hardcodeado
+        _dv_sulf  = k.get("dev_mina_sulf",      "")
+        _dv_ox    = k.get("dev_mina_ox",         "")
+        _dv_total = k.get("dev_mina_total_vol",  "")
+        _dv_from_keys = [x for x in [_dv_sulf, _dv_ox] if x]
+        if not _dv_from_keys and _dv_total:
+            _dv_from_keys = [_dv_total]
+        if _dv_from_keys:
+            _dv_keys = _dv_from_keys
+        else:
+            _dv_raw  = k.get("dev_mina_vol", "")
+            _dv_keys = _dv_raw if isinstance(_dv_raw, list) else ([_dv_raw] if _dv_raw else [])
+        dev_vol_r = _sum_resolve(r_snap, _dv_keys, panel) if _dv_keys else None
+        dev_vol_b = _sum_resolve(b_snap, _dv_keys, panel) if _dv_keys else None
+
+        dev_cu_key = k.get("dev_mina_cu", "")
+        cu_dev_r   = rv(dev_cu_key) if dev_cu_key else None
+        cu_dev_b   = bv(dev_cu_key) if dev_cu_key else None
+
+        # Fallback: derive CU from old desarrollo_mina cost / volume
+        if cu_dev_r is None and dev_vol_r:
+            _dm_r_fb = _sum_resolve(r_snap, p.get("desarrollo_mina") or [], panel)
+            cu_dev_r = (_dm_r_fb / dev_vol_r) if (_dm_r_fb is not None and dev_vol_r != 0) else None
+        if cu_dev_b is None and dev_vol_b:
+            _dm_b_fb = _sum_resolve(b_snap, p.get("desarrollo_mina") or [], panel)
+            cu_dev_b = (_dm_b_fb / dev_vol_b) if (_dm_b_fb is not None and dev_vol_b != 0) else None
+
+        # Total cost (kUS$) = volume (kt) × unit cost (US$/t = kUS$/kt)
+        dm_r = (dev_vol_r * cu_dev_r) if (dev_vol_r is not None and cu_dev_r is not None) else None
+        dm_b = (dev_vol_b * cu_dev_b) if (dev_vol_b is not None and cu_dev_b is not None) else None
 
         f = lambda v: round(v, 4) if v is not None else None
 
-        dev_ton_kus = f(_m(_n(dev_vol_r, dev_vol_b), cu_dev_b)) if (cu_dev_b is not None and dev_vol_r is not None and dev_vol_b is not None) else None
-        dev_cu_kus  = f(_m(_n(cu_dev_r, cu_dev_b), dev_vol_r)) if (cu_dev_r is not None and cu_dev_b is not None and dev_vol_r is not None) else None
+        # Effects: ppto − real (positive = favorable, spent less than planned)
+        dev_ton_kus = f(_m(_n(dev_vol_b, dev_vol_r), cu_dev_b)) if (cu_dev_b is not None and dev_vol_r is not None and dev_vol_b is not None) else None
+        dev_cu_kus  = f(_m(_n(cu_dev_b, cu_dev_r), dev_vol_r)) if (cu_dev_r is not None and cu_dev_b is not None and dev_vol_r is not None) else None
 
-        # Ajuste monetario effects: need total operational cost budget as base
-        gasto_key  = k.get("gasto_operacional", "")
-        gasto_b    = bv(gasto_key) if gasto_key else None
+        # Ajuste monetario effects: base = Costo Onsite Ppto from costos-ajustados
+        gasto_key = k.get("gasto_operacional", "")
+        gasto_b   = _gasto_b.get(panel) or (bv(gasto_key) if gasto_key else None)
 
         tc_r_val   = mo_fin.get("dolar_real")
         tc_b_val   = mo_fin.get("dolar_budget")
@@ -155,14 +227,13 @@ def get_explicaciones(company: str, año: int, mes: int):
         tcrc_b_tot_val  = _bk(k.get("tcrc_b_total",  ""))
         comer_b_tot_val = _bk(k.get("comer_b_total", ""))
 
-        # Variación inventario (real − budget, ktCuf delta)
-        vi_delta = f(_n(vi_r, vi_b))
+        # Inventarios y otros (ktCuf) — residuo de la bridge de producción
+        # = Δ Cu Total − (Δ trat + Δ rec + Δ ley), igual que Flash Producciones
+        vi_delta = deltas.get("varinv_residual")
 
-        # Efecto inventarios kUS$ (real − budget por segmento)
-        vi_mina_key   = k.get("vi_inv_mina",   "")
-        vi_planta_key = k.get("vi_inv_planta",  "")
-        vi_mina_kus   = f(_n(rv(vi_mina_key),   bv(vi_mina_key)))   if vi_mina_key   else None
-        vi_planta_kus = f(_n(rv(vi_planta_key), bv(vi_planta_key))) if vi_planta_key else None
+        # Efecto inventarios kUS$ (real − budget) — sólo para el waterfall de costos
+        vi_key = k.get("vi_inv", "")
+        vi_kus = f(_n(rv(vi_key), bv(vi_key))) if vi_key else None
 
         # IFRS16 kUS$ (real − budget)
         ifrs16_key = k.get("ifrs16", "")
@@ -194,8 +265,8 @@ def get_explicaciones(company: str, año: int, mes: int):
             "cu_prod_budget": f(cu_b),
             "ajuste_monetario": [
                 {"label": "TC (Dólar)", "unit": "CLP/USD", "real": f(tc_r_val),  "ppto": f(tc_b_val),  "efecto_kus": ef_tc},
-                {"label": "IPC",        "unit": "Índice",  "real": f(ipc_r_val), "ppto": f(ipc_b_val), "efecto_kus": ef_ipc},
-                {"label": "CPI",        "unit": "Índice",  "real": f(cpi_r_val), "ppto": f(cpi_b_val), "efecto_kus": ef_cpi},
+                {"label": "IPC",        "unit": "Índice",  "real": f(ipc_r_val), "ppto": f(ipc_b_val), "efecto_kus": f(ef_ipc)},
+                {"label": "CPI",        "unit": "Índice",  "real": f(cpi_r_val), "ppto": f(cpi_b_val), "efecto_kus": f(ef_cpi)},
             ],
             "precio_insumos": [
                 {"label": "Energía",     "unit": "US$/MWh", "real": f(rv(k["tarifa_energia"])),     "ppto": f(bv(k["tarifa_energia"])),     "efecto_kus": f(dg["energia"])},
@@ -219,7 +290,7 @@ def get_explicaciones(company: str, año: int, mes: int):
                 {"label": "Beneficio Hidro", "unit": "kt",    "real": None, "ppto": None, "efecto_ktcuf": f(da["trat_hidro"])},
                 {"label": "Rec Hidro",       "unit": "%",     "real": None, "ppto": None, "efecto_ktcuf": f(da["rec_hidro"])},
                 {"label": "Otros",           "unit": "kt",    "real": None, "ppto": None, "efecto_ktcuf": None},
-                {"label": "Inventarios",     "unit": "kt",    "real": f(vi_r), "ppto": f(vi_b), "efecto_ktcuf": None},
+                {"label": "Inventarios y otros", "unit": "kt", "real": None, "ppto": None, "efecto_ktcuf": vi_delta, "efecto_kus": None},
             ],
             "mov_mina": {
                 "real": f(mov_r), "ppto": f(mov_b),
@@ -227,7 +298,7 @@ def get_explicaciones(company: str, año: int, mes: int):
             },
             "desarrollo_mina": {
                 "real": f(dm_r), "ppto": f(dm_b),
-                "efecto_kus": f(_n(dm_r, dm_b)),
+                "efecto_kus": f(_n(dm_b, dm_r)),
                 "tonelaje_real": f(abs(dev_vol_r)) if dev_vol_r is not None else None,
                 "tonelaje_ppto": f(abs(dev_vol_b)) if dev_vol_b is not None else None,
                 "tonelaje_efecto_kus": dev_ton_kus,
@@ -283,8 +354,7 @@ def get_explicaciones(company: str, año: int, mes: int):
                 "tcrc_kus":  tcrc_kus,
                 "comer_kus": comer_kus,
                 # Efecto inventarios (kUS$ delta)
-                "vi_inv_mina_kus":   vi_mina_kus,
-                "vi_inv_planta_kus": vi_planta_kus,
+                "vi_inv_kus": vi_kus,
                 # IFRS16 (kUS$ delta)
                 "ifrs16_kus": ifrs16_kus,
                 # Estructura real (valores absolutos)

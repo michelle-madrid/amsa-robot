@@ -31,7 +31,10 @@ def _load_structure(company: str) -> list | None:
     data = json.loads(KPI_STRUCTURE_FILE.read_text(encoding="utf-8"))
     raw = data.get(company)
     if raw is None:
-        return None
+        # Company not in kpi_structure.json — try to build Costos Ajustados section only
+        result: list = []
+        _append_costos_aj(company, result)
+        return result if result else None
     current_section = ""
     result = []
     for item in raw:
@@ -77,7 +80,19 @@ def _append_costos_aj(company: str, result: list) -> None:
     # Grupos: always show all items (user wants full visibility)
     for grp in grupos:
         grp_items = []
-        for sa in grp.get("subareas", []):
+        sas = grp.get("subareas", [])
+        # Fila ∑ Total solo si ya existe un mapeo directo a nivel de grupo (clave 2 o 3 partes)
+        grp_total_id   = f"{section}||{grp['label']}"
+        grp_total_id3  = f"{section}||{grp['label']}||Total"
+        if len(sas) > 1 and (grp_total_id in existing or grp_total_id3 in existing):
+            grp_items.append({
+                "type": "kpi",
+                "id": grp_total_id,
+                "section": section,
+                "code": grp["key"], "label": "Total", "unit": "kUS$", "row": None,
+                "is_group_total": True,
+            })
+        for sa in sas:
             if sa["label"] in seen_labels:
                 continue
             seen_labels.add(sa["label"])

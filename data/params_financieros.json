@@ -176,6 +176,9 @@
     "ANT": 51,
     "CMZ": 49.8
   },
+  "company_cost_scale": {
+    "CMZ": 0.5
+  },
   "costos_fijo_var": {
     "MLP": [
       { "key": "mina",   "label": "Mina y sub-áreas",           "fijo": 0.30 },
@@ -239,8 +242,7 @@
         {"key":"gest_mant",   "label":"Gestión del Mantención",        "fijo":1.00}
       ]},
       {"key":"vi_grp","label":"Var. Inv.","subareas":[
-        {"key":"vi_mina",   "label":"Var. Inv. Mina",  "fijo":1.00},
-        {"key":"vi_planta", "label":"Var. Inv. Planta", "fijo":1.00}
+        {"key":"vi_total", "label":"Var. Inv.", "fijo":1.00}
       ]},
       {"key":"dev_mina_grp","label":"Desarrollo Mina","subareas":[
         {"key":"vi_devmina","label":"Desarrollo Mina","fijo":1.00}
@@ -276,8 +278,7 @@
         {"key":"ga_cen","label":"G&A","fijo":1.00}
       ]},
       {"key":"vi_grp","label":"Var. Inv.","subareas":[
-        {"key":"vi_mina",   "label":"Var. Inv. Mina",  "fijo":1.00},
-        {"key":"vi_planta", "label":"Var. Inv. Planta", "fijo":1.00}
+        {"key":"vi_total", "label":"Var. Inv.", "fijo":1.00}
       ]},
       {"key":"dev_mina_grp","label":"Desarrollo Mina","subareas":[
         {"key":"vi_devmina","label":"Desarrollo Mina","fijo":1.00}
@@ -296,18 +297,22 @@
         {"key":"adm_op",       "label":"Adm. Operación y Gestión","fijo":0.50}
       ]},
       {"key":"planta_sx","label":"Planta SX-EW","subareas":[
+        {"key":"chancado_sx",  "label":"Chancado SX-EW",                "fijo":0.60},
         {"key":"aglom_ap",     "label":"Aglomeración / Apilamiento",    "fijo":0.60},
         {"key":"lixiv",        "label":"Lixiviación",                   "fijo":0.60},
         {"key":"rom_sl",       "label":"ROM / SL",                      "fijo":0.60},
         {"key":"sxew",         "label":"SX-EW",                        "fijo":0.60},
-        {"key":"adm_sx",       "label":"Admin.",                        "fijo":0.60}
+        {"key":"adm_sx",       "label":"Admin.",                        "fijo":0.60},
+        {"key":"otros_sx",     "label":"Otros costos planta SX-EW",     "fijo":0.60}
       ]},
       {"key":"ga","label":"G&A","subareas":[
         {"key":"ga_ant","label":"G&A","fijo":1.00}
       ]},
+      {"key":"serv_apoyo_grp","label":"Servicios de Apoyo","subareas":[
+        {"key":"serv_apoyo_ant","label":"Servicios de Apoyo","fijo":1.00}
+      ]},
       {"key":"vi_grp","label":"Var. Inv.","subareas":[
-        {"key":"vi_mina",   "label":"Var. Inv. Mina",  "fijo":1.00},
-        {"key":"vi_planta", "label":"Var. Inv. Planta", "fijo":1.00}
+        {"key":"vi_total", "label":"Var. Inv.", "fijo":1.00}
       ]},
       {"key":"dev_mina_grp","label":"Desarrollo Mina","subareas":[
         {"key":"vi_devmina","label":"Desarrollo Mina","fijo":1.00}
@@ -326,18 +331,22 @@
         {"key":"adm_op",       "label":"Adm. Operación y Gestión","fijo":0.50}
       ]},
       {"key":"planta_sx","label":"Planta SX-EW","subareas":[
+        {"key":"chancado",     "label":"Chancado SX-EW",               "fijo":0.60},
         {"key":"aglom_ap",     "label":"Aglomeración / Apilamiento",    "fijo":0.60},
         {"key":"lixiv",        "label":"Lixiviación",                   "fijo":0.60},
         {"key":"rom_sl",       "label":"ROM / SL",                      "fijo":0.60},
         {"key":"sxew",         "label":"SX-EW",                        "fijo":0.60},
-        {"key":"adm_sx",       "label":"Admin.",                        "fijo":0.60}
+        {"key":"adm_sx",       "label":"Admin.",                        "fijo":0.60},
+        {"key":"otros_sx",     "label":"Otros costos planta SX-EW",     "fijo":0.60}
       ]},
       {"key":"ga","label":"G&A","subareas":[
         {"key":"ga_cmz","label":"G&A","fijo":1.00}
       ]},
+      {"key":"serv_apoyo_grp","label":"Servicios de Apoyo","subareas":[
+        {"key":"serv_apoyo_cmz","label":"Servicios de Apoyo","fijo":1.00}
+      ]},
       {"key":"vi_grp","label":"Var. Inv.","subareas":[
-        {"key":"vi_mina",   "label":"Var. Inv. Mina",  "fijo":1.00},
-        {"key":"vi_planta", "label":"Var. Inv. Planta", "fijo":1.00}
+        {"key":"vi_total", "label":"Var. Inv.", "fijo":1.00}
       ]},
       {"key":"dev_mina_grp","label":"Desarrollo Mina","subareas":[
         {"key":"vi_devmina","label":"Desarrollo Mina","fijo":1.00}

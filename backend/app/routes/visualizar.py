@@ -13,12 +13,21 @@ from ..config import settings
 from ..services import parquet_service as pq
 from ..services.mapping_store import load_mappings
 from ..services.mapper_service import get_excel_kpis_for_setup
+from .setup import _append_costos_aj
 
 router = APIRouter(prefix="/api/visualizar", tags=["visualizar"])
 
-KPI_STRUCTURE_FILE = settings.parquet_path.parent / "kpi_structure.json"
+KPI_STRUCTURE_FILE   = settings.parquet_path.parent / "kpi_structure.json"
+FORMULA_PARAMS_FILE  = settings.parquet_path.parent / "formula_params.json"
 MONTH_FIELDS = pq.MONTH_FIELDS
 MONTH_BY_NUM = {i+1: f for i, f in enumerate(MONTH_FIELDS)}
+
+
+def _load_visualizar_scales(company: str) -> dict[str, float]:
+    if FORMULA_PARAMS_FILE.exists():
+        data = json.loads(FORMULA_PARAMS_FILE.read_text(encoding="utf-8"))
+        return data.get("visualizar_scales_per_company", {}).get(company, {})
+    return {}
 
 
 _TIPO_ALIASES: list[set[str]] = [
@@ -75,10 +84,7 @@ def _build_columns(año_ini, mes_ini, año_fin, mes_fin) -> list[dict]:
 
 
 def _fetch_year_snapshot(df_co, tipo: str, year: int, snap_mes: int) -> dict[str, dict]:
-    """Returns {'subcategory||kpi': {field: value}} for the given snapshot period.
-    If the exact period is not available, falls back to the most recent available period
-    within the same year up to snap_mes, so partial-year ranges still show available data.
-    """
+    """Returns {'subcategory||kpi': {field: value}} for the given snapshot period."""
     variants = _tipo_variants(tipo)
     df_tipo = df_co[df_co["tipo"].str.strip().str.lower().isin(variants)]
 
@@ -86,7 +92,6 @@ def _fetch_year_snapshot(df_co, tipo: str, year: int, snap_mes: int) -> dict[str
     df = df_tipo[df_tipo["periodo"] == periodo]
 
     if df.empty:
-        # Fall back to the latest available period in the same year up to snap_mes
         year_min = year * 100 + 1
         df_year = df_tipo[(df_tipo["periodo"] >= year_min) & (df_tipo["periodo"] <= periodo)]
         if not df_year.empty:
@@ -94,48 +99,62 @@ def _fetch_year_snapshot(df_co, tipo: str, year: int, snap_mes: int) -> dict[str
             df = df_tipo[df_tipo["periodo"] == periodo]
 
     result: dict[str, dict] = {}
-    for _, row in df.iterrows():
-        kpi_name = str(row.get("kpi", "") or "").strip()
-        subcategory = str(row.get("subcategory", "") or "").strip()
+    cols = [c for c in pq.MONTH_FIELDS + ["mes", "ytd"] if c in df.columns]
+    for row in df[["kpi", "subcategory"] + cols].itertuples(index=False):
+        kpi_name    = str(row.kpi        or "").strip()
+        subcategory = str(row.subcategory or "").strip()
         if not kpi_name:
             continue
         key = f"{subcategory}||{kpi_name}" if subcategory else kpi_name
         if key not in result:
-            result[key] = pq.row_to_monthly_values(row)
+            d: dict = {}
+            for f in pq.MONTH_FIELDS:
+                v = getattr(row, f, None)
+                d[f] = float(v) if v is not None and str(v) != "nan" else None
+            v = getattr(row, "mes", None)
+            d["mes"] = float(v) if v is not None and str(v) != "nan" else None
+            v = getattr(row, "ytd", None)
+            d["ytd"] = float(v) if v is not None and str(v) != "nan" else None
+            result[key] = d
     return result
 
 
 def _resolve_snapshot(snapshot: dict[str, dict], src: str) -> dict:
-    """Look up a source in the snapshot. Supports exact match or suffix match for plain names."""
+    """Look up a source in the snapshot. Supports exact match or suffix match for plain names.
+    If src is 'A||B' and exact match fails, also tries matching just 'B' (kpi without subcategory).
+    """
     if src in snapshot:
         return snapshot[src]
     suffix = f"||{src}"
     matches = [v for k, v in snapshot.items() if k.endswith(suffix)]
     if len(matches) == 1:
         return matches[0]
+    # If src contains "||" (e.g. "Item||Ingresos Molibdeno"), also try the kpi-only part
+    if "||" in src:
+        plain = src.split("||", 1)[1]
+        if plain in snapshot:
+            return snapshot[plain]
+        suffix2 = f"||{plain}"
+        matches2 = [v for k, v in snapshot.items() if k.endswith(suffix2)]
+        if len(matches2) == 1:
+            return matches2[0]
     return {}
 
 
-def _get_series(df_co, tipo, año_ini, mes_ini, año_fin, mes_fin,
-                columns: list[dict], sources: list[str]) -> list:
-    """Returns one value per column for the given sources (summed if multiple)."""
+def _get_series(snapshots: dict[int, dict], columns: list[dict], sources: list[str]) -> list:
+    """Returns one value per column for the given sources (summed if multiple).
+    snapshots must be pre-built: {year: snapshot_dict}.
+    """
     if not sources:
         return _empty_series(len(columns))
-
-    # Fetch snapshot per year: last available month of the year (or mes_fin for last year)
-    years = sorted({c["year"] for c in columns})
-    snapshots: dict[int, dict[str, dict]] = {}
-    for yr in years:
-        snap_mes = mes_fin if yr == año_fin else 12
-        snapshots[yr] = _fetch_year_snapshot(df_co, tipo, yr, snap_mes)
-
     result = []
     for col in columns:
         yr, mo = col["year"], col["month"]
-        field = MONTH_BY_NUM[mo]
-        total = None
+        field  = MONTH_BY_NUM[mo]
+        total  = None
+        snap   = snapshots.get(yr, {})
         for src in sources:
-            val = _resolve_snapshot(snapshots.get(yr, {}), src).get(field)
+            val = _resolve_snapshot(snap, src).get(field)
             if val is not None:
                 total = (total or 0.0) + val
         result.append(total)
@@ -162,7 +181,9 @@ def _get_company_items(company: str) -> list:
         data = json.loads(KPI_STRUCTURE_FILE.read_text(encoding="utf-8"))
         items = data.get(company, [])
         if items:
-            return items
+            result = list(items)
+            _append_costos_aj(company, result)
+            return result
     # Fallback al template Excel
     if settings.template_path.exists():
         try:
@@ -188,8 +209,20 @@ def get_visualization(
     cols1 = _build_columns(año1_ini, mes1_ini, año1_fin, mes1_fin)
     cols2 = _build_columns(año2_ini, mes2_ini, año2_fin, mes2_fin)
 
-    company_items = _get_company_items(company)
-    mappings      = load_mappings().get(company, {})
+    # Pre-build snapshots ONCE per tipo (not once per KPI)
+    def _build_snaps(cols, año_fin, mes_fin, tipo):
+        snaps = {}
+        for yr in sorted({c["year"] for c in cols}):
+            snap_mes = mes_fin if yr == año_fin else 12
+            snaps[yr] = _fetch_year_snapshot(df_co, tipo, yr, snap_mes)
+        return snaps
+
+    snaps1 = _build_snaps(cols1, año1_fin, mes1_fin, tipo1)
+    snaps2 = _build_snaps(cols2, año2_fin, mes2_fin, tipo2)
+
+    company_items   = _get_company_items(company)
+    mappings        = load_mappings().get(company, {})
+    viz_scales      = _load_visualizar_scales(company)
 
     def resolve_sources(mapped_value) -> list[str]:
         if not mapped_value or mapped_value == "__NA__":
@@ -228,8 +261,14 @@ def get_visualization(
         is_formula = isinstance(mapped, dict) and bool(mapped.get("_f"))
         is_scalar  = isinstance(mapped, dict) and bool(mapped.get("_s"))
 
-        vals1 = _get_series(df_co, tipo1, año1_ini, mes1_ini, año1_fin, mes1_fin, cols1, src1)
-        vals2 = _get_series(df_co, tipo2, año2_ini, mes2_ini, año2_fin, mes2_fin, cols2, src2)
+        vals1 = _get_series(snaps1, cols1, src1)
+        vals2 = _get_series(snaps2, cols2, src2)
+
+        # Apply display scale from formula_params (e.g. fraction→percent for CEN ley)
+        _vsc = viz_scales.get(lk)
+        if _vsc is not None:
+            vals1 = [v * _vsc if v is not None else None for v in vals1]
+            vals2 = [v * _vsc if v is not None else None for v in vals2]
 
         if is_scalar and mapped.get("scalar") is not None:
             sc_op  = mapped.get("op", "*")
@@ -278,20 +317,42 @@ def get_visualization(
             if kpi.get("type") == "subheader":
                 continue
             mapped = mappings.get(kpi["lk"])
-            if not isinstance(mapped, dict) or not mapped.get("_f"):
+            if not isinstance(mapped, dict):
                 continue
-            a, op, b = mapped.get("a",""), mapped.get("op","/"), mapped.get("b","")
-            a1 = by_lk1.get(a, _empty_series(len(cols1)))
-            b1 = by_lk1.get(b, _empty_series(len(cols1)))
-            a2 = by_lk2.get(a, _empty_series(len(cols2)))
-            b2 = by_lk2.get(b, _empty_series(len(cols2)))
-            kpi["vals1"] = [_apply_scale(_apply_op(x, op, y), mapped) for x, y in zip(a1, b1)]
-            kpi["vals2"] = [_apply_scale(_apply_op(x, op, y), mapped) for x, y in zip(a2, b2)]
-            kpi["mes1"]  = _apply_scale(_apply_op(mes_by_lk1.get(a), op, mes_by_lk1.get(b)), mapped)
-            kpi["mes2"]  = _apply_scale(_apply_op(mes_by_lk2.get(a), op, mes_by_lk2.get(b)), mapped)
-            kpi["ytd1"]  = _apply_scale(_apply_op(ytd_by_lk1.get(a), op, ytd_by_lk1.get(b)), mapped)
-            kpi["ytd2"]  = _apply_scale(_apply_op(ytd_by_lk2.get(a), op, ytd_by_lk2.get(b)), mapped)
-            kpi["mapped"] = bool(a and b)
+
+            if mapped.get("_f"):
+                a, op, b = mapped.get("a",""), mapped.get("op","/"), mapped.get("b","")
+                a1 = by_lk1.get(a, _empty_series(len(cols1)))
+                b1 = by_lk1.get(b, _empty_series(len(cols1)))
+                a2 = by_lk2.get(a, _empty_series(len(cols2)))
+                b2 = by_lk2.get(b, _empty_series(len(cols2)))
+                kpi["vals1"] = [_apply_scale(_apply_op(x, op, y), mapped) for x, y in zip(a1, b1)]
+                kpi["vals2"] = [_apply_scale(_apply_op(x, op, y), mapped) for x, y in zip(a2, b2)]
+                kpi["mes1"]  = _apply_scale(_apply_op(mes_by_lk1.get(a), op, mes_by_lk1.get(b)), mapped)
+                kpi["mes2"]  = _apply_scale(_apply_op(mes_by_lk2.get(a), op, mes_by_lk2.get(b)), mapped)
+                kpi["ytd1"]  = _apply_scale(_apply_op(ytd_by_lk1.get(a), op, ytd_by_lk1.get(b)), mapped)
+                kpi["ytd2"]  = _apply_scale(_apply_op(ytd_by_lk2.get(a), op, ytd_by_lk2.get(b)), mapped)
+                kpi["mapped"] = bool(a and b)
+
+            elif mapped.get("_pf"):
+                num, den, op = mapped.get("num",""), mapped.get("den",""), mapped.get("op","/")
+                def _pf_col(snaps, cols, _num=num, _den=den, _op=op):
+                    out = []
+                    for col in cols:
+                        snap = snaps.get(col["year"], {})
+                        f    = MONTH_BY_NUM[col["month"]]
+                        nv   = _resolve_snapshot(snap, _num).get(f) if _num else None
+                        dv   = _resolve_snapshot(snap, _den).get(f) if _den else None
+                        out.append(_apply_scale(_apply_op(nv, _op, dv), mapped))
+                    return out
+                def _pf_agg(snaps, año_fin, cols, _num=num, _den=den, _op=op):
+                    vals = _pf_col(snaps, cols)
+                    return _derive_mes_ytd(vals, cols, año_fin)
+                kpi["vals1"] = _pf_col(snaps1, cols1)
+                kpi["vals2"] = _pf_col(snaps2, cols2)
+                kpi["mes1"], kpi["ytd1"] = _derive_mes_ytd(kpi["vals1"], cols1, año1_fin)
+                kpi["mes2"], kpi["ytd2"] = _derive_mes_ytd(kpi["vals2"], cols2, año2_fin)
+                kpi["mapped"] = bool(num and den)
 
     return {
         "company": company,

@@ -9,6 +9,7 @@ Costos Ajustados — ajusta el presupuesto por diferencias de FX, IPC y CPI.
   exp_tc: exposición al tipo de cambio CLP (parámetro por compañía, en %)
 """
 import json
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -33,8 +34,8 @@ _TIPO_ALIASES = [
 _DEFAULT_SUMMARY_ROWS = [
     {"key": "tcrc",          "label": "TC/RC",                         "fijo": 0.0},
     {"key": "comer",         "label": "Comercialización",              "fijo": 0.0},
-    {"key": "da",            "label": "Depreciación / Amortización",   "fijo": 1.0},
     {"key": "credito_subp",  "label": "Crédito Subproductos",          "fijo": 0.0},
+    {"key": "da",            "label": "Depreciación / Amortización",   "fijo": 1.0},
     {"key": "otros_fin",     "label": "Otros Items Financieros",       "fijo": 0.0},
     {"key": "dif_cambio",    "label": "Diferencias de cambio",         "fijo": 0.0},
     {"key": "donaciones",    "label": "Donaciones",                    "fijo": 0.0},
@@ -57,8 +58,7 @@ _FALLBACK_KEYS = {
     "ing_gasto_fin": ("",              "ing_gasto_fin_r"),
     "ing_no_op":     ("",              "ing_no_op_r"),
     "otros_egr_op":  ("",              "otros_egr_op_r"),
-    "vi_mina":       ("vi_inv_mina",   "vi_inv_mina"),
-    "vi_planta":     ("vi_inv_planta", "vi_inv_planta"),
+    "vi_total":      ("vi_inv",        "vi_inv"),
     "vi_devmina":    ("dev_mina_vol",  "dev_mina_vol"),
     "vi_ifrs16":     ("ifrs16",        "ifrs16"),
 }
@@ -86,17 +86,7 @@ def _load_formula_params() -> dict:
     return {}
 
 
-def _fetch_snapshot(df_co, tipo: str, year: int, month: int) -> dict[str, dict]:
-    variants = _tipo_variants(tipo)
-    df_tipo  = df_co[df_co["tipo"].str.strip().str.lower().isin(variants)]
-    periodo  = year * 100 + month
-    df       = df_tipo[df_tipo["periodo"] == periodo]
-    if df.empty:
-        year_min = year * 100 + 1
-        df_year  = df_tipo[(df_tipo["periodo"] >= year_min) & (df_tipo["periodo"] <= periodo)]
-        if not df_year.empty:
-            periodo = int(df_year["periodo"].max())
-            df = df_tipo[df_tipo["periodo"] == periodo]
+def _build_snapshot_from_df(df) -> dict[str, dict]:
     result: dict[str, dict] = {}
     for _, row in df.iterrows():
         kpi_name    = str(row.get("kpi", "") or "").strip()
@@ -109,12 +99,64 @@ def _fetch_snapshot(df_co, tipo: str, year: int, month: int) -> dict[str, dict]:
     return result
 
 
+def _fetch_snapshot(df_co, tipo: str, year: int, month: int) -> tuple[dict[str, dict], int]:
+    """Returns (snapshot_dict, actual_month_used). actual_month may be < month if data not yet available.
+    If the exact-period snapshot is sparse (missing cost-breakdown KPIs added later),
+    it is enriched with keys from the nearest richer period in the same year."""
+    variants = _tipo_variants(tipo)
+    df_tipo  = df_co[df_co["tipo"].str.strip().str.lower().isin(variants)]
+    periodo  = year * 100 + month
+    df       = df_tipo[df_tipo["periodo"] == periodo]
+    if df.empty:
+        year_min = year * 100 + 1
+        df_year  = df_tipo[(df_tipo["periodo"] >= year_min) & (df_tipo["periodo"] <= periodo)]
+        if not df_year.empty:
+            periodo = int(df_year["periodo"].max())
+            df = df_tipo[df_tipo["periodo"] == periodo]
+    actual_month = periodo % 100
+    result = _build_snapshot_from_df(df)
+
+    # Enriquecer con KPIs del periodo más completo disponible en el mismo año si el actual es incompleto
+    # (ej. enero/febrero 2026 carecen del desglose de Costos Ajustados que aparece en marzo)
+    if len(df) > 0:
+        next_periodo = year * 100 + actual_month + 1
+        while next_periodo <= year * 100 + 12:
+            df_next = df_tipo[df_tipo["periodo"] == next_periodo]
+            if not df_next.empty and len(df_next) > len(df) * 1.05:
+                richer = _build_snapshot_from_df(df_next)
+                for k, v in richer.items():
+                    if k not in result:
+                        result[k] = v   # añade claves faltantes; las existentes no se sobreescriben
+                break   # encontramos un periodo más rico; no buscar más
+            next_periodo += 1
+
+    return result, actual_month
+
+
+def _norm_key(s: str) -> str:
+    """Normaliza para comparación: elimina \\n y caracteres no-ASCII (Mojibake, tildes)."""
+    return re.sub(r'[^\x00-\x7F]', '', s.replace('\n', '').replace('\r', '')).lower()
+
+
 def _resolve(snapshot: dict, src: str, field: str):
+    # 1. Exact match
     data = snapshot.get(src)
+    # 2. Suffix match ("||src")
     if data is None:
         suffix = f"||{src}"
         matches = [v for k, v in snapshot.items() if k.endswith(suffix)]
         data = matches[0] if len(matches) == 1 else None
+    # 3. Normalized match — maneja \n y Mojibake en nombres del parquet
+    if data is None:
+        src_norm = _norm_key(src)
+        norm_matches = [v for k, v in snapshot.items() if _norm_key(k) == src_norm]
+        data = norm_matches[0] if len(norm_matches) == 1 else None
+    # 4. Normalized suffix match
+    if data is None:
+        src_norm = _norm_key(src)
+        norm_matches = [v for k, v in snapshot.items()
+                        if _norm_key(k).endswith('||' + src_norm)]
+        data = norm_matches[0] if len(norm_matches) == 1 else None
     if data is None:
         return None
     val = data.get(field)
@@ -174,11 +216,7 @@ def _compute_row(r_snap, b_snap, kpi_r, kpi_b, fin_kpis, fin, company, año, mes
     af_m   = _adj_factor(fin_kpis, fin, company, año, mes_fin)
 
     paj_tot_m = _r(ppto_m * af_m) if ppto_m is not None else None
-    dif_m = None
-    if real_m is not None and paj_tot_m is not None:
-        dif_m = _r(real_m - paj_tot_m)
-    elif real_m is not None:
-        dif_m = _r(real_m)
+    dif_m = _r(paj_tot_m - ppto_m) if (paj_tot_m is not None and ppto_m is not None) else None
 
     ytd_real = ytd_ppto = ytd_paj = None
     for m in range(1, mes_fin + 1):
@@ -193,11 +231,8 @@ def _compute_row(r_snap, b_snap, kpi_r, kpi_b, fin_kpis, fin, company, año, mes
             ytd_paj  = (ytd_paj  or 0.0) + b_m * af_mm
 
     ytd_paj_tot = _r(ytd_paj) if ytd_paj is not None else None
-    ytd_dif = None
-    if ytd_real is not None and ytd_paj_tot is not None:
-        ytd_dif = _r(ytd_real - ytd_paj_tot)
-    elif ytd_real is not None:
-        ytd_dif = _r(ytd_real)
+    ytd_ppto_r  = _r(ytd_ppto) if ytd_ppto is not None else None
+    ytd_dif = _r(ytd_paj_tot - ytd_ppto_r) if (ytd_paj_tot is not None and ytd_ppto_r is not None) else None
 
     return {
         "mes": {
@@ -230,29 +265,87 @@ def _add_periods(a: dict | None, b: dict | None) -> dict | None:
     return _sum_periods([a, b])
 
 
+_PERIOD_COST_KEYS = {"real", "ppto", "ppto_aj_tot", "dif"}
+_MONTHLY_COST_KEYS = {"ppto", "aj_tc", "aj_ipc", "aj_cpi",
+                      "ppto_mes", "ppto_acum",
+                      "aj_tc_mes", "aj_tc_acum",
+                      "aj_ipc_mes", "aj_ipc_acum",
+                      "aj_cpi_mes", "aj_cpi_acum",
+                      "ef_tc_mes", "ef_tc_acum",
+                      "ef_ipc_mes", "ef_ipc_acum",
+                      "ef_cpi_mes", "ef_cpi_acum"}
+
+
+def _scale_period(p: dict | None, f: float) -> dict | None:
+    if p is None or f == 1.0:
+        return p
+    return {k: (_r(v * f) if k in _PERIOD_COST_KEYS and v is not None else v)
+            for k, v in p.items()}
+
+
+def _scale_row(row: dict, f: float) -> dict:
+    if not row or f == 1.0:
+        return row
+    out = dict(row)
+    for p in ("mes", "ytd"):
+        if out.get(p) is not None:
+            out[p] = _scale_period(out[p], f)
+    return out
+
+
+def _scale_monthly_row(row: dict, f: float) -> dict:
+    """Scale a monthly-endpoint row (arrays + scalar totals)."""
+    if not row or f == 1.0:
+        return row
+    out = dict(row)
+    for k, v in out.items():
+        if k not in _MONTHLY_COST_KEYS:
+            continue
+        if isinstance(v, list):
+            out[k] = [(_r(x * f) if x is not None else None) for x in v]
+        elif isinstance(v, (int, float)):
+            out[k] = _r(v * f)
+    return out
+
+
 # ── Monthly adj-factor helpers ────────────────────────────────────────────────
 
 def _exp_tc(fin: dict, company: str) -> float:
     return float((fin.get("exp_tc") or {}).get(company) or 50) / 100.0
 
 
+def _last_real(yr_data: dict, mes: int, key: str):
+    """Devuelve el último valor real disponible en o antes del mes dado."""
+    for m in range(mes, 0, -1):
+        v = yr_data.get(str(m), {}).get(key)
+        if v:
+            return v
+    return None
+
+
 def _adj_tc_only(fin_kpis: dict, fin: dict, company: str, año: int, mes: int) -> float:
-    m    = fin_kpis.get(str(año), {}).get(str(mes), {})
-    tc_r = m.get("dolar_real"); tc_b = m.get("dolar_budget")
+    yr   = fin_kpis.get(str(año), {})
+    m    = yr.get(str(mes), {})
+    tc_r = m.get("dolar_real") or _last_real(yr, mes - 1, "dolar_real")
+    tc_b = m.get("dolar_budget")
     e    = _exp_tc(fin, company)
     return e * (tc_b / tc_r) + (1.0 - e) if (tc_r and tc_b and tc_r != 0) else 1.0
 
 
 def _adj_ipc_only(fin_kpis: dict, fin: dict, company: str, año: int, mes: int) -> float:
-    m    = fin_kpis.get(str(año), {}).get(str(mes), {})
-    ip_r = m.get("ipc_real"); ip_b = m.get("ipc_budget")
+    yr   = fin_kpis.get(str(año), {})
+    m    = yr.get(str(mes), {})
+    ip_r = m.get("ipc_real") or _last_real(yr, mes - 1, "ipc_real")
+    ip_b = m.get("ipc_budget")
     e    = _exp_tc(fin, company)
     return e * (ip_r / ip_b) + (1.0 - e) if (ip_r and ip_b and ip_b != 0) else 1.0
 
 
 def _adj_cpi_only(fin_kpis: dict, fin: dict, company: str, año: int, mes: int) -> float:
-    m    = fin_kpis.get(str(año), {}).get(str(mes), {})
-    cp_r = m.get("cpi_real"); cp_b = m.get("cpi_budget")
+    yr   = fin_kpis.get(str(año), {})
+    m    = yr.get(str(mes), {})
+    cp_r = m.get("cpi_real") or _last_real(yr, mes - 1, "cpi_real")
+    cp_b = m.get("cpi_budget")
     e    = _exp_tc(fin, company)
     return e + (1.0 - e) * (cp_r / cp_b) if (cp_r and cp_b and cp_b != 0) else 1.0
 
@@ -271,12 +364,12 @@ def _build_monthly_row(b_snap: dict, kpi_b: list, fijo: float,
             atc  = _adj_tc_only(fin_kpis, fin, company, año, m)
             aipc = _adj_ipc_only(fin_kpis, fin, company, año, m)
             acpi = _adj_cpi_only(fin_kpis, fin, company, año, m)
-            aj_tc.append(_r(p * (fijo * atc  + (1.0 - fijo))))
-            aj_ipc.append(_r(p * (fijo * aipc + (1.0 - fijo))))
-            aj_cpi.append(_r(p * (fijo * acpi + (1.0 - fijo))))
-            ef_tc.append(_r(p * fijo * (atc  - 1.0)))
-            ef_ipc.append(_r(p * fijo * (aipc - 1.0)))
-            ef_cpi.append(_r(p * fijo * (acpi - 1.0)))
+            aj_tc.append(_r(p * atc))
+            aj_ipc.append(_r(p * aipc))
+            aj_cpi.append(_r(p * acpi))
+            ef_tc.append(_r(p * (atc  - 1.0)))
+            ef_ipc.append(_r(p * (aipc - 1.0)))
+            ef_cpi.append(_r(p * (acpi - 1.0)))
         else:
             aj_tc.append(None); aj_ipc.append(None); aj_cpi.append(None)
             ef_tc.append(None); ef_ipc.append(None); ef_cpi.append(None)
@@ -345,7 +438,7 @@ def _auto_lookup(mappings: dict, label: str) -> object | None:
     return candidates[0] if len(candidates) == 1 else None
 
 
-def _costos_lookup(mappings: dict, key: str, label: str | None) -> object | None:
+def _costos_lookup(mappings: dict, key: str, label: str | None, grp_label: str | None = None) -> object | None:
     """Look up a Costos Ajustados mapping supporting 2-part and 3-part keys."""
     v = mappings.get(f"Costos Ajustados||{key}")
     if v is not None:
@@ -355,15 +448,23 @@ def _costos_lookup(mappings: dict, key: str, label: str | None) -> object | None
     v = mappings.get(f"Costos Ajustados||{label}")
     if v is not None:
         return v
+    # Variante 3-partes para totales de grupo guardados desde la UI: "||<label>||Total"
+    v = mappings.get(f"Costos Ajustados||{label}||Total")
+    if v is not None:
+        return v
     # 3-part: "Costos Ajustados||<subheader>||<label>"
+    if grp_label:
+        # Exact group match only — no cross-group fallback
+        return mappings.get(f"Costos Ajustados||{grp_label}||{label}")
     candidates = [v for k, v in mappings.items()
                   if k.startswith("Costos Ajustados||") and k.endswith(f"||{label}")
                   and k.count("||") == 2]
     return candidates[0] if len(candidates) == 1 else None
 
 
-def _resolve_row_kpis(key: str, mappings: dict, fp: dict, use_real: bool, label: str | None = None) -> list[str]:
-    mapped = _costos_lookup(mappings, key, label)
+def _resolve_row_kpis(key: str, mappings: dict, fp: dict, use_real: bool,
+                      label: str | None = None, grp_label: str | None = None) -> list[str]:
+    mapped = _costos_lookup(mappings, key, label, grp_label)
     if mapped is None and label:
         mapped = _auto_lookup(mappings, label)
     kpis   = _get_kpi_list(mapped, use_real)
@@ -392,15 +493,16 @@ def get_costos_ajustados(company: str, año: int, mes: int):
 
     df_all = pq.get_cached_df(settings.parquet_path)
     df_co  = df_all[df_all["compania"] == company]
-    r_snap = _fetch_snapshot(df_co, "real", año, mes)
-    b_snap = _fetch_snapshot(df_co, "ppto", año, mes)
+    r_snap, _r_mes = _fetch_snapshot(df_co, "real", año, mes)
+    b_snap, _b_mes = _fetch_snapshot(df_co, "ppto", año, mes)
+    mes_fin = mes
 
-    def _proc_key(key, is_summary=False, label=None):
+    def _proc_key(key, is_summary=False, label=None, grp_label=None):
         if is_summary:
-            kpi_r = _resolve_row_kpis(key, mappings, fp, True,  label)
-            kpi_b = _resolve_row_kpis(key, mappings, fp, False, label)
+            kpi_r = _resolve_row_kpis(key, mappings, fp, True,  label, grp_label)
+            kpi_b = _resolve_row_kpis(key, mappings, fp, False, label, grp_label)
         else:
-            mapped = _costos_lookup(mappings, key, label)
+            mapped = _costos_lookup(mappings, key, label, grp_label)
             if mapped is None and label:
                 mapped = _auto_lookup(mappings, label)
             kpi_r  = _get_kpi_list(mapped, True)
@@ -410,7 +512,7 @@ def get_costos_ajustados(company: str, año: int, mes: int):
         data = _compute_row(
             r_snap, b_snap,
             kpi_r or kpi_b, kpi_b or kpi_r,
-            fin_kpis, fin, company, año, mes,
+            fin_kpis, fin, company, año, mes_fin,
         )
         data["mapped"] = True
         return data
@@ -426,7 +528,7 @@ def get_costos_ajustados(company: str, año: int, mes: int):
         result_sub = []
 
         for sa in grp.get("subareas", []):
-            sa_data = _proc_key(sa["key"], label=sa.get("label"))
+            sa_data = _proc_key(sa["key"], label=sa.get("label"), grp_label=grp.get("label"))
             result_sub.append({
                 "key": sa["key"], "label": sa["label"],
                 "fijo": sa.get("fijo", 0.0), **sa_data,
@@ -434,8 +536,14 @@ def get_costos_ajustados(company: str, año: int, mes: int):
             sub_mes.append(sa_data.get("mes"))
             sub_ytd.append(sa_data.get("ytd"))
 
-        grp_mes = _sum_periods(sub_mes)
-        grp_ytd = _sum_periods(sub_ytd)
+        # Si existe mapeo directo a nivel de grupo, úsalo como total (ej. "Total Servicios de Apoyo")
+        grp_direct = _proc_key(grp["key"], label=grp.get("label"))
+        if grp_direct.get("mapped"):
+            grp_mes = grp_direct.get("mes")
+            grp_ytd = grp_direct.get("ytd")
+        else:
+            grp_mes = _sum_periods(sub_mes)
+            grp_ytd = _sum_periods(sub_ytd)
         onsite_mes_list.append(grp_mes)
         onsite_ytd_list.append(grp_ytd)
 
@@ -467,8 +575,30 @@ def get_costos_ajustados(company: str, año: int, mes: int):
     c1_y  = _add_periods(pre_y, _sp("credito_subp", "ytd"))
     c2_m  = _add_periods(c1_m,  _sp("da",           "mes"))
     c2_y  = _add_periods(c1_y,  _sp("da",           "ytd"))
-    c3_m  = _add_periods(c2_m,  _sp("otros_fin",    "mes"))
-    c3_y  = _add_periods(c2_y,  _sp("otros_fin",    "ytd"))
+    _otros_keys = ["otros_fin", "dif_cambio", "donaciones", "gasto_expl",
+                    "ing_gasto_fin", "ing_no_op", "otros_egr_op"]
+    c3_m = c2_m
+    c3_y = c2_y
+    for _k in _otros_keys:
+        c3_m = _add_periods(c3_m, _sp(_k, "mes"))
+        c3_y = _add_periods(c3_y, _sp(_k, "ytd"))
+
+    sc = fin.get("company_cost_scale", {}).get(company, 1.0)
+    if sc != 1.0:
+        result_grupos = [
+            {**grp,
+             "subareas": [_scale_row(sa, sc) for sa in grp["subareas"]],
+             "total": {"mes": _scale_period(grp["total"]["mes"], sc),
+                       "ytd": _scale_period(grp["total"]["ytd"], sc)}}
+            for grp in result_grupos
+        ]
+        result_sum  = [_scale_row(sr, sc) for sr in result_sum]
+        onsite_mes  = _scale_period(onsite_mes, sc)
+        onsite_ytd  = _scale_period(onsite_ytd, sc)
+        pre_m = _scale_period(pre_m, sc);  pre_y = _scale_period(pre_y, sc)
+        c1_m  = _scale_period(c1_m,  sc);  c1_y  = _scale_period(c1_y,  sc)
+        c2_m  = _scale_period(c2_m,  sc);  c2_y  = _scale_period(c2_y,  sc)
+        c3_m  = _scale_period(c3_m,  sc);  c3_y  = _scale_period(c3_y,  sc)
 
     return {
         "company": company, "año": año, "mes": mes,
@@ -503,13 +633,14 @@ def get_costos_ajustados_monthly(company: str, año: int, mes_cierre: int):
     df_all = pq.get_cached_df(settings.parquet_path)
     df_co  = df_all[df_all["compania"] == company]
     # Fetch full-year plan: request month 12 so the fallback picks the latest PPTO snapshot
-    b_snap = _fetch_snapshot(df_co, "ppto", año, 12)
+    b_snap, _ = _fetch_snapshot(df_co, "ppto", año, 12)
 
-    def _monthly(key: str, fijo: float, is_summary: bool = False, label: str | None = None) -> dict:
+    def _monthly(key: str, fijo: float, is_summary: bool = False,
+                 label: str | None = None, grp_label: str | None = None) -> dict:
         if is_summary:
-            kpi_b = _resolve_row_kpis(key, mappings, fp, False, label)
+            kpi_b = _resolve_row_kpis(key, mappings, fp, False, label, grp_label)
         else:
-            mapped_val = _costos_lookup(mappings, key, label)
+            mapped_val = _costos_lookup(mappings, key, label, grp_label)
             if mapped_val is None and label:
                 mapped_val = _auto_lookup(mappings, label)
             kpi_b = _get_kpi_list(mapped_val, False)
@@ -526,11 +657,12 @@ def get_costos_ajustados_monthly(company: str, año: int, mes_cierre: int):
         sub_rows: list = []
         result_sub: list = []
         for sa in grp.get("subareas", []):
-            d = _monthly(sa["key"], sa.get("fijo", 0.0), label=sa.get("label"))
+            d = _monthly(sa["key"], sa.get("fijo", 0.0), label=sa.get("label"), grp_label=grp.get("label"))
             result_sub.append({"key": sa["key"], "label": sa["label"], "fijo": sa.get("fijo", 0.0), **d})
             if d.get("mapped"):
                 sub_rows.append(d)
-        grp_total = _sum_monthly_rows(sub_rows)
+        grp_direct = _monthly(grp["key"], 1.0, label=grp.get("label"))
+        grp_total = grp_direct if grp_direct.get("mapped") else _sum_monthly_rows(sub_rows)
         onsite_rows.append(grp_total)
         result_grupos.append({"key": grp["key"], "label": grp["label"],
                                "subareas": result_sub, "total": grp_total})
@@ -551,7 +683,24 @@ def get_costos_ajustados_monthly(company: str, año: int, mes_cierre: int):
     pre_cred = _sum_monthly_rows([r for r in [onsite, _sk("tcrc"), _sk("comer")] if r])
     c1       = _sum_monthly_rows([r for r in [pre_cred, _sk("credito_subp")] if r])
     c2       = _sum_monthly_rows([r for r in [c1, _sk("da")] if r])
-    c3       = _sum_monthly_rows([r for r in [c2, _sk("otros_fin")] if r])
+    _otros_keys_m = ["otros_fin", "dif_cambio", "donaciones", "gasto_expl",
+                      "ing_gasto_fin", "ing_no_op", "otros_egr_op"]
+    c3 = _sum_monthly_rows([r for r in [c2] + [_sk(k) for k in _otros_keys_m] if r])
+
+    sc = fin.get("company_cost_scale", {}).get(company, 1.0)
+    if sc != 1.0:
+        result_grupos = [
+            {**grp,
+             "subareas": [_scale_monthly_row(sa, sc) for sa in grp["subareas"]],
+             "total": _scale_monthly_row(grp.get("total") or {}, sc)}
+            for grp in result_grupos
+        ]
+        result_sum = [_scale_monthly_row(sr, sc) for sr in result_sum]
+        onsite   = _scale_monthly_row(onsite,   sc)
+        pre_cred = _scale_monthly_row(pre_cred, sc)
+        c1 = _scale_monthly_row(c1, sc)
+        c2 = _scale_monthly_row(c2, sc)
+        c3 = _scale_monthly_row(c3, sc)
 
     return {
         "company": company, "año": año, "mes_cierre": mes_cierre,

@@ -12,20 +12,44 @@
     "ley_cu":              "Mineral Procesado||Ley de Cu",
     "recuperacion":        "Mineral Procesado||Recuperación de cobre",
     "horas_efectivas":     "Mina||Horas Efectivas",
-    "tronadura":           ["Roca Quebrada (Lastre)", "Roca Quebrada (Mineral)"]
+    "tronadura":           ["Roca Quebrada (Lastre)", "Roca Quebrada (Mineral)"],
+    "dev_mina_vol":        ["Fase 11||Esteril a Activar", "Fase 12E||Esteril a Activar"],
+    "dev_mina_cu":         "Fase 11||Costo Unitario",
+    "ifrs16":              "",
+    "mov_mina_sulf":       "",
+    "mov_mina_ox":         "",
+    "mov_mina_total":      "",
+    "dev_mina_sulf":       "",
+    "dev_mina_ox":         "",
+    "dev_mina_total_vol":  ""
   },
-  "desarrollo_mina":      ["Desarrollo Mina||Desarrollo Mina"],
+  "desarrollo_mina":      ["Fase 11||Esteril a Activar", "Fase 12E||Esteril a Activar"],
   "desarrollo_mina_items": [
     { "key": "ifric20",  "label": "IFRIC20",  "kpis": [] },
     { "key": "efecto_p", "label": "Efecto P",  "kpis": [] },
     { "key": "efecto_q", "label": "Efecto Q",  "kpis": [] }
   ],
-  "variacion_inventario": ["Var. Inv. Mina", "Var. Inv. Planta"],
+  "variacion_inventario": ["Administración||Variación de Inventario"],
   "actividad_contexto": {
     "mov_mina_kpis":        ["Movimiento Mina"],
     "procesamiento_kpi":    "Tratamiento",
     "costo_unitario_mina":  null,
     "costo_unitario_conc":  null,
     "costo_unitario_hidro": null
+  },
+  "kpi_scales_per_company": {
+    "CEN": {
+      "ley_cu": 100,
+      "recuperacion": 100
+    }
+  },
+  "kpi_scales_mes_ytd_per_company": {
+    "CEN": []
+  },
+  "visualizar_scales_per_company": {
+    "CEN": {
+      "Variables Mineras||Ley sulfuros": 100,
+      "Variables Mineras||Recuperación sulfuros": 100
+    }
   }
 }
