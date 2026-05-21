@@ -45,9 +45,11 @@ def _tipo_variants(tipo: str) -> set[str]:
 
 
 def _apply_op(a, op, b):
+    if op == "+":
+        if a is None and b is None: return None
+        return (a or 0.0) + (b or 0.0)
     if a is None or b is None:
         return None
-    if op == "+": return a + b
     if op == "-": return a - b
     if op == "*": return a * b
     if op == "/" and b != 0: return a / b

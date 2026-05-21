@@ -4,23 +4,43 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Robot 2026 — Automatización de Reportes v2</title>
+  <title>Robot Cierre de Mes — Automatización de Reportes v2</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1A3A4A; }
+    html, body { height:100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1A3A4A; height:100vh; overflow:hidden; }
     :root { --teal:#1A7080; --teal-lt:#4EC3C3; --amber:#F5A800; --red:#C8312A; --navy:#1A3A4A; --gray:#E8E8E8; }
 
-    /* Header */
-    .header { background:linear-gradient(135deg, #1A7080 0%, #4EC3C3 100%); color:white; padding:14px 32px; display:flex; align-items:center; justify-content:space-between; }
-    .header h1 { font-size:1.2rem; font-weight:700; }
-    .header p  { color:var(--teal-lt); font-size:.82rem; margin-top:2px; }
-    .nav-tabs { display:flex; gap:4px; }
-    .nav-tab { padding:7px 18px; border-radius:6px; cursor:pointer; font-size:.88rem; font-weight:600; border:none; background:rgba(255,255,255,.1); color:rgba(255,255,255,.7); }
-    .nav-tab.active { background:var(--teal); color:white; }
-    .nav-tab:hover:not(.active) { background:rgba(255,255,255,.18); color:white; }
+    /* ── Sidebar layout ── */
+    .app-layout { display:flex; height:100vh; overflow:hidden; }
+    .sidebar { width:220px; flex-shrink:0; background:#f4f7f8; border-right:1px solid #d4dde4; display:flex; flex-direction:column; height:100vh; overflow-y:auto; overflow-x:hidden; }
+    .sidebar-logo { padding:16px 16px 13px; background:var(--navy); border-bottom:2px solid var(--teal); }
+    .sidebar-logo h1 { font-size:.93rem; font-weight:800; color:white; line-height:1.25; }
+    .sidebar-logo p  { font-size:.72rem; color:var(--teal-lt); margin-top:3px; opacity:.85; }
+    .sidebar-section { padding:10px 0 4px; }
+    .sidebar-section-label { padding:0 14px 5px; font-size:.67rem; font-weight:700; color:var(--teal); text-transform:uppercase; letter-spacing:.09em; }
+    .sidebar-item { display:flex; align-items:center; gap:9px; padding:8px 14px; cursor:pointer; font-size:.84rem; font-weight:500; color:var(--navy); border-left:2px solid transparent; transition:background .12s, color .12s; }
+    .sidebar-item:hover { background:#ddf0ec; color:var(--teal); }
+    .sidebar-item.active { background:#E1F5EE; color:#085041; font-weight:700; border-left:2px solid var(--teal); }
+    .sidebar-item svg { flex-shrink:0; opacity:.55; }
+    .sidebar-item:hover svg { opacity:.85; }
+    .sidebar-item.active svg { opacity:1; }
+    .sidebar-sep { border:none; border-top:1px solid #d4dde4; margin:4px 0; }
+    .sidebar-bottom { margin-top:auto; padding:12px 10px; border-top:1px solid #d4dde4; }
+    .sidebar-export { display:flex; align-items:center; gap:7px; width:100%; padding:9px 12px; background:var(--teal); color:white; border:none; border-radius:6px; font-size:.84rem; font-weight:700; cursor:pointer; text-decoration:none; justify-content:center; }
+    .sidebar-export:hover { background:#15606e; }
 
-    /* Layout */
-    .main { max-width:1100px; margin:0 auto; padding:24px 16px; display:flex; flex-direction:column; gap:16px; }
+    /* ── Content area ── */
+    .content-area { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    .content-header { background:linear-gradient(135deg, #1A7080 0%, #4EC3C3 100%); color:white; padding:16px 24px 13px; display:flex; align-items:flex-start; flex-direction:column; justify-content:center; flex-shrink:0; border-bottom:2px solid rgba(255,255,255,.25); }
+    .content-header-title { font-size:.93rem; font-weight:700; line-height:1.25; }
+    .content-header-sub   { font-size:.72rem; color:rgba(255,255,255,.7); margin-top:3px; }
+    .topbar { background:white; border-bottom:0.5px solid #dde3ea; padding:0 16px; flex-shrink:0; }
+    .main { flex:1; overflow-y:auto; padding:24px 16px; display:flex; flex-direction:column; gap:16px; }
+
+    @media print {
+      .sidebar { display:none !important; }
+    }
     .card { background:white; border-radius:10px; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
     .card-title { font-size:.95rem; font-weight:700; color:var(--teal); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
     .card-title::before { content:''; display:inline-block; width:4px; height:16px; background:var(--teal); border-radius:2px; }
@@ -89,6 +109,13 @@
     .company-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
     .company-tab { padding:6px 16px; border:2px solid var(--gray); border-radius:6px; cursor:pointer; font-weight:700; font-size:.88rem; background:white; }
     .company-tab.active { background:var(--teal); border-color:var(--teal); color:white; }
+    /* ── Selector bar (CtrlBar) ── */
+    .ctrl-bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .seg-ctrl { display:flex; align-items:center; background:#edf0f3; border-radius:8px; padding:3px; gap:2px; }
+    .seg-btn { padding:5px 13px; border:none; border-radius:6px; font-weight:700; font-size:.84rem; cursor:pointer; background:transparent; color:#4a6070; transition:background .15s,color .15s,box-shadow .15s; white-space:nowrap; line-height:1.35; }
+    .seg-btn.active { background:var(--teal); color:white; box-shadow:0 1px 4px rgba(26,112,128,.3); }
+    .seg-btn:hover:not(.active) { background:#dce3ea; color:var(--navy); }
+    .ctrl-bar-sticky { background:white; padding:8px 16px; border-bottom:1px solid #e8ecf0; flex-shrink:0; }
     .map-summary { font-size:.82rem; color:#666; margin-bottom:12px; }
     .map-summary strong { color:var(--teal); }
 
@@ -122,7 +149,7 @@
       body > * { display:none !important; }
       #flash-print-area, #flash-print-area * { display:revert !important; }
       #flash-print-area { position:fixed; top:0; left:0; width:100%; }
-      .header, .nav-tabs, button { display:none !important; }
+      .sidebar, button { display:none !important; }
     }
   </style>
 </head>
@@ -175,44 +202,104 @@ function useAsyncState() {
   return [s.data, s.loading, s.error, run];
 }
 
+/* ─── Sidebar icons ─── */
+const IcoGear    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+const IcoSliders = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/></svg>;
+const IcoTable   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>;
+const IcoChart   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>;
+const IcoDollar  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
+const IcoCalendar= () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+const IcoFlash   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+const IcoText    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+const IcoGraph   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+const IcoDownload= () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+
 /* ─── Shared components ─── */
-function Header({ tab, setTab, period }) {
+function Sidebar({ tab, setTab, period }) {
   function excelUrl() {
     const enc = encodeURIComponent;
     const { tipo1, a1ini, m1ini, a1fin, m1fin, tipo2, a2ini, m2ini, a2fin, m2fin } = period;
     return `/api/export/excel?tipo1=${enc(tipo1)}&año1_ini=${a1ini}&mes1_ini=${m1ini}&año1_fin=${a1fin}&mes1_fin=${m1fin}`
          + `&tipo2=${enc(tipo2)}&año2_ini=${a2ini}&mes2_ini=${m2ini}&año2_fin=${a2fin}&mes2_fin=${m2fin}`;
   }
+  const item = (id, label, Icon) => (
+    <div className={`sidebar-item ${tab===id?'active':''}`} onClick={()=>setTab(id)}>
+      <Icon/>{label}
+    </div>
+  );
   return (
-    <div className="header">
-      <div>
-        <h1>Robot 2026</h1>
+    <nav className="sidebar">
+      <div className="sidebar-logo">
+        <h1>Robot Cierre de Mes</h1>
         <p>Automatización de Reportes</p>
       </div>
-      <div className="nav-tabs">
-        <button className={`nav-tab ${tab==='mapeos'?'active':''}`} onClick={()=>setTab('mapeos')}>Configuración</button>
-        <button className={`nav-tab ${tab==='params'?'active':''}`} onClick={()=>setTab('params')}>Parámetros</button>
-        <button className={`nav-tab ${tab==='viz'?'active':''}`} onClick={()=>setTab('viz')}>Visualizar Input</button>
-        <button className={`nav-tab ${tab==='analisis'?'active':''}`} onClick={()=>setTab('analisis')}>Análisis Costo</button>
-        <button className={`nav-tab ${tab==='costos_aj'?'active':''}`} onClick={()=>setTab('costos_aj')}>Costos Ajustados</button>
-        <button className={`nav-tab ${tab==='cm'?'active':''}`} onClick={()=>setTab('cm')}>Costos Aj Mes (CM)</button>
-        <button className={`nav-tab ${tab==='flash'?'active':''}`} onClick={()=>setTab('flash')}>Flash Producciones</button>
-        <button className={`nav-tab ${tab==='explicaciones'?'active':''}`} onClick={()=>setTab('explicaciones')}>Explicaciones</button>
-        <button className={`nav-tab ${tab==='graficos'?'active':''}`} onClick={()=>setTab('graficos')}>Gráficos</button>
-        <a href={excelUrl()} className="btn-dl"
-           style={{padding:'6px 14px', fontSize:'.82rem', borderRadius:'6px', marginLeft:'8px'}}
+
+      <div className="sidebar-section">
+        <div className="sidebar-section-label">Configuración</div>
+        {item('mapeos',  'Configuración', IcoGear)}
+        {item('params',  'Parámetros',    IcoSliders)}
+      </div>
+
+      <hr className="sidebar-sep"/>
+
+      <div className="sidebar-section">
+        <div className="sidebar-section-label">Análisis</div>
+        {item('viz',        'Visualizar Input',    IcoTable)}
+        {item('analisis',   'Análisis Costo',      IcoChart)}
+        {item('costos_aj',  'Costos Ajustados',    IcoDollar)}
+        {item('cm',         'Costos Aj Mes (CM)',  IcoCalendar)}
+      </div>
+
+      <hr className="sidebar-sep"/>
+
+      <div className="sidebar-section">
+        <div className="sidebar-section-label">Reportes</div>
+        {item('flash',        'Flash Producciones', IcoFlash)}
+        {item('explicaciones','Explicaciones',       IcoText)}
+        {item('graficos',     'Gráficos',            IcoGraph)}
+      </div>
+
+      <div className="sidebar-bottom">
+        <a href={excelUrl()} className="sidebar-export"
            title="Descargar reporte completo Excel (todas las compañías y secciones)">
-          ↓ Reporte
+          <IcoDownload/> Exportar Reporte
         </a>
       </div>
-    </div>
+    </nav>
   );
 }
 
 
+/* ─── Selector bar reutilizable ─── */
+function CtrlBar({companies, company, setCompany, panel, setPanel, onRecalcular, loading, children}) {
+  return (
+    <div className="ctrl-bar">
+      <div className="seg-ctrl">
+        {companies.map(c => (
+          <button key={c} className={`seg-btn ${company===c?'active':''}`} onClick={()=>setCompany(c)}>{c}</button>
+        ))}
+      </div>
+      {panel !== undefined && setPanel && (
+        <div className="seg-ctrl">
+          {[['mes','Mes'],['ytd','YTD']].map(([k,lbl]) => (
+            <button key={k} className={`seg-btn ${panel===k?'active':''}`} onClick={()=>setPanel(k)}>{lbl}</button>
+          ))}
+        </div>
+      )}
+      {onRecalcular && (
+        <button className="btn btn-primary" onClick={onRecalcular} disabled={loading}
+          style={{height:'34px', padding:'0 16px', fontSize:'.85rem'}}>
+          {loading ? <><span className="spin"/>Calculando…</> : 'Recalcular'}
+        </button>
+      )}
+      {children}
+    </div>
+  );
+}
+
 /* ─── Tab: Mapeos Excel ─── */
-function MapeosTab() {
-  const [company, setCompany]        = useState('MLP');
+function MapeosTab({company, setCompany}) {
+  const effectiveCompany = COMPANIES.includes(company) ? company : COMPANIES[0];
   const [excelKpis, setExcelKpis]    = useState([]);
   const [parquetKpis, setParquetKpis]= useState([]);
   // uiMaps: keyed by array-index string (e.g. "22") — guaranteed unique, no label collisions
@@ -251,21 +338,19 @@ function MapeosTab() {
   useEffect(() => {
     setLoading(true); setError('');
     Promise.all([
-      apiGet(`/api/setup/excel-kpis/${company}`),
-      apiGet(`/api/setup/parquet-kpis/${company}`),
+      apiGet(`/api/setup/excel-kpis/${effectiveCompany}`),
+      apiGet(`/api/setup/parquet-kpis/${effectiveCompany}`),
       apiGet('/api/setup/mappings'),
     ])
     .then(([excel, parquet, saved]) => {
       const kpis = excel.kpis || [];
       setExcelKpis(kpis);
-      // parquet.kpis is [{name, hoja, title}]; build lookup map too
       const pKpis = (parquet.kpis || []).map(k => typeof k === 'string' ? {name:k, hoja:'', title:''} : k);
       setParquetKpis(pKpis);
       setLabelMappings(saved || {});
-      // Convert label-keyed saved maps → index-keyed for UI
       let sec = '', subhdr = '';
       const converted = {};
-      const cmap = (saved || {})[company] || {};
+      const cmap = (saved || {})[effectiveCompany] || {};
       kpis.forEach((k, i) => {
         if (k.type === 'header')    { sec = k.label; subhdr = ''; return; }
         if (k.type === 'subheader') { subhdr = k.label; return; }
@@ -276,7 +361,7 @@ function MapeosTab() {
     })
     .catch(e => setError(e.message || 'Error cargando datos'))
     .finally(() => setLoading(false));
-  }, [company]);
+  }, [effectiveCompany]);
 
   function setKpiVal(id, value) {
     setUiMaps(prev => ({ ...prev, [id]: value }));
@@ -318,7 +403,7 @@ function MapeosTab() {
         const val = uiMaps[k._id];
         if (val !== undefined) labelMap[k._lk] = val;
       }
-      const toSave = { ...labelMappings, [company]: labelMap };
+      const toSave = { ...labelMappings, [effectiveCompany]: labelMap };
       await apiPost('/api/setup/mappings', toSave);
       setLabelMappings(toSave);
       setSaved(true);
@@ -404,14 +489,9 @@ function MapeosTab() {
             }}>{l}</button>
           ))}
         </div>
-        <div style={{display:'flex',gap:'16px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}}>
-          <div className="company-tabs" style={{marginBottom:0}}>
-            {COMPANIES.map(c=>(
-              <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>{setCompany(c);setSelectedId(null);}}>
-                {c}
-              </button>
-            ))}
-          </div>
+        <div style={{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}}>
+          <CtrlBar companies={COMPANIES} company={effectiveCompany}
+            setCompany={c=>{setCompany(c);setSelectedId(null);}}/>
           {!loading && !error && kpiRows.length > 0 && (
             <p className="map-summary" style={{marginBottom:0}}>
               <strong>{mapped.length}</strong> mapeados · <strong>{na.length}</strong> N/A · <strong style={{color:unmapped.length>0?'var(--amber)':'inherit'}}>{unmapped.length}</strong> pendientes de {kpiRows.length}
@@ -806,7 +886,8 @@ function fmt(v) {
   if (v === null || v === undefined) return <span style={{color:'#ccc'}}>—</span>;
   const n = Number(v);
   if (isNaN(n)) return '—';
-  return n.toLocaleString('es-CL', {maximumFractionDigits: 2});
+  const dec = (n !== 0 && Math.abs(n) < 0.005) ? 3 : 2;
+  return n.toLocaleString('es-CL', {maximumFractionDigits: dec});
 }
 
 const RANGE_YEARS = Array.from({length: new Date().getFullYear()-2023}, (_,i)=>2024+i);
@@ -864,8 +945,8 @@ function PeriodBar({period, setters, tipos}) {
       letterSpacing:'.05em', whiteSpace:'nowrap'}}>{txt}</span>
   );
   return (
-    <div style={{background:'white', borderBottom:'1px solid #e5e7eb', padding:'8px 16px'}}>
-      <div style={{maxWidth:'1200px', margin:'0 auto', display:'flex', alignItems:'stretch',
+    <div style={{padding:'8px 0'}}>
+      <div style={{display:'flex', alignItems:'stretch',
         border:'1px solid #e5e7eb', borderRadius:'8px', overflow:'hidden'}}>
         {/* Comparación 1 */}
         <div style={{display:'flex', gap:'6px', alignItems:'center', padding:'7px 14px', flexWrap:'wrap'}}>
@@ -940,9 +1021,9 @@ function applyOverrides(data, overrides) {
   };
 }
 
-function VisualizarTab({period, tipos}) {
+function VisualizarTab({period, tipos, company, setCompany}) {
   const {tipo1, a1ini, m1ini, a1fin, m1fin, tipo2, a2ini, m2ini, a2fin, m2fin} = period;
-  const [company,   setCompany]   = useState('MLP');
+  const effectiveCompany = COMPANIES.includes(company) ? company : COMPANIES[0];
   const [hideNA,    setHideNA]    = useState(true);
   const [data,      loading,      error,      runFetch] = useAsyncState();
   const [calcData,  calcLoading,  calcError,  runCalc]  = useAsyncState();
@@ -951,8 +1032,8 @@ function VisualizarTab({period, tipos}) {
 
   // Load overrides when company changes
   useEffect(() => {
-    apiGet(`/api/overrides/${company}`).then(setOverrides).catch(() => setOverrides({}));
-  }, [company]);
+    apiGet(`/api/overrides/${effectiveCompany}`).then(setOverrides).catch(() => setOverrides({}));
+  }, [effectiveCompany]);
 
   const displayData = React.useMemo(() => applyOverrides(data, overrides), [data, overrides]);
 
@@ -972,26 +1053,24 @@ function VisualizarTab({period, tipos}) {
   }
 
   function cargarCalculos() {
-    runCalc(apiGet(`/api/calculos/${company}?año_ini=${a1ini}&mes_ini=${m1ini}&año_fin=${a1fin}&mes_fin=${m1fin}`));
+    runCalc(apiGet(`/api/calculos/${effectiveCompany}?año_ini=${a1ini}&mes_ini=${m1ini}&año_fin=${a1fin}&mes_fin=${m1fin}`));
   }
 
   function cargar() {
-    // Save pending overrides, then reload (overrides applied client-side)
-    apiPost(`/api/overrides/${company}`, overrides).catch(e => console.error(e));
+    apiPost(`/api/overrides/${effectiveCompany}`, overrides).catch(e => console.error(e));
     const enc = encodeURIComponent;
     const q = `tipo1=${enc(tipo1)}&año1_ini=${a1ini}&mes1_ini=${m1ini}&año1_fin=${a1fin}&mes1_fin=${m1fin}`
             + `&tipo2=${enc(tipo2)}&año2_ini=${a2ini}&mes2_ini=${m2ini}&año2_fin=${a2fin}&mes2_fin=${m2fin}`;
-    runFetch(apiGet(`/api/visualizar/${company}?${q}`));
+    runFetch(apiGet(`/api/visualizar/${effectiveCompany}?${q}`));
   }
 
   function cargarDeFuente() {
-    // Clear overrides for this company, then reload from parquet
-    apiDelete(`/api/overrides/${company}`).catch(e => console.error(e));
+    apiDelete(`/api/overrides/${effectiveCompany}`).catch(e => console.error(e));
     setOverrides({});
     const enc = encodeURIComponent;
     const q = `tipo1=${enc(tipo1)}&año1_ini=${a1ini}&mes1_ini=${m1ini}&año1_fin=${a1fin}&mes1_fin=${m1fin}`
             + `&tipo2=${enc(tipo2)}&año2_ini=${a2ini}&mes2_ini=${m2ini}&año2_fin=${a2fin}&mes2_fin=${m2fin}`;
-    runFetch(apiGet(`/api/visualizar/${company}?${q}`));
+    runFetch(apiGet(`/api/visualizar/${effectiveCompany}?${q}`));
   }
 
   // Renders an editable table cell
@@ -1032,11 +1111,6 @@ function VisualizarTab({period, tipos}) {
     <div className="main">
       <div className="card">
         <div className="card-title">Visualizar KPIs por Período</div>
-        <div className="company-tabs" style={{marginBottom:'12px'}}>
-          {COMPANIES.map(c=>(
-            <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>{c}</button>
-          ))}
-        </div>
         <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginBottom:'16px'}}>
           <button className="btn btn-primary" onClick={cargar} disabled={loading}
             style={{alignSelf:'flex-end', height:'38px'}}>
@@ -1091,7 +1165,7 @@ function VisualizarTab({period, tipos}) {
                   </tr>
                 </thead>
                 <tbody>
-                  {d.sections.map((sec,si)=>{
+                  {d.sections.filter(sec => sec.label !== 'Costos Ajustados').map((sec,si)=>{
                     const visKpis = hideNA
                       ? sec.kpis.filter(k => k.type === 'subheader' || !k.is_na)
                       : sec.kpis;
@@ -1504,7 +1578,7 @@ function aggregateExpResults(results) {
       'dev_mina','tcrc_kus','comer_kus'];
     for (const key of WF_KEYS) wf[key] = panels.reduce((acc, p) => ss(acc, p.waterfall?.[key]), null);
 
-    // Agrega arrays por posición sumando solo los efectos (real/ppto son tasas, no se suman)
+    // Agrega arrays por posición sumando solo los efectos (real/ppto son tasas → null)
     const mergeRows = (key, effKey) => {
       const first = panels[0]?.[key];
       if (!first) return [];
@@ -1513,6 +1587,55 @@ function aggregateExpResults(results) {
         real: null, ppto: null,
         [effKey]: panels.reduce((acc, p) => ss(acc, p[key]?.[i]?.[effKey]), null),
       }));
+    };
+
+    // Producción: kt se suman, % usan promedio ponderado
+    const wavgProd = (numLabel, denLabel, field) => {
+      const first = panels[0]?.produccion;
+      if (!first) return null;
+      const ni = first.findIndex(r => r.label === numLabel);
+      const di = first.findIndex(r => r.label === denLabel);
+      if (ni < 0 || di < 0) return null;
+      let wSum = 0, wTot = 0;
+      for (const p of panels) {
+        const v = p.produccion?.[ni]?.[field];
+        const w = p.produccion?.[di]?.[field];
+        if (v != null && w != null && w > 0) { wSum += v * w; wTot += w; }
+      }
+      return wTot > 0 ? wSum / wTot : null;
+    };
+    const KT_PROD = new Set(['Tratamiento Conc','Apilamiento','Beneficio Hidro','Otros','Inventarios y otros']);
+    const WAVG_PROD = {
+      'Ley Conc':  ['Ley Conc',  'Tratamiento Conc'],
+      'Rec Conc':  ['Rec Conc',  'Tratamiento Conc'],
+      'Ley Hidro': ['Ley Hidro', 'Beneficio Hidro'],
+      'Rec Hidro': ['Rec Hidro', 'Beneficio Hidro'],
+    };
+    const mergeProd = () => {
+      const first = panels[0]?.produccion;
+      if (!first) return [];
+      return first.map((row, i) => {
+        const eff    = panels.reduce((a, p) => ss(a, p.produccion?.[i]?.efecto_ktcuf), null);
+        const effKus = panels.reduce((a, p) => ss(a, p.produccion?.[i]?.efecto_kus),   null);
+        if (KT_PROD.has(row.label)) {
+          return {
+            ...row,
+            real: panels.reduce((a, p) => ss(a, p.produccion?.[i]?.real), null),
+            ppto: panels.reduce((a, p) => ss(a, p.produccion?.[i]?.ppto), null),
+            efecto_ktcuf: eff, efecto_kus: effKus,
+          };
+        }
+        if (WAVG_PROD[row.label]) {
+          const [nl, dl] = WAVG_PROD[row.label];
+          return {
+            ...row,
+            real: wavgProd(nl, dl, 'real'),
+            ppto: wavgProd(nl, dl, 'ppto'),
+            efecto_ktcuf: eff, efecto_kus: effKus,
+          };
+        }
+        return { ...row, real: null, ppto: null, efecto_ktcuf: eff, efecto_kus: effKus };
+      });
     };
 
     const mmObj = key => ({
@@ -1528,7 +1651,7 @@ function aggregateExpResults(results) {
       ajuste_monetario: mergeRows('ajuste_monetario', 'efecto_kus'),
       precio_insumos:   mergeRows('precio_insumos',   'efecto_kus'),
       rendimiento:      mergeRows('rendimiento',       'efecto_kus'),
-      produccion:       mergeRows('produccion',        'efecto_ktcuf'),
+      produccion:       mergeProd(),
       mov_mina:         mmObj('mov_mina'),
       desarrollo_mina: {
         ...mmObj('desarrollo_mina'),
@@ -1629,7 +1752,8 @@ function buildWaterfall(expData, panel, tipo2) {
   applyGroup('da',        'Depreciación / Amortización', wf.da_b      != null ? -wf.da_b      : null, 0);
   snapMain('c1p',         `C1 ${t2}`,                   wf.c1_abs_b);
   applyGroup('subprod',   'Subproductos',               wf.subprod_b != null ? -wf.subprod_b : null, 0);
-  pushMain('precredit',   `Pre-credit ${t2}`);
+  if (wf.precredit_b_costo != null) snapMain('precredit', `Pre-credit ${t2}`, wf.precredit_b_costo);
+  else pushMain('precredit', `Pre-credit ${t2}`);
   applyGroup('tcrc_pre',  'TC/RC',                      wf.tcrc_b_total  != null ? -wf.tcrc_b_total  : null, 0);
   applyGroup('comer_pre', 'Comercialización',            wf.comer_b_total != null ? -wf.comer_b_total : null, 0);
 
@@ -1653,7 +1777,7 @@ function buildWaterfall(expData, panel, tipo2) {
 
   applyGroup('ley', 'Efecto ley', 0, nsum(wf.ley_conc, wf.ley_hidro));
 
-  groupThenSubs('act', 'Efecto actividad', nsum(wf.act_mina_kus, wf.act_conc_kus), 0, sub => {
+  groupThenSubs('act', 'Efecto actividad', nsum(wf.act_mina_kus, wf.act_conc_kus), null, sub => {
     sub('ac_mn', 'Mina',        wf.act_mina_kus, 0);
     sub('ac_cn', 'Tratamiento', wf.act_conc_kus, 0);
   });
@@ -1780,8 +1904,22 @@ const CALLOUT_META = {
   vi:   {label:'Var.Inv./IFRIC',yOffset:  0, rows:[{id:'inv',  lbl:'Var. Inv.'}, {id:'ifrs16', lbl:'IFRIC 20'}]},
 };
 
+/* ─── Configuración por defecto de barras intermedias del waterfall ─── */
+const DELTA_BARS_DEFAULT = [
+  {id:'aj',    label:'Aj. Monetario',   wfIds:['aj_mon'],                                    callout:null,   visible:true},
+  {id:'pr',    label:'Precio Insumos',  wfIds:['pr_ins'],                                    callout:null,   visible:true},
+  {id:'rend',  label:'Rendim. Insumos', wfIds:['rend'],                                      callout:null,   visible:true},
+  {id:'ley',   label:'Leyes',           wfIds:['ley'],                                       callout:null,   visible:true},
+  {id:'act',   label:'Actividad',       wfIds:['act'],                                       callout:'act',  visible:true},
+  {id:'prod',  label:'Prod. Cu',        wfIds:['prod_cu'],                                   callout:'prod', visible:true},
+  {id:'vi',    label:'Var.Inv./IFRIC',  wfIds:['inv','ifrs16'],                              callout:'vi',   visible:true},
+  {id:'tcrc',  label:'TC/RC & Comerc.', wfIds:['tcrc_pre','comer_pre','tcrc_r','comer_r'],   callout:null,   visible:true},
+  {id:'otros', label:'Otros',           wfIds:['dev','efic'],                                callout:null,   visible:true},
+];
+const WF_BARS_LS_KEY = 'wf_bar_config_v1';
+
 /* ─── Gráfico Waterfall SVG ─── */
-function WaterfallSvgChart({rows, title, hiddenCallouts = new Set()}) {
+function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars = DELTA_BARS_DEFAULT}) {
   if (!rows || !rows.length) return null;
 
   const byId = {};
@@ -1793,22 +1931,28 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set()}) {
   };
   const fv = (v) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1);
 
+  // Auto-split label en máx 2 líneas por espacio central
+  const splitLbl = lbl => {
+    const w = lbl.trim().split(/\s+/);
+    if (w.length <= 1) return [lbl];
+    const mid = Math.ceil(w.length / 2);
+    return [w.slice(0, mid).join(' '), w.slice(mid).join(' ')];
+  };
+
   // Barras principales
   const bars = [
-    {id:'c1_b',  labels:['C1','Ppto'],        type:'split',
+    {id:'c1_b',  labels:['C1','Ppto'],       type:'split',
       clb_net: byId.c1p?.clb,  clb_pre: byId.precredit?.clb},
-    {id:'pre_b', labels:['Pre-créd.','Ppto'],  type:'anchor', clb: byId.precredit?.clb,   style:'pre'},
-    {id:'aj',    labels:['Aj.','Monetario'],   type:'delta',  dclb: byId.aj_mon?.dclb},
-    {id:'pr',    labels:['Precio','Insumos'],  type:'delta',  dclb: byId.pr_ins?.dclb},
-    {id:'rend',  labels:['Rendim.','Insumos'], type:'delta',  dclb: byId.rend?.dclb},
-    {id:'ley',   labels:['Leyes'],             type:'delta',  dclb: byId.ley?.dclb},
-    {id:'act',   labels:['Actividad'],         type:'delta',  dclb: byId.act?.dclb,       callout:'act'},
-    {id:'prod',  labels:['Prod.','Cu'],        type:'delta',  dclb: byId.prod_cu?.dclb,   callout:'prod'},
-    {id:'vi',    labels:['Var.Inv.','& IFRIC'],type:'delta',  dclb: ns('inv','ifrs16'),   callout:'vi'},
-    {id:'tcrc',  labels:['TC/RC &','Comerc.'], type:'delta',  dclb: ns('tcrc_pre','comer_pre','tcrc_r','comer_r')},
-    {id:'otros', labels:['Otros'],             type:'delta',  dclb: ns('dev','efic')},
-    {id:'pre_r', labels:['Pre-créd.','Real'],  type:'anchor', clb: byId.precredit_r?.clb, style:'pre'},
-    {id:'c1_r',  labels:['C1','Real'],         type:'split',
+    {id:'pre_b', labels:['Pre-créd.','Ppto'], type:'anchor', clb: byId.precredit?.clb, style:'pre'},
+    ...deltaBars.filter(b => b.visible).map(b => ({
+      id: b.id,
+      labels: splitLbl(b.label),
+      type: 'delta',
+      dclb: ns(...b.wfIds),
+      callout: b.callout || null,
+    })),
+    {id:'pre_r', labels:['Pre-créd.','Real'], type:'anchor', clb: byId.precredit_r?.clb, style:'pre'},
+    {id:'c1_r',  labels:['C1','Real'],        type:'split',
       clb_net: byId.c1_real?.clb, clb_pre: byId.precredit_r?.clb},
   ];
 
@@ -1894,7 +2038,7 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set()}) {
       {deltaPre != null && preBIdx >= 0 && preRIdx >= 0 && (() => {
         const x1 = bcx(preBIdx), x2 = bcx(preRIdx);
         const by = bracketY;
-        const col = deltaPre > 0.01 ? RED : deltaPre < -0.01 ? GRN : NEU;
+        const col = NEU;
         const lbl = `${deltaPre >= 0 ? '+' : ''}${deltaPre.toFixed(1)}${pctPre != null ? ` (${pctPre >= 0 ? '+' : ''}${pctPre.toFixed(0)}%)` : ''}`;
         return (
           <g>
@@ -1930,29 +2074,18 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set()}) {
         );
 
         if (b.type === 'split') {
-          // Celeste ABAJO (subproductos) + navy ARRIBA (C1 neto)
-          // subVal = clb_pre − clb_net ocupa el segmento inferior (0 → subVal en eje)
-          const subVal  = b.clb_pre - b.clb_net;
-          const ySplit  = sy(subVal);           // frontera en pantalla
-          const yTop    = sy(b.clb_pre);        // tope barra
-          const hCelest = Math.max(yBase - ySplit, 1);
-          const hNavy   = Math.max(ySplit - yTop, 1);
+          // C1 neto ABAJO (mismo color que Pre-créd.) + subproductos ARRIBA (color clarito)
+          const subVal = b.clb_pre - b.clb_net;  // altura segmento superior (subprod)
+          const ySplit = sy(b.clb_net);           // frontera: nivel C1 neto
+          const yTop   = sy(b.clb_pre);           // tope barra
+          const hBot   = Math.max(yBase - ySplit, 1);   // C1 neto (abajo)
+          const hTop   = Math.max(ySplit - yTop, 1);    // subproductos (arriba)
           return (
             <g key={b.id}>
-              {/* Celeste: subproductos (abajo) */}
-              <rect x={bx(i)} y={ySplit} width={bW} height={hCelest} fill={CELESTE} rx={0}/>
-              {/* Navy: C1 neto (arriba) */}
-              <rect x={bx(i)} y={yTop} width={bW} height={hNavy+1} fill="#1A3A4A" rx={2}/>
-              {/* Valor C1 neto dentro del segmento navy */}
-              {hNavy > 12 && <text x={bcx(i)} y={yTop + hNavy/2 + 3}
-                textAnchor="middle" fontSize={8} fontWeight={700} fill="white">{b.clb_net.toFixed(1)}</text>}
-              {/* Valor subproductos dentro del segmento celeste */}
-              {hCelest > 12 && <text x={bcx(i)} y={ySplit + hCelest/2 + 3}
-                textAnchor="middle" fontSize={8} fontWeight={700} fill="white">{subVal.toFixed(1)}</text>}
-              {/* Etiqueta total encima (C1 neto + subproductos = nivel Pre-créd) */}
-              <text x={bcx(i)} y={yTop-3} textAnchor="middle" fontSize={8.5} fontWeight={700} fill="#1A3A4A">
-                {b.clb_pre.toFixed(1)}
-              </text>
+              {/* Segmento superior: subproductos — color clarito */}
+              <rect x={bx(i)} y={yTop} width={bW} height={hTop+1} fill="#b0d8e8" rx={2}/>
+              {/* Segmento inferior: C1 neto — mismo color que Pre-créd. */}
+              <rect x={bx(i)} y={ySplit} width={bW} height={hBot} fill={FILL.pre} rx={2}/>
               {b.labels.map((l,li) => <text key={li} x={bcx(i)} y={yBase+14+li*11}
                 textAnchor="middle" fontSize={8} fill="#333" fontWeight={600}>{l}</text>)}
             </g>
@@ -1966,11 +2099,6 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set()}) {
           return (
             <g key={b.id}>
               <rect x={bx(i)} y={yTop} width={bW} height={barH} fill={fill} rx={2}/>
-              {barH > 12 && <text x={bcx(i)} y={yTop + barH/2 + 3}
-                textAnchor="middle" fontSize={8} fontWeight={700} fill="white">{b.clb.toFixed(1)}</text>}
-              <text x={bcx(i)} y={yTop-3} textAnchor="middle" fontSize={8.5} fontWeight={700} fill={fill}>
-                {b.clb.toFixed(1)}
-              </text>
               {b.labels.map((l,li) => <text key={li} x={bcx(i)} y={yBase+14+li*11}
                 textAnchor="middle" fontSize={8} fill="#333" fontWeight={600}>{l}</text>)}
             </g>
@@ -2093,10 +2221,13 @@ function mergeCaIntoExp(expData, caAgg) {
     ovr('c1_r',     onsite?.real);
     wf['aj_total_ca'] = (onsite?.ppto_aj_tot != null && onsite?.ppto != null)
       ? onsite.ppto_aj_tot - onsite.ppto : null;
-    const c1 = pv(tot.c1);
-    ovr('c1_abs_b',       c1?.ppto);
-    ovr('c1_r_costo',     c1?.real);
+    const c1  = pv(tot.c1);
     const pre = pv(tot.pre_credito);
+    // c1 nunca puede superar pre_credito (créditos subproductos solo reducen costo)
+    const c1ppto = (c1?.ppto != null && pre?.ppto != null) ? Math.min(c1.ppto, pre.ppto) : c1?.ppto;
+    const c1real = (c1?.real  != null && pre?.real  != null) ? Math.min(c1.real,  pre.real)  : c1?.real;
+    ovr('c1_abs_b',   c1ppto);
+    ovr('c1_r_costo', c1real);
     ovr('precredit_b_costo',  pre?.ppto);
     ovr('precredit_r_costo',  pre?.real);
     const c2 = pv(tot.c2);
@@ -2220,10 +2351,8 @@ function CostSummaryTable({wf, cu_r, cu_b, t2}) {
   );
 }
 
-function AnalisisCostoTab({period}) {
+function AnalisisCostoTab({period, company, setCompany, panel, setPanel}) {
   const {a1fin, m1fin, tipo2} = period;
-  const [company, setCompany] = useState('Grupo Minero');
-  const [panel,   setPanel]   = useState('mes');
   const [expData, expLoading, expError, runExp] = useAsyncState();
 
   function cargar(co) {
@@ -2257,25 +2386,10 @@ function AnalisisCostoTab({period}) {
   return (
     <div className="main">
       <div className="card">
-        <div className="card-title">Análisis Costo — {a1fin}/{String(m1fin).padStart(2,'0')}</div>
-        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'center', marginBottom:'16px'}}>
-          <div className="company-tabs" style={{marginBottom:0}}>
-            {['Grupo Minero', ...COMPANIES].map(c => (
-              <button key={c} className={`company-tab ${company===c?'active':''}`}
-                onClick={()=>setCompany(c)}>{c}</button>
-            ))}
-          </div>
-          <div style={{display:'flex', gap:'4px', border:'2px solid var(--gray)', borderRadius:'6px', overflow:'hidden'}}>
-            {['mes','ytd'].map(p => (
-              <button key={p} onClick={()=>setPanel(p)}
-                style={{padding:'5px 18px', border:'none', fontWeight:700, fontSize:'.85rem', cursor:'pointer',
-                  background: panel===p ? 'var(--teal)' : 'white',
-                  color: panel===p ? 'white' : 'var(--navy)'}}>
-                {p === 'mes' ? 'Mes' : 'YTD'}
-              </button>
-            ))}
-          </div>
-          <button className="btn btn-primary" onClick={()=>cargar()} disabled={expLoading} style={{height:'36px'}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px', flexWrap:'wrap', gap:'8px'}}>
+          <div className="card-title" style={{margin:0}}>Análisis Costo — {a1fin}/{String(m1fin).padStart(2,'0')}</div>
+          <button className="btn btn-primary" onClick={()=>cargar()} disabled={expLoading}
+            style={{height:'32px', padding:'0 14px', fontSize:'.83rem'}}>
             {expLoading ? <><span className="spin"/>Calculando…</> : 'Recalcular'}
           </button>
         </div>
@@ -2292,18 +2406,201 @@ function AnalisisCostoTab({period}) {
           Puente {t2} → Real
         </h3>
         <WaterfallTable rows={rows}/>
+
+        {/* Tabla Backup */}
+        {d && <BackupTable d={d}/>}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Backup Table ─── */
+function BackupTable({d}) {
+  if (!d) return null;
+
+  const fv = v => {
+    if (v == null) return <span style={{color:'#ccc'}}>—</span>;
+    const n = Number(v);
+    if (isNaN(n)) return '—';
+    const dec = (n !== 0 && Math.abs(n) < 0.005) ? 3 : (Math.abs(n) < 1 ? 2 : 1);
+    return n.toLocaleString('es-CL', {maximumFractionDigits: dec});
+  };
+  const fk = v => v != null ? Number(v).toLocaleString('es-CL', {maximumFractionDigits:0}) : <span style={{color:'#ccc'}}>—</span>;
+  const fda = (v, unit) => v != null
+    ? <span>{Number(v).toLocaleString('es-CL',{maximumFractionDigits:1})} <span style={{fontSize:'.7rem',color:'#999'}}>{unit}</span></span>
+    : <span style={{color:'#ccc'}}>—</span>;
+
+  const thS = {padding:'4px 8px', fontSize:'.73rem', color:'white', background:'#2d5a6e', fontWeight:700, whiteSpace:'nowrap', textAlign:'right'};
+  const tdS = {padding:'3px 6px', fontSize:'.79rem', textAlign:'right', whiteSpace:'nowrap'};
+  const tdL = {padding:'3px 8px', fontSize:'.79rem', fontWeight:500};
+  const tdU = {padding:'3px 6px', fontSize:'.72rem', color:'#888', textAlign:'center', whiteSpace:'nowrap'};
+  const secS = {background:'#1A3A4A', color:'white', fontWeight:700, padding:'5px 8px', fontSize:'.72rem',
+    letterSpacing:'.05em', textTransform:'uppercase'};
+
+  function SecRow({label}) {
+    return <tr><td colSpan={6} style={secS}>{label}</td></tr>;
+  }
+  function DataRow({label, unit, real, ppto, actvNode, kus, alt, green}) {
+    const bg = alt ? '#f8fafb' : 'white';
+    const col = green ? '#059669' : undefined;
+    const kusCol = kus != null ? (kus < 0 ? 'var(--red)' : '#059669') : '#aaa';
+    return (
+      <tr style={{background:bg}}>
+        <td style={{...tdL, background:bg, color:col}}>{label}</td>
+        <td style={tdU}>{unit}</td>
+        <td style={tdS}>{fv(real)}</td>
+        <td style={tdS}>{fv(ppto)}</td>
+        <td style={{...tdS, color:'#555'}}>{actvNode}</td>
+        <td style={{...tdS, color:kusCol}}>{fk(kus)}</td>
+      </tr>
+    );
+  }
+
+  const mm = d.mov_mina || {};
+  const dm = d.desarrollo_mina || {};
+  const movDelta = (mm.real != null && mm.ppto != null) ? mm.real - mm.ppto : null;
+  const devDelta = (dm.tonelaje_real != null && dm.tonelaje_ppto != null) ? dm.tonelaje_real - dm.tonelaje_ppto : null;
+
+  return (
+    <div style={{marginTop:'20px'}}>
+      <h3 style={{color:'var(--navy)', fontSize:'.9rem', marginBottom:'8px'}}>Backup</h3>
+      <div style={{overflowX:'auto'}}>
+        <table style={{width:'100%', borderCollapse:'collapse', fontSize:'.8rem', tableLayout:'fixed'}}>
+          <colgroup>
+            <col style={{minWidth:'160px'}}/>
+            <col style={{width:'76px'}}/>
+            <col style={{width:'90px'}}/>
+            <col style={{width:'90px'}}/>
+            <col style={{width:'110px'}}/>
+            <col style={{width:'88px'}}/>
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={{...thS, textAlign:'left', background:'#1A3A4A'}}>KPI</th>
+              <th style={{...thS, textAlign:'center', background:'#1A3A4A'}}>Unidad</th>
+              <th style={thS}>Real</th>
+              <th style={thS}>Ppto</th>
+              <th style={thS}>Actividad</th>
+              <th style={thS}>kUS$</th>
+            </tr>
+          </thead>
+          <tbody>
+            <SecRow label="Actividad"/>
+            <DataRow label="Movimiento total Mina" unit="kt"
+              real={mm.real} ppto={mm.ppto}
+              actvNode={fda(movDelta, 'kt')} kus={mm.efecto_kus} alt={false}/>
+            {(d.produccion || []).map((r, i) => (
+              <DataRow key={i} alt={i%2===0} label={r.label} unit={r.unit}
+                real={r.real} ppto={r.ppto}
+                actvNode={fda(r.efecto_ktcuf, 'ktCuf')}
+                kus={r.efecto_kus ?? null}/>
+            ))}
+
+            <SecRow label="Precio Insumos"/>
+            {(d.precio_insumos || []).map((r, i) => (
+              <DataRow key={i} alt={i%2===0} label={r.label} unit={r.unit}
+                real={r.real} ppto={r.ppto}
+                actvNode={<span style={{color:'#ccc'}}>—</span>}
+                kus={r.efecto_kus}
+                green={r.label === 'Explosivos'}/>
+            ))}
+
+            <SecRow label="Rendimiento Insumos"/>
+            {(d.rendimiento || []).map((r, i) => (
+              <DataRow key={i} alt={i%2===0} label={r.label} unit={r.unit}
+                real={r.real} ppto={r.ppto}
+                actvNode={<span style={{color:'#ccc'}}>—</span>}
+                kus={r.efecto_kus}
+                green={r.label === 'Explosivos'}/>
+            ))}
+
+            <SecRow label="Desarrollo Mina"/>
+            <DataRow label="Tonelaje" unit="kt"
+              real={dm.tonelaje_real} ppto={dm.tonelaje_ppto}
+              actvNode={fda(devDelta, 'kt')} kus={dm.tonelaje_efecto_kus} alt={false}/>
+            <DataRow label="Costo unitario" unit="US$/t"
+              real={dm.cu_real} ppto={dm.cu_ppto}
+              actvNode={<span style={{color:'#ccc'}}>—</span>} kus={dm.cu_efecto_kus} alt={true}/>
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
 /* ─── Tab: Gráficos ─── */
-function GraficosTab({period}) {
+function GraficosTab({period, company, setCompany, panel, setPanel}) {
   const {a1fin, m1fin, tipo2} = period;
-  const [company, setCompany] = useState('MLP');
-  const [panel, setPanel] = useState('ytd');
   const [hiddenCallouts, setHiddenCallouts] = useState(new Set());
   const [expData, expLoading, expError, runExp] = useAsyncState();
+  const [exporting, setExporting] = useState(false);
+  const [showBarConfig, setShowBarConfig] = useState(false);
+  const [barConfig, setBarConfig] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem(WF_BARS_LS_KEY)); if (Array.isArray(s) && s.length) return s; } catch {}
+    return DELTA_BARS_DEFAULT;
+  });
+
+  const saveBarConfig = cfg => { setBarConfig(cfg); try { localStorage.setItem(WF_BARS_LS_KEY, JSON.stringify(cfg)); } catch {} };
+  const toggleBarVisible = i => saveBarConfig(barConfig.map((b,idx) => idx===i ? {...b, visible:!b.visible} : b));
+  const updateBarLabel   = (i, lbl) => saveBarConfig(barConfig.map((b,idx) => idx===i ? {...b, label:lbl} : b));
+  const moveBar = (i, dir) => {
+    const nc = [...barConfig], j = i + dir;
+    if (j < 0 || j >= nc.length) return;
+    [nc[i], nc[j]] = [nc[j], nc[i]];
+    saveBarConfig(nc);
+  };
+  const resetBarConfig = () => saveBarConfig(DELTA_BARS_DEFAULT);
+
+  function exportarPng() {
+    const svgEl = document.querySelector('#grafico-export-area svg');
+    if (!svgEl) return;
+    setExporting(true);
+
+    const PPT_W = 2560, PPT_H = 1440;
+    const vbW = 880, vbH = 380;
+    const escala = (PPT_W * 0.92) / vbW;
+    const dW = vbW * escala, dH = vbH * escala;
+    const ox = (PPT_W - dW) / 2, oy = (PPT_H - dH) / 2;
+
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute('width', String(vbW));
+    clone.setAttribute('height', String(vbH));
+    clone.removeAttribute('style');
+
+    const svgStr = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+
+    const fallback = () => {
+      html2canvas(document.getElementById('grafico-export-area'), {scale:2, backgroundColor:'#ffffff', useCORS:true}).then(c => {
+        const a = document.createElement('a');
+        a.download = `Bridge_${company}_${panel.toUpperCase()}_${a1fin}_${String(m1fin).padStart(2,'0')}.png`;
+        a.href = c.toDataURL('image/png');
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setExporting(false);
+      });
+    };
+
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = PPT_W; canvas.height = PPT_H;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, PPT_W, PPT_H);
+        ctx.drawImage(img, ox, oy, dW, dH);
+        const a = document.createElement('a');
+        a.download = `Bridge_${company}_${panel.toUpperCase()}_${a1fin}_${String(m1fin).padStart(2,'0')}.png`;
+        a.href = canvas.toDataURL('image/png');
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setExporting(false);
+      } catch(e) { URL.revokeObjectURL(url); fallback(); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); fallback(); };
+    img.src = url;
+  }
 
   const toggleCallout = key => setHiddenCallouts(prev => {
     const n = new Set(prev);
@@ -2343,27 +2640,48 @@ function GraficosTab({period}) {
     <div className="main">
       <div className="card">
         <div className="card-title">Gráficos — Bridge Costo {t2} → Real</div>
-        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'center', marginBottom:'16px'}}>
-          <div className="company-tabs" style={{marginBottom:0}}>
-            {['Grupo Minero', ...COMPANIES].map(c => (
-              <button key={c} className={`company-tab ${company===c?'active':''}`}
-                onClick={()=>setCompany(c)}>{c}</button>
-            ))}
-          </div>
-          <div style={{display:'flex', gap:'4px', border:'2px solid var(--gray)', borderRadius:'6px', overflow:'hidden'}}>
-            {['ytd','mes'].map(p => (
-              <button key={p} onClick={()=>setPanel(p)}
-                style={{padding:'5px 18px', border:'none', fontWeight:700, fontSize:'.85rem', cursor:'pointer',
-                  background: panel===p ? 'var(--teal)' : 'white',
-                  color: panel===p ? 'white' : 'var(--navy)'}}>
-                {p === 'mes' ? 'Mes' : 'YTD'}
-              </button>
-            ))}
-          </div>
-          <button className="btn btn-primary" onClick={()=>cargar()} disabled={expLoading} style={{height:'36px'}}>
-            {expLoading ? <><span className="spin"/>Calculando…</> : 'Recalcular'}
-          </button>
+        <div style={{marginBottom:'16px'}}>
+          <CtrlBar companies={['Grupo Minero',...COMPANIES]} company={company} setCompany={setCompany}
+            panel={panel} setPanel={setPanel} onRecalcular={()=>cargar()} loading={expLoading}>
+            <button className="btn" onClick={exportarPng} disabled={expLoading || exporting || !expData}
+              style={{height:'34px', background:'#1A7080', color:'white', border:'none', borderRadius:'6px',
+                      padding:'0 14px', fontWeight:700, fontSize:'.84rem', cursor:'pointer', opacity:(expLoading||exporting||!expData)?0.5:1}}>
+              {exporting ? <><span className="spin"/>Exportando…</> : '↓ PNG'}
+            </button>
+            <button onClick={() => setShowBarConfig(v => !v)}
+              style={{height:'34px', background: showBarConfig ? '#edf0f3' : 'white', border:'2px solid #dde',
+                      borderRadius:'6px', padding:'0 12px', fontWeight:700, fontSize:'.84rem', cursor:'pointer', color:'#1A3A4A'}}>
+              ⚙ Barras
+            </button>
+          </CtrlBar>
         </div>
+
+        {/* Panel configuración barras */}
+        {showBarConfig && (
+          <div style={{background:'#f8fafc', border:'1px solid #dde', borderRadius:'8px', padding:'14px', marginBottom:'14px'}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px'}}>
+              <span style={{fontWeight:700, fontSize:'.82rem', color:'#1A3A4A'}}>Configurar barras intermedias</span>
+              <button onClick={resetBarConfig} style={{fontSize:'.75rem', color:'#888', background:'none', border:'1px solid #ddd', borderRadius:'4px', padding:'2px 8px', cursor:'pointer'}}>Restaurar</button>
+            </div>
+            <div style={{display:'grid', gap:'4px'}}>
+              {barConfig.map((bar, i) => (
+                <div key={bar.id} style={{display:'flex', gap:'6px', alignItems:'center', padding:'4px 6px', background:'white', border:'1px solid #eee', borderRadius:'5px'}}>
+                  <input type="checkbox" checked={bar.visible} onChange={() => toggleBarVisible(i)}
+                    style={{cursor:'pointer', accentColor:'var(--teal)'}}/>
+                  <input type="text" value={bar.label} onChange={e => updateBarLabel(i, e.target.value)}
+                    style={{flex:1, border:'1px solid #ddd', borderRadius:'4px', padding:'2px 7px', fontSize:'.8rem',
+                            color: bar.visible ? '#1A3A4A' : '#aaa', fontFamily:'inherit'}}/>
+                  <button onClick={() => moveBar(i, -1)} disabled={i===0}
+                    style={{padding:'1px 7px', border:'1px solid #ddd', borderRadius:'4px', cursor:'pointer', background:'white',
+                            opacity: i===0 ? 0.3 : 1, fontSize:'.8rem'}}>↑</button>
+                  <button onClick={() => moveBar(i, 1)} disabled={i===barConfig.length-1}
+                    style={{padding:'1px 7px', border:'1px solid #ddd', borderRadius:'4px', cursor:'pointer', background:'white',
+                            opacity: i===barConfig.length-1 ? 0.3 : 1, fontSize:'.8rem'}}>↓</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Toggles de cajitas de desglose */}
         <div style={{display:'flex', gap:'6px', flexWrap:'wrap', alignItems:'center', marginBottom:'12px'}}>
@@ -2391,10 +2709,13 @@ function GraficosTab({period}) {
           </p>
         )}
         {!expLoading && rows.length > 0 && (
-          <WaterfallSvgChart rows={rows}
-            hiddenCallouts={hiddenCallouts}
-            title={`${compLabel} — Costo ${t2} vs Real · ${panel==='ytd'?'YTD':'Mes'} ${a1fin}/${String(m1fin).padStart(2,'0')}`}
-          />
+          <div id="grafico-export-area">
+            <WaterfallSvgChart rows={rows}
+              hiddenCallouts={hiddenCallouts}
+              deltaBars={barConfig}
+              title={`${compLabel} — Costo ${t2} vs Real · ${panel==='ytd'?'YTD':'Mes'} ${a1fin}/${String(m1fin).padStart(2,'0')}`}
+            />
+          </div>
         )}
       </div>
     </div>
@@ -2572,10 +2893,11 @@ function ParamsTab({period}) {
 
       <h3 style={{color:'var(--navy)', fontSize:'.95rem', marginBottom:'12px'}}>Exposición a Tipo de Cambio</h3>
       <div style={{display:'flex', gap:'20px', flexWrap:'wrap', marginBottom:'28px'}}>
-        {COMPANIES.map(co => (
+        {['GM', ...COMPANIES].map(co => (
           <div key={co} style={{display:'flex', flexDirection:'column', gap:'4px', alignItems:'center',
-            background:'white', border:'1px solid #e0e0e0', borderRadius:'8px', padding:'12px 18px', minWidth:'90px'}}>
-            <span style={{fontWeight:700, color:'var(--navy)', fontSize:'.9rem'}}>{co}</span>
+            background:'white', border:'1px solid #e0e0e0', borderRadius:'8px', padding:'12px 18px', minWidth:'90px',
+            ...(co === 'GM' ? {borderColor:'var(--teal)', boxShadow:'0 0 0 1px var(--teal)'} : {})}}>
+            <span style={{fontWeight:700, color: co === 'GM' ? 'var(--teal)' : 'var(--navy)', fontSize:'.9rem'}}>{co}</span>
             <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
               <input type="number" min="0" max="100" step="0.1"
                 className="params-inp" style={{width:'60px'}}
@@ -2591,10 +2913,8 @@ function ParamsTab({period}) {
       <p style={{fontSize:'.8rem', color:'#888', marginBottom:'10px'}}>
         Proporción fija del presupuesto (no escala con volumen). Variable = 100% − Fijo. Varía por compañía.
       </p>
-      <div className="company-tabs" style={{marginBottom:'10px'}}>
-        {COMPANIES.map(co => (
-          <button key={co} className={`company-tab ${fvCompany===co?'active':''}`} onClick={()=>setFvCompany(co)}>{co}</button>
-        ))}
+      <div style={{marginBottom:'10px'}}>
+        <CtrlBar companies={COMPANIES} company={fvCompany} setCompany={setFvCompany}/>
       </div>
       <table style={{width:'100%', borderCollapse:'collapse', fontSize:'.84rem', maxWidth:'480px'}}>
         <thead>
@@ -2678,46 +2998,6 @@ function ParamsTab({period}) {
           )}
         </tbody>
       </table>
-      <h3 style={{color:'var(--navy)', fontSize:'.95rem', margin:'24px 0 4px'}}>KPIs para Análisis Costo</h3>
-      <p style={{fontSize:'.8rem', color:'#888', marginBottom:'10px'}}>
-        Nombre exacto del KPI en el parquet (formato: <code>Subcategoría||KPI</code> o solo <code>KPI</code>).
-        Dejar vacío si no aplica.
-      </p>
-      {(() => {
-        const KPI_FIELDS = [
-          { key:'ifrs16', label:'IFRIC16 / IFRS16', hint:'Costo de arrendamientos IFRS 16 (kUS$)' },
-        ];
-        return (
-          <table style={{width:'100%', borderCollapse:'collapse', fontSize:'.84rem', maxWidth:'600px'}}>
-            <thead>
-              <tr style={{background:'#f3f4f6'}}>
-                <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151', width:'200px'}}>Concepto</th>
-                <th style={{padding:'7px 14px', textAlign:'left', fontWeight:600, color:'#374151'}}>Clave KPI en parquet</th>
-              </tr>
-            </thead>
-            <tbody>
-              {KPI_FIELDS.map(({key, label, hint}) => (
-                <tr key={key} style={{borderTop:'1px solid #f0f0f0'}}>
-                  <td style={{padding:'8px 14px', color:'#374151', fontWeight:500}}>
-                    {label}
-                    <div style={{fontSize:'.73rem', color:'#aaa', fontWeight:400}}>{hint}</div>
-                  </td>
-                  <td style={{padding:'6px 14px'}}>
-                    <input
-                      type="text"
-                      className="params-inp"
-                      style={{width:'100%', maxWidth:'340px', fontFamily:'monospace', fontSize:'.82rem'}}
-                      value={fp?.kpi_keys?.[key] ?? ''}
-                      placeholder="ej: Administración||IFRIC16"
-                      onChange={e => setKpiKey(key, e.target.value)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        );
-      })()}
       </div>
     </div>
   );
@@ -2780,29 +3060,110 @@ function ExpRow({label, unit, real, ppto, efNode, alt, indent}) {
   );
 }
 
+/* ─── EfPopover: detalle de un efecto al hacer click ─── */
+function EfPopover({pop, onClose}) {
+  if (!pop) return null;
+  const {label, unit, real, ppto, kus, ktcuf, clb, clbDec, cprod, x, y} = pop;
+  const delta = (real != null && ppto != null) ? real - ppto : null;
+  const deltaPct = (delta != null && ppto && ppto !== 0) ? (delta / ppto * 100) : null;
+  const fmt = v => v == null ? '—' : Number(v).toLocaleString('es-CL', {maximumFractionDigits:3});
+  const col = v => v == null ? '#888' : v > 0.001 ? '#dc2626' : v < -0.001 ? '#059669' : '#888';
+  // Viewport clamping
+  const W = 240;
+  const left = Math.min(x, window.innerWidth - W - 12);
+  const top  = y + 6;
+  return (
+    <div style={{
+      position:'fixed', left, top, width:W,
+      background:'white', border:'1px solid #d0d8e0', borderRadius:'8px',
+      boxShadow:'0 6px 20px rgba(0,0,0,.14)', padding:'11px 13px',
+      zIndex:9999, fontSize:'.77rem', lineHeight:1.5,
+    }} onClick={e => e.stopPropagation()}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center',
+                   fontWeight:700, marginBottom:'7px', borderBottom:'1px solid #eee', paddingBottom:'5px'}}>
+        <span>{label}{unit ? <span style={{fontWeight:400, color:'#aaa', marginLeft:4}}>[{unit}]</span> : null}</span>
+        <span style={{cursor:'pointer', color:'#aaa', fontSize:'.85rem', lineHeight:1}} onClick={onClose}>✕</span>
+      </div>
+      <table style={{width:'100%', borderCollapse:'collapse', marginBottom:'7px'}}>
+        <tbody>
+          <tr>
+            <td style={{color:'#666', paddingRight:10, paddingBottom:2}}>Real</td>
+            <td style={{textAlign:'right', paddingBottom:2}}>{fmt(real)}</td>
+          </tr>
+          <tr>
+            <td style={{color:'#666', paddingBottom:2}}>Ppto</td>
+            <td style={{textAlign:'right', paddingBottom:2}}>{fmt(ppto)}</td>
+          </tr>
+          {delta != null && (
+            <tr>
+              <td style={{color:'#666'}}>Δ real − ppto</td>
+              <td style={{textAlign:'right', fontWeight:600, color:col(delta)}}>
+                {delta >= 0 ? '+' : ''}{fmt(delta)}
+                {deltaPct != null ? <span style={{fontWeight:400, color:'#888', marginLeft:4}}>
+                  ({deltaPct >= 0 ? '+' : ''}{deltaPct.toFixed(1)}%)
+                </span> : null}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      {kus != null && (
+        <div style={{borderTop:'1px solid #eee', paddingTop:'7px'}}>
+          <div style={{color:'#666', marginBottom:3}}>Efecto en kUS$:</div>
+          <div style={{fontWeight:600, color:col(-kus)}}>{kus >= 0 ? '+' : ''}{(kus/1000).toFixed(2)} MUS$</div>
+          {cprod != null && cprod > 0 && clb != null && (
+            <div style={{marginTop:6}}>
+              <div style={{color:'#666', marginBottom:2}}>Conversión a c/lb:</div>
+              <div style={{fontFamily:'monospace', fontSize:'.71rem', color:'#555', lineHeight:1.7,
+                           background:'#f8fafc', borderRadius:4, padding:'4px 6px'}}>
+                {(kus/1000).toFixed(3)} MUS$ × 100<br/>
+                ÷ ({cprod.toFixed(3)} ktCuf × 2,204.62)<br/>
+                <span style={{fontWeight:700, color:col(-kus)}}>= {clb >= 0 ? '+' : ''}{clb.toFixed(clbDec)} c/lb</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {ktcuf != null && kus == null && (
+        <div style={{borderTop:'1px solid #eee', paddingTop:'7px'}}>
+          <div style={{color:'#666', marginBottom:3}}>Efecto en ktCuf:</div>
+          <div style={{fontWeight:600, color:col(-ktcuf)}}>{ktcuf >= 0 ? '+' : ''}{ktcuf.toFixed(clbDec)} ktCuf</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Tab: Explicaciones ─── */
 const EXP_CO_LABELS = {MLP:'Los Pelambres', CEN:'Centinela', ANT:'Antucoya', CMZ:'Zaldívar'};
 
-function ExplicacionesTab({period}) {
+function ExplicacionesTab({period, company, setCompany, panel, setPanel}) {
   const {a1fin, m1fin} = period;
-  const [company, setCompany] = useState('Grupo Minero');
+  const [showTodas, setShowTodas] = useState(false);
+  const expCompany = showTodas ? 'Todas' : company;
+  const [efPop, setEfPop] = useState(null);
+  useEffect(() => {
+    if (!efPop) return;
+    const h = () => setEfPop(null);
+    document.addEventListener('click', h);
+    return () => document.removeEventListener('click', h);
+  }, [efPop]);
   const [año, setAño] = useState(a1fin);
   const [mes, setMes] = useState(m1fin);
-  const [pnl, setPnl] = useState('ytd');
   const [decimals, setDecimals] = useState(1);
   const [data, loading, error, run] = useAsyncState();
 
   function cargar() {
     const url = x => `/api/explicaciones/${x}?año=${año}&mes=${mes}`;
-    if (company === 'Grupo Minero') {
+    if (expCompany === 'Grupo Minero') {
       run(Promise.all(COMPANIES.map(x => apiGet(url(x)))).then(aggregateExpResults));
-    } else if (company === 'Todas') {
+    } else if (expCompany === 'Todas') {
       run(Promise.all(COMPANIES.map(x => apiGet(url(x)))).then(results => ({
         _todas: true,
         byCompany: Object.fromEntries(COMPANIES.map((c, i) => [c, results[i]])),
       })));
     } else {
-      run(apiGet(url(company)));
+      run(apiGet(url(expCompany)));
     }
   }
 
@@ -2815,6 +3176,19 @@ function ExplicacionesTab({period}) {
     const smK = rows => { let t=null; for(const r of rows){if(r.efecto_ktcuf!=null)t=(t||0)+r.efecto_ktcuf;} return t; };
     const fC = v => { if(v==null)return <span style={{color:'#bbb'}}>—</span>; const col=v<0?'var(--red)':v>0?'#059669':'inherit'; return <span style={{color:col,fontWeight:700}}>{v>=0?'+':''}{v.toFixed(decimals)} c/lb</span>; };
     const fK = v => { if(v==null)return <span style={{color:'#bbb'}}>—</span>; const col=v<0?'var(--red)':v>0?'#059669':'inherit'; return <span style={{color:col,fontWeight:700}}>{v>=0?'+':''}{v.toFixed(decimals)} ktCuf</span>; };
+    const wrap = (node, detail) => {
+      if (detail.kus == null && detail.ktcuf == null) return node;
+      return (
+        <span style={{cursor:'pointer', borderBottom:'1px dotted currentColor', display:'inline-block'}}
+          onClick={e => {
+            e.stopPropagation();
+            const rc = e.currentTarget.getBoundingClientRect();
+            setEfPop({...detail, cprod, clbDec:decimals, x:rc.left, y:rc.bottom});
+          }}>
+          {node}
+        </span>
+      );
+    };
     const ajTot=smC(pd.ajuste_monetario), piTot=smC(pd.precio_insumos), rendTot=smC(pd.rendimiento), prodTot=smK(pd.produccion);
     return (
       <div className="card" key={compLabel}>
@@ -2831,15 +3205,18 @@ function ExplicacionesTab({period}) {
               <tbody>
                 <ExpSecHd label="Ajuste Monetario" total={fC(ajTot)}/>
                 {pd.ajuste_monetario.map((r,i)=>(
-                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto} efNode={fC(toC(r.efecto_kus))}/>
+                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto}
+                    efNode={wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus)})}/>
                 ))}
                 <ExpSecHd label="Precio Insumos" total={fC(piTot)}/>
                 {pd.precio_insumos.map((r,i)=>(
-                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto} efNode={fC(toC(r.efecto_kus))}/>
+                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto}
+                    efNode={wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus)})}/>
                 ))}
                 <ExpSecHd label="Rendimiento" total={fC(rendTot)}/>
                 {pd.rendimiento.map((r,i)=>(
-                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto} efNode={fC(toC(r.efecto_kus))}/>
+                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto}
+                    efNode={wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus)})}/>
                 ))}
               </tbody>
             </table>
@@ -2847,18 +3224,20 @@ function ExplicacionesTab({period}) {
               <ExpTblHead title="Actividad"/>
               <tbody>
                 <ExpSecHd label="Producción" total={fK(prodTot)}/>
-                {pd.produccion.map((r,i)=>(
+                {pd.produccion.filter(r => r.real!=null || r.ppto!=null || r.efecto_ktcuf!=null || r.efecto_kus!=null).map((r,i)=>(
                   <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto}
-                    efNode={r.efecto_kus!=null ? fC(toC(r.efecto_kus)) : fK(r.efecto_ktcuf)}/>
+                    efNode={r.efecto_kus!=null
+                      ? wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus)})
+                      : wrap(fK(r.efecto_ktcuf),    {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, ktcuf:r.efecto_ktcuf})}/>
                 ))}
                 <ExpSecHd label="Movimiento Mina" total={fC(toC(pd.mov_mina.efecto_kus))}/>
                 <ExpRow label="Movimiento total Mina" unit="kt" real={pd.mov_mina.real} ppto={pd.mov_mina.ppto}
-                  efNode={fC(toC(pd.mov_mina.efecto_kus))}/>
+                  efNode={wrap(fC(toC(pd.mov_mina.efecto_kus)), {label:'Movimiento total Mina', unit:'kt', real:pd.mov_mina.real, ppto:pd.mov_mina.ppto, kus:pd.mov_mina.efecto_kus, clb:toC(pd.mov_mina.efecto_kus)})}/>
                 <ExpSecHd label="Desarrollo Mina" total={fC(toC(pd.desarrollo_mina.efecto_kus))}/>
                 <ExpRow label="Tonelaje" unit="kt" real={pd.desarrollo_mina.tonelaje_real} ppto={pd.desarrollo_mina.tonelaje_ppto}
-                  efNode={fC(toC(pd.desarrollo_mina.tonelaje_efecto_kus))}/>
+                  efNode={wrap(fC(toC(pd.desarrollo_mina.tonelaje_efecto_kus)), {label:'Tonelaje Desarrollo Mina', unit:'kt', real:pd.desarrollo_mina.tonelaje_real, ppto:pd.desarrollo_mina.tonelaje_ppto, kus:pd.desarrollo_mina.tonelaje_efecto_kus, clb:toC(pd.desarrollo_mina.tonelaje_efecto_kus)})}/>
                 <ExpRow label="Costo unitario" unit="US$/t" real={pd.desarrollo_mina.cu_real} ppto={pd.desarrollo_mina.cu_ppto}
-                  efNode={fC(toC(pd.desarrollo_mina.cu_efecto_kus))}/>
+                  efNode={wrap(fC(toC(pd.desarrollo_mina.cu_efecto_kus)), {label:'Costo Unitario Desarrollo Mina', unit:'US$/t', real:pd.desarrollo_mina.cu_real, ppto:pd.desarrollo_mina.cu_ppto, kus:pd.desarrollo_mina.cu_efecto_kus, clb:toC(pd.desarrollo_mina.cu_efecto_kus)})}/>
               </tbody>
             </table>
           </div>
@@ -2867,16 +3246,20 @@ function ExplicacionesTab({period}) {
     );
   }
 
-  const pd = data?._todas ? null : data?.data?.[pnl];
+  const pd = data?._todas ? null : data?.data?.[panel];
 
   return (
     <div className="main">
+      <EfPopover pop={efPop} onClose={() => setEfPop(null)}/>
       {/* Controls */}
       <div className="card">
         <div className="card-title">Explicaciones</div>
-        <div className="company-tabs">
+        <div className="seg-ctrl" style={{marginBottom:'12px', flexWrap:'wrap'}}>
           {['Grupo Minero', ...COMPANIES, 'Todas'].map(c => (
-            <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>{c}</button>
+            <button key={c} className={`seg-btn ${expCompany===c?'active':''}`}
+              onClick={()=>{ if(c==='Todas'){setShowTodas(true);} else {setShowTodas(false);setCompany(c);} }}>
+              {c}
+            </button>
           ))}
         </div>
         <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginTop:'12px'}}>
@@ -2896,15 +3279,10 @@ function ExplicacionesTab({period}) {
             {loading ? <><span className="spin"/>Cargando…</> : 'Cargar'}
           </button>
           {data && (
-            <div style={{display:'flex', gap:'6px', alignSelf:'flex-end'}}>
+            <div className="seg-ctrl" style={{alignSelf:'flex-end'}}>
               {[['ytd','YTD'],['mes','Mes']].map(([k,lbl]) => (
-                <button key={k} onClick={()=>setPnl(k)} style={{
-                  padding:'6px 18px', border:'2px solid', borderRadius:'6px',
-                  cursor:'pointer', fontWeight:700, fontSize:'.86rem',
-                  borderColor: pnl===k ? 'var(--teal)' : '#ddd',
-                  background:  pnl===k ? 'var(--teal)' : 'white',
-                  color:       pnl===k ? 'white' : '#666',
-                }}>{lbl}</button>
+                <button key={k} className={`seg-btn ${panel===k?'active':''}`}
+                  onClick={()=>setPanel(k)}>{lbl}</button>
               ))}
             </div>
           )}
@@ -2921,7 +3299,7 @@ function ExplicacionesTab({period}) {
       </div>
 
       {data?._todas
-        ? COMPANIES.map(co => renderPanel(data.byCompany[co]?.data?.[pnl], EXP_CO_LABELS[co] || co))
+        ? COMPANIES.map(co => renderPanel(data.byCompany[co]?.data?.[panel], EXP_CO_LABELS[co] || co))
         : pd && renderPanel(pd, null)
       }
     </div>
@@ -2929,9 +3307,9 @@ function ExplicacionesTab({period}) {
 }
 
 /* ─── Tab: Costos Ajustados ─── */
-function CostosAjustadosTab({period}) {
-  const {a1fin, m1fin} = period;
-  const [company, setCompany] = useState('MLP');
+function CostosAjustadosTab({period, company, setCompany}) {
+  const {tipo1, a1fin, m1fin, tipo2} = period;
+  const effectiveCompany = COMPANIES.includes(company) ? company : COMPANIES[0];
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]           = useState('');
@@ -2944,11 +3322,11 @@ function CostosAjustadosTab({period}) {
   useEffect(() => {
     if (!a1fin || !m1fin) return;
     setLoading(true); setError(''); setData(null);
-    apiGet(`/api/costos-ajustados/${company}?año=${a1fin}&mes=${m1fin}`)
+    apiGet(`/api/costos-ajustados/${effectiveCompany}?año=${a1fin}&mes=${m1fin}`)
       .then(d => setData(d))
       .catch(e => setError(e.message || 'Error'))
       .finally(() => setLoading(false));
-  }, [company, a1fin, m1fin]);
+  }, [effectiveCompany, a1fin, m1fin]);
 
   // Auto-expand groups that have at least one mapped subarea; collapse all-NA groups
   useEffect(() => {
@@ -3009,16 +3387,9 @@ function CostosAjustadosTab({period}) {
   return (
     <div className="main">
       <div className="card">
-        <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'12px', flexWrap:'wrap'}}>
-          <div className="card-title" style={{margin:0}}>Costos Ajustados por FX / IPC</div>
-          <div className="company-tabs" style={{margin:0}}>
-            {COMPANIES.map(c=>(
-              <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>{c}</button>
-            ))}
-          </div>
-        </div>
+        <div className="card-title">Costos Ajustados por FX / IPC</div>
         <p style={{fontSize:'.78rem', color:'#888', marginBottom:'12px'}}>
-          <strong>{MESES[data?.mes ?? m1fin]} {a1fin}</strong> · adj_factor = (FX_r/FX_b)×(IPC_r/IPC_b) · PptoAjTot = Ppto×%F×adj + Ppto×%V · Dif = PptoAjTot − Ppto · <em>US$m</em>
+          <strong>{MESES[data?.mes ?? m1fin]} {a1fin}</strong> · adj_factor = (FX_r/FX_b)×(IPC_r/IPC_b) · {tipo2}AjTot = {tipo2}×%F×adj + {tipo2}×%V · Dif = {tipo2}AjTot − {tipo2} · <em>US$m</em>
         </p>
 
         {loading && <p style={{color:'#aaa'}}><span className="spin"/>Calculando…</p>}
@@ -3034,7 +3405,7 @@ function CostosAjustadosTab({period}) {
                   <th style={{...TH, textAlign:'center', background:'#1A4E5A'}} colSpan={4}>YTD {a1fin}</th>
                 </tr>
                 <tr>
-                  {['Real','Ppto','Ppto Aj Tot','Dif.','Real','Ppto','Ppto Aj Tot','Dif.'].map((h,i)=>(
+                  {[tipo1, tipo2, `${tipo2} Aj Tot`,'Dif.',tipo1, tipo2, `${tipo2} Aj Tot`,'Dif.'].map((h,i)=>(
                     <th key={i} style={{...TH, background: i<4 ? '#1A5F6E' : '#1A4E5A', ...(i===3?SEP:{})}}>{h}</th>
                   ))}
                 </tr>
@@ -3166,9 +3537,9 @@ function CostosAjustadosTab({period}) {
 }
 
 /* ─── Tab: Costos Ajustados Mes (CM) ─── */
-function CostosAjMesTab({period}) {
+function CostosAjMesTab({period, company, setCompany}) {
   const {a1fin, m1fin} = period;
-  const [company,  setCompany]  = useState('MLP');
+  const effectiveCompany = COMPANIES.includes(company) ? company : COMPANIES[0];
   const [data,     setData]     = useState(null);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
@@ -3184,11 +3555,11 @@ function CostosAjMesTab({period}) {
   useEffect(() => {
     if (!a1fin || !m1fin) return;
     setLoading(true); setError(''); setData(null);
-    apiGet(`/api/costos-ajustados/${company}/monthly?año=${a1fin}&mes_cierre=${m1fin}`)
+    apiGet(`/api/costos-ajustados/${effectiveCompany}/monthly?año=${a1fin}&mes_cierre=${m1fin}`)
       .then(d => setData(d))
       .catch(e => setError(e.message || 'Error'))
       .finally(() => setLoading(false));
-  }, [company, a1fin, m1fin]);
+  }, [effectiveCompany, a1fin, m1fin]);
 
   useEffect(() => {
     if (!data) return;
@@ -3306,11 +3677,7 @@ function CostosAjMesTab({period}) {
         {/* Header row */}
         <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'10px', flexWrap:'wrap'}}>
           <div className="card-title" style={{margin:0}}>Costos Ajustados Mes (CM)</div>
-          <div className="company-tabs" style={{margin:0}}>
-            {COMPANIES.map(c=>(
-              <button key={c} className={`company-tab ${company===c?'active':''}`} onClick={()=>setCompany(c)}>{c}</button>
-            ))}
-          </div>
+          <CtrlBar companies={COMPANIES} company={effectiveCompany} setCompany={setCompany}/>
           {/* Section toggles */}
           <div style={{display:'flex', gap:'5px', marginLeft:'auto', flexWrap:'wrap', alignItems:'center'}}>
             <button onClick={()=>setShowSub(p=>!p)} style={{
@@ -3691,7 +4058,9 @@ function FlashProduccionesTab({period}) {
 
 /* ─── Root App ─── */
 function App() {
-  const [tab,   setTab]   = useState('viz');
+  const [tab,     setTab]     = useState('viz');
+  const [company, setCompany] = useState('Grupo Minero');
+  const [panel,   setPanel]   = useState('ytd');
   const [tipos] = useState(['Real', 'Ppto']);
   const [tipo1, setTipo1] = useState('Real');
   const [a1ini, setA1ini] = useState(DEFAULT_YR);
@@ -3710,20 +4079,56 @@ function App() {
   const period  = { tipo1, a1ini, m1ini, a1fin, m1fin, tipo2, a2ini, m2ini, a2fin, m2fin };
   const setters = { setTipo1, setA1ini, setM1ini, setA1fin, setM1fin, setTipo2, setA2ini, setM2ini };
 
+  const showPeriodBar = ['viz','analisis','params','costos_aj','cm','flash','graficos'].includes(tab);
+  const TAB_LABELS = {
+    mapeos:'Configuración', params:'Parámetros', viz:'Visualizar Input',
+    analisis:'Análisis Costo', costos_aj:'Costos Ajustados', cm:'Costos Ajustados Mes (CM)',
+    flash:'Flash Producciones', explicaciones:'Explicaciones', graficos:'Gráficos',
+  };
+  const TAB_SECTIONS = {
+    mapeos:'Configuración', params:'Configuración',
+    viz:'Análisis', analisis:'Análisis', costos_aj:'Análisis', cm:'Análisis',
+    flash:'Reportes', explicaciones:'Reportes', graficos:'Reportes',
+  };
+
   return (
-    <>
-      <Header tab={tab} setTab={setTab} period={period}/>
-      {(tab==='viz' || tab==='analisis' || tab==='params' || tab==='costos_aj' || tab==='cm' || tab==='flash' || tab==='graficos') && <PeriodBar period={period} setters={setters} tipos={tipos}/>}
-      {tab==='mapeos'        && <MapeosTab/>}
-      {tab==='viz'           && <VisualizarTab period={period} tipos={tipos}/>}
-      {tab==='analisis'      && <AnalisisCostoTab period={period}/>}
-      {tab==='costos_aj'     && <CostosAjustadosTab period={period}/>}
-      {tab==='cm'            && <CostosAjMesTab period={period}/>}
-      {tab==='params'        && <ParamsTab period={period}/>}
-      {tab==='flash'         && <FlashProduccionesTab period={period}/>}
-      {tab==='explicaciones' && <ExplicacionesTab period={period}/>}
-      {tab==='graficos'      && <GraficosTab period={period}/>}
-    </>
+    <div className="app-layout">
+      <Sidebar tab={tab} setTab={setTab} period={period}/>
+      <div className="content-area">
+        <div className="content-header">
+          <div className="content-header-title">{TAB_LABELS[tab] || tab}</div>
+          <div className="content-header-sub">{TAB_SECTIONS[tab]}</div>
+        </div>
+
+        {showPeriodBar && (
+          <div className="topbar">
+            <PeriodBar period={period} setters={setters} tipos={tipos}/>
+          </div>
+        )}
+        {(tab==='viz' || tab==='analisis' || tab==='costos_aj') && (
+          <div className="ctrl-bar-sticky">
+            <CtrlBar
+              companies={tab==='analisis' ? ['Grupo Minero',...COMPANIES] : COMPANIES}
+              company={COMPANIES.includes(company) || (tab==='analisis' && company==='Grupo Minero') ? company : COMPANIES[0]}
+              setCompany={setCompany}
+              panel={tab==='analisis' ? panel : undefined}
+              setPanel={tab==='analisis' ? setPanel : undefined}
+            />
+          </div>
+        )}
+        <div className="main">
+          {tab==='mapeos'        && <MapeosTab company={company} setCompany={setCompany}/>}
+          {tab==='viz'           && <VisualizarTab period={period} tipos={tipos} company={company} setCompany={setCompany}/>}
+          {tab==='analisis'      && <AnalisisCostoTab period={period} company={company} setCompany={setCompany} panel={panel} setPanel={setPanel}/>}
+          {tab==='costos_aj'     && <CostosAjustadosTab period={period} company={company} setCompany={setCompany}/>}
+          {tab==='cm'            && <CostosAjMesTab period={period} company={company} setCompany={setCompany}/>}
+          {tab==='params'        && <ParamsTab period={period}/>}
+          {tab==='flash'         && <FlashProduccionesTab period={period}/>}
+          {tab==='explicaciones' && <ExplicacionesTab period={period} company={company} setCompany={setCompany} panel={panel} setPanel={setPanel}/>}
+          {tab==='graficos'      && <GraficosTab period={period} company={company} setCompany={setCompany} panel={panel} setPanel={setPanel}/>}
+        </div>
+      </div>
+    </div>
   );
 }
 

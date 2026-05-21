@@ -1,55 +1,183 @@
 {
   "kpi_keys": {
-    "tarifa_bolas":        "Tarifa Bolas",
-    "tarifa_energia":      "Energía all in",
-    "tarifa_combustible":  "Combustible",
-    "tarifa_explosivos":   "Precios Insumos Críticos||Explosivos",
-    "consumo_bolas":       "Consumo Bolas",
-    "consumo_energia":     "Consumo Energía Compañía",
+    "tarifa_bolas": "Tarifa Bolas",
+    "tarifa_energia": "Energía all in",
+    "tarifa_combustible": "Combustible",
+    "tarifa_explosivos": "Precios Insumos Críticos||Explosivos",
+    "tarifa_acido": "",
+    "ley_hidro": "",
+    "apilamiento": "",
+    "beneficio_hidro": "",
+    "rec_hidro": "",
+    "otros_hidro": "",
+    "rend_bolas_directo": "",
+    "rend_acido_directo": "",
+    "consumo_bolas": "Consumo Bolas",
+    "consumo_energia": "Consumo Energía Compañía",
     "consumo_combustible": "Mina||Consumo Comb. - Transporte",
-    "consumo_explosivos":  "Mina||Explosivos",
-    "tratamiento":         "Tratamiento",
-    "ley_cu":              "Mineral Procesado||Ley de Cu",
-    "recuperacion":        "Mineral Procesado||Recuperación de cobre",
-    "horas_efectivas":     "Mina||Horas Efectivas",
-    "tronadura":           ["Roca Quebrada (Lastre)", "Roca Quebrada (Mineral)"],
-    "dev_mina_vol":        ["Fase 11||Esteril a Activar", "Fase 12E||Esteril a Activar"],
-    "dev_mina_cu":         "Fase 11||Costo Unitario",
-    "ifrs16":              "",
-    "mov_mina_sulf":       "",
-    "mov_mina_ox":         "",
-    "mov_mina_total":      "",
-    "dev_mina_sulf":       "",
-    "dev_mina_ox":         "",
-    "dev_mina_total_vol":  ""
+    "consumo_explosivos": "Mina||Explosivos",
+    "consumo_acido": "",
+    "tratamiento": "Tratamiento",
+    "ley_cu": "Mineral Procesado||Ley de Cu",
+    "recuperacion": "Mineral Procesado||Recuperación de cobre",
+    "horas_efectivas": "Mina||Horas Efectivas",
+    "tronadura": [
+      "Roca Quebrada (Lastre)",
+      "Roca Quebrada (Mineral)"
+    ],
+    "tcrc_q": "",
+    "tcrc_total": "",
+    "comer_total": "",
+    "gasto_operacional": "",
+    "gasto_operacional_real": "",
+    "dev_mina_vol": [
+      "Fase 11||Esteril a Activar",
+      "Fase 12E||Esteril a Activar"
+    ],
+    "c3": "",
+    "c2": "",
+    "c1_abs": "",
+    "da": "",
+    "subprod_b": "",
+    "tcrc_b_total": "",
+    "comer_b_total": "",
+    "vi_inv_mina": "",
+    "vi_inv_planta": "",
+    "ifrs16": "",
+    "tcrc_r_total": "",
+    "comer_r_total": "",
+    "subprod_r": "",
+    "c1_r_costo": "",
+    "da_r": "",
+    "c2_r": "",
+    "c3_r": "",
+    "otros_fin_r": "",
+    "dif_cambio_r": "",
+    "donaciones_r": "",
+    "gasto_expl_r": "",
+    "ing_gasto_fin_r": "",
+    "ing_no_op_r": "",
+    "otros_egr_op_r": "",
+    "dev_mina_cu": "Fase 11||Costo Unitario",
+    "mov_mina_sulf": "",
+    "mov_mina_ox": "",
+    "mov_mina_total": "",
+    "dev_mina_sulf": "",
+    "dev_mina_ox": "",
+    "dev_mina_total_vol": ""
   },
-  "desarrollo_mina":      ["Fase 11||Esteril a Activar", "Fase 12E||Esteril a Activar"],
-  "desarrollo_mina_items": [
-    { "key": "ifric20",  "label": "IFRIC20",  "kpis": [] },
-    { "key": "efecto_p", "label": "Efecto P",  "kpis": [] },
-    { "key": "efecto_q", "label": "Efecto Q",  "kpis": [] }
+  "kpi_keys_per_company": {
+    "ANT": {
+      "cu_fino": "Producción Cu Fino, Cátodos||Producción Cu Fino, Cátodos"
+    }
+  },
+  "desarrollo_mina": [
+    "Fase 11||Esteril a Activar",
+    "Fase 12E||Esteril a Activar"
   ],
-  "variacion_inventario": ["Administración||Variación de Inventario"],
+  "desarrollo_mina_items": [
+    {
+      "key": "ifric20",
+      "label": "IFRIC20",
+      "type": "delta",
+      "kpis": [],
+      "cost_kpis_per_company": {
+        "MLP": [
+          "Administración||Desarrollo"
+        ],
+        "CEN": [
+          "Items Relevantes||Desarrollo Mina"
+        ],
+        "ANT": [
+          "Items Relevantes||Desarrollo Mina"
+        ],
+        "CMZ": [
+          "Costos C1 por Procesos||Desarrollo Mina"
+        ]
+      }
+    },
+    {
+      "key": "efecto_p",
+      "label": "Efecto P",
+      "type": "efecto_p",
+      "kpis": [],
+      "cost_kpis_per_company": {
+        "MLP": [
+          "Administración||Desarrollo"
+        ],
+        "CEN": [
+          "Items Relevantes||Desarrollo Mina"
+        ],
+        "ANT": [
+          "Items Relevantes||Desarrollo Mina"
+        ],
+        "CMZ": [
+          "Costos C1 por Procesos||Desarrollo Mina"
+        ]
+      }
+    },
+    {
+      "key": "efecto_q",
+      "label": "Efecto Q",
+      "type": "efecto_q",
+      "kpis": [],
+      "cost_kpis_per_company": {
+        "MLP": [
+          "Administración||Desarrollo"
+        ],
+        "CEN": [
+          "Items Relevantes||Desarrollo Mina"
+        ],
+        "ANT": [
+          "Items Relevantes||Desarrollo Mina"
+        ],
+        "CMZ": [
+          "Costos C1 por Procesos||Desarrollo Mina"
+        ]
+      }
+    }
+  ],
+  "variacion_inventario": [
+    "Administración||Variación de Inventario"
+  ],
   "actividad_contexto": {
-    "mov_mina_kpis":        ["Movimiento Mina"],
-    "procesamiento_kpi":    "Tratamiento",
-    "costo_unitario_mina":  null,
-    "costo_unitario_conc":  null,
+    "mov_mina_kpis": [
+      "Movimiento Mina"
+    ],
+    "procesamiento_kpi": "Tratamiento",
+    "costo_unitario_mina": null,
+    "costo_unitario_conc": null,
     "costo_unitario_hidro": null
   },
+  "subprod_precio_scale": 1.0,
   "kpi_scales_per_company": {
     "CEN": {
       "ley_cu": 100,
-      "recuperacion": 100
+      "recuperacion": 100,
+      "ley_hidro": 100,
+      "rec_hidro": 100
+    },
+    "ANT": {
+      "ley_hidro": 100,
+      "rec_hidro": 100
+    },
+    "CMZ": {
+      "ley_hidro": 100,
+      "rec_hidro": 100
     }
   },
   "kpi_scales_mes_ytd_per_company": {
-    "CEN": []
+    "CEN": [],
+    "ANT": []
   },
   "visualizar_scales_per_company": {
     "CEN": {
       "Variables Mineras||Ley sulfuros": 100,
       "Variables Mineras||Recuperación sulfuros": 100
+    },
+    "ANT": {
+      "Variables Mineras||Ley oxidos": 100,
+      "Variables Mineras||Recuperación óxidos": 100
     }
   }
 }

@@ -37,9 +37,12 @@ def get_explicaciones(company: str, año: int, mes: int):
 
     # Onsite cost budget (base for monetary adjustment effects)
     _ca_onsite: dict = {}
+    _ca_grupos: dict = {}
+    _ca = None
     try:
         _ca = get_costos_ajustados(company=company, año=año, mes=mes)
         _ca_onsite = (_ca or {}).get("totales", {}).get("costo_onsite", {})
+        _ca_grupos = {g["key"]: g for g in (_ca.get("grupos") or [])} if _ca else {}
     except Exception:
         pass
     _gasto_b = {
@@ -116,7 +119,6 @@ def get_explicaciones(company: str, año: int, mes: int):
         dr  = deltas["delta_rendimiento"]
         da  = deltas["delta_actividad"]
         el  = deltas["efecto_ley"]
-        ac  = _compute_actividad_contexto(r_scaled, b_scaled, panel, _p_calc, tc_factor)
 
         def rv(key, _p=panel, _snap=r_scaled): return _resolve(_snap, key, _p) if key else None
         def bv(key, _p=panel, _snap=b_scaled): return _resolve(_snap, key, _p) if key else None
@@ -137,6 +139,29 @@ def get_explicaciones(company: str, año: int, mes: int):
         rend_comb_b  = _m(_safe_div(bv(k["consumo_combustible"]),  hef_b), 1000.0)
         rend_expl_r  = _m(_safe_div(rv(k["consumo_explosivos"]),   tron_r), 1000.0)
         rend_expl_b  = _m(_safe_div(bv(k["consumo_explosivos"]),   tron_b), 1000.0)
+        # rendimiento bolas: usar KPI directo cuando existe (CEN), si no, calcular
+        _rend_bolas_dir_r = rv(k.get("rend_bolas_directo", "")) if k.get("rend_bolas_directo") else None
+        _rend_bolas_dir_b = bv(k.get("rend_bolas_directo", "")) if k.get("rend_bolas_directo") else None
+        if _rend_bolas_dir_r is not None:
+            rend_bolas_r = _rend_bolas_dir_r
+            rend_bolas_b = _rend_bolas_dir_b
+        # ácido: denominador apilamiento si existe, si no proc
+        apil_r = rv(k.get("apilamiento", "")) if k.get("apilamiento") else None
+        apil_b = bv(k.get("apilamiento", "")) if k.get("apilamiento") else None
+        _acido_den_r = apil_r if apil_r is not None else proc_r
+        _acido_den_b = apil_b if apil_b is not None else proc_b
+        rend_acido_r = _safe_div(rv(k.get("consumo_acido", "")), _acido_den_r)
+        rend_acido_b = _safe_div(bv(k.get("consumo_acido", "")), _acido_den_b)
+
+        # Variables mineras hidro
+        ley_hidro_r  = rv(k.get("ley_hidro",       "")) if k.get("ley_hidro")       else None
+        ley_hidro_b  = bv(k.get("ley_hidro",       "")) if k.get("ley_hidro")       else None
+        ben_hidro_r  = rv(k.get("beneficio_hidro", "")) if k.get("beneficio_hidro") else None
+        ben_hidro_b  = bv(k.get("beneficio_hidro", "")) if k.get("beneficio_hidro") else None
+        rec_hidro_r  = rv(k.get("rec_hidro",       "")) if k.get("rec_hidro")       else None
+        rec_hidro_b  = bv(k.get("rec_hidro",       "")) if k.get("rec_hidro")       else None
+        otros_r      = rv(k.get("otros_hidro",     "")) if k.get("otros_hidro")     else None
+        otros_b      = bv(k.get("otros_hidro",     "")) if k.get("otros_hidro")     else None
 
         # Cu production in ktCuf: use actual CuFino KPI when available, fallback to proc×ley×rec
         _all = lambda *args: None not in args
@@ -154,6 +179,17 @@ def get_explicaciones(company: str, año: int, mes: int):
         mov_kpis = _mov_from_keys if _mov_from_keys else p.get("actividad_contexto", {}).get("mov_mina_kpis", [])
         mov_r = _sum_resolve(r_snap, mov_kpis, panel) if mov_kpis else None
         mov_b = _sum_resolve(b_snap, mov_kpis, panel) if mov_kpis else None
+
+        # Derivar costo unitario de actividad desde costos_ajustados cuando no configurado
+        _act_ctx = dict(p.get("actividad_contexto", {}))
+        if _ca_grupos:
+            def _ca_ppto(gkey): return (_ca_grupos.get(gkey) or {}).get("total", {}).get(panel, {}).get("ppto")
+            if _act_ctx.get("costo_unitario_mina") is None and mov_b and _ca_ppto("mina"):
+                _act_ctx["costo_unitario_mina"] = _ca_ppto("mina") / mov_b
+            if _act_ctx.get("costo_unitario_hidro") is None and ben_hidro_b and _ca_ppto("planta_sx"):
+                _act_ctx["costo_unitario_hidro"] = _ca_ppto("planta_sx") / ben_hidro_b
+        _p_act = {**_p_calc, "actividad_contexto": _act_ctx}
+        ac = _compute_actividad_contexto(r_scaled, b_scaled, panel, _p_act, tc_factor)
 
         # Desarrollo mina: volume (kt) — usa keys mapeados si existen, si no el hardcodeado
         _dv_sulf  = k.get("dev_mina_sulf",      "")
@@ -271,25 +307,26 @@ def get_explicaciones(company: str, año: int, mes: int):
             "precio_insumos": [
                 {"label": "Energía",     "unit": "US$/MWh", "real": f(rv(k["tarifa_energia"])),     "ppto": f(bv(k["tarifa_energia"])),     "efecto_kus": f(dg["energia"])},
                 {"label": "Combustible", "unit": "US$/lt",  "real": f(rv(k["tarifa_combustible"])), "ppto": f(bv(k["tarifa_combustible"])), "efecto_kus": f(dg["combustible"])},
-                {"label": "Ácido",       "unit": "US$/t",   "real": None,                           "ppto": None,                           "efecto_kus": f(dg["acido"])},
+                {"label": "Ácido",       "unit": "US$/t",   "real": f(rv(k.get("tarifa_acido",""))),  "ppto": f(bv(k.get("tarifa_acido",""))),  "efecto_kus": f(dg["acido"])},
                 {"label": "Bolas",       "unit": "US$/t",   "real": f(rv(k["tarifa_bolas"])),       "ppto": f(bv(k["tarifa_bolas"])),       "efecto_kus": f(dg["bolas"])},
-                {"label": "Explosivos",  "unit": "US$/kg",  "real": f(rv(k["tarifa_explosivos"])),  "ppto": f(bv(k["tarifa_explosivos"])),  "efecto_kus": f(dg["explosivos"])},
+                {"label": "Explosivos",  "unit": "US$/t",   "real": f(rv(k["tarifa_explosivos"])),  "ppto": f(bv(k["tarifa_explosivos"])),  "efecto_kus": f(dg["explosivos"])},
             ],
             "rendimiento": [
                 {"label": "Energía",     "unit": "MWh/kt", "real": f(rend_energ_r), "ppto": f(rend_energ_b), "efecto_kus": f(dr["energia_conc"])},
                 {"label": "Combustible", "unit": "lt/hr",  "real": f(rend_comb_r),  "ppto": f(rend_comb_b),  "efecto_kus": f(dr["combustible"])},
-                {"label": "Ácido",       "unit": "t/t",    "real": None,            "ppto": None,            "efecto_kus": f(dr["acido"])},
+                {"label": "Ácido",       "unit": "kg/t",   "real": f(rend_acido_r),  "ppto": f(rend_acido_b),  "efecto_kus": f(dr["acido"])},
                 {"label": "Bolas",       "unit": "g/t",    "real": f(rend_bolas_r), "ppto": f(rend_bolas_b), "efecto_kus": f(dr["bolas"])},
                 {"label": "Explosivos",  "unit": "g/t",    "real": f(rend_expl_r),  "ppto": f(rend_expl_b),  "efecto_kus": f(dr["explosivos"])},
             ],
             "produccion": [
-                {"label": "Ley Conc",        "unit": "% CuT", "real": f(ley_rr), "ppto": f(ley_rb), "efecto_ktcuf": f(el["concentradora"])},
-                {"label": "Tratamiento Conc","unit": "kt",    "real": f(proc_r), "ppto": f(proc_b), "efecto_ktcuf": f(da["trat_concentradora"])},
-                {"label": "Rec Conc",        "unit": "%",     "real": f(rec_rr), "ppto": f(rec_rb), "efecto_ktcuf": f(da["rec_concentradora"])},
-                {"label": "Ley Hidro",       "unit": "% CuT", "real": None, "ppto": None, "efecto_ktcuf": None},
-                {"label": "Beneficio Hidro", "unit": "kt",    "real": None, "ppto": None, "efecto_ktcuf": f(da["trat_hidro"])},
-                {"label": "Rec Hidro",       "unit": "%",     "real": None, "ppto": None, "efecto_ktcuf": f(da["rec_hidro"])},
-                {"label": "Otros",           "unit": "kt",    "real": None, "ppto": None, "efecto_ktcuf": None},
+                {"label": "Ley Conc",        "unit": "% CuT", "real": f(ley_rr),      "ppto": f(ley_rb),      "efecto_ktcuf": f(el["concentradora"])},
+                {"label": "Tratamiento Conc","unit": "kt",    "real": f(proc_r) if (ley_rr is not None or ley_rb is not None) else None, "ppto": f(proc_b) if (ley_rr is not None or ley_rb is not None) else None, "efecto_ktcuf": f(da["trat_concentradora"])},
+                {"label": "Rec Conc",        "unit": "%",     "real": f(rec_rr),      "ppto": f(rec_rb),      "efecto_ktcuf": f(da["rec_concentradora"])},
+                {"label": "Ley Hidro",       "unit": "% CuT", "real": f(ley_hidro_r), "ppto": f(ley_hidro_b), "efecto_ktcuf": f(el["hidro"])},
+                {"label": "Apilamiento",     "unit": "kt",    "real": f(apil_r),      "ppto": f(apil_b),      "efecto_ktcuf": None},
+                {"label": "Beneficio Hidro", "unit": "kt",    "real": f(ben_hidro_r), "ppto": f(ben_hidro_b), "efecto_ktcuf": f(da["trat_hidro"])},
+                {"label": "Rec Hidro",       "unit": "%",     "real": f(rec_hidro_r), "ppto": f(rec_hidro_b), "efecto_ktcuf": f(da["rec_hidro"])},
+                {"label": "Otros",           "unit": "kt",    "real": f(otros_r),     "ppto": f(otros_b),     "efecto_ktcuf": None},
                 {"label": "Inventarios y otros", "unit": "kt", "real": None, "ppto": None, "efecto_ktcuf": vi_delta, "efecto_kus": None},
             ],
             "mov_mina": {

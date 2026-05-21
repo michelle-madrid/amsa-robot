@@ -15,7 +15,7 @@ def _load() -> dict:
     else:
         data = {}
     data.setdefault("kpis", {})
-    data.setdefault("exp_tc", {c: None for c in COMPANIES})
+    data.setdefault("exp_tc", {c: None for c in COMPANIES + ["GM"]})
     data.setdefault("costos_fijo_var", {
         "MLP": [
             {"key": "mina",   "label": "Mina y sub-áreas",      "fijo": 0.30},
@@ -83,16 +83,35 @@ def _load() -> dict:
                 {"key":"chancado_c","label":"Chancado","fijo":0.29},
                 {"key":"molienda","label":"Molienda","fijo":0.29},
                 {"key":"flotacion","label":"Flotación","fijo":0.29},
+                {"key":"sistemas_aux","label":"Sistemas Auxiliares","fijo":0.29},
+                {"key":"planta_moly","label":"Planta Molibdeno","fijo":0.29},
+                {"key":"transp_conc","label":"Transporte de Concentrado","fijo":0.29},
+                {"key":"relaves","label":"Relaves y Depósitos","fijo":0.29},
+                {"key":"serv_ap_conc","label":"Servicios de apoyo","fijo":0.29},
                 {"key":"adm_serv_c","label":"Adm. y Servicios","fijo":0.29},
             ]},
+            {"key":"puerto","label":"Puerto","subareas":[
+                {"key":"pto_transp","label":"Transporte Concentrado","fijo":0.35},
+                {"key":"pto_filtrado","label":"Planta Filtrado","fijo":0.35},
+                {"key":"pto_muelle","label":"Muelle","fijo":0.35},
+                {"key":"pto_mant","label":"Mantenimiento","fijo":0.35},
+                {"key":"pto_serv","label":"Servicios de Apoyo","fijo":0.35},
+                {"key":"pto_adm","label":"Admin.","fijo":0.35},
+            ]},
             {"key":"planta_sx","label":"Planta SX-EW","subareas":[
+                {"key":"chancado_sx","label":"Chancado SX-EW","fijo":0.40},
                 {"key":"aglom_ap","label":"Aglomeración / Apilamiento","fijo":0.40},
                 {"key":"lixiv","label":"Lixiviación","fijo":0.40},
                 {"key":"rom_sl","label":"ROM / SL","fijo":0.40},
                 {"key":"sxew","label":"SX-EW","fijo":0.40},
                 {"key":"adm_sx","label":"Admin.","fijo":0.40},
+                {"key":"otros_sx","label":"Otros costos planta SX-EW","fijo":0.40},
             ]},
             {"key":"ga","label":"G&A","subareas":[{"key":"ga_cen","label":"G&A","fijo":1.00}]},
+            {"key":"serv_apoyo_g","label":"Servicios de Apoyo","subareas":[{"key":"serv_apoyo_total","label":"Total","fijo":0.49}]},
+            {"key":"vi_grp","label":"Var. Inv.","subareas":[{"key":"vi_total","label":"Var. Inv.","fijo":1.00}]},
+            {"key":"dev_mina_grp","label":"Desarrollo Mina","subareas":[{"key":"vi_devmina","label":"Desarrollo Mina","fijo":1.00}]},
+            {"key":"ifrs16_grp","label":"IFRS16","subareas":[{"key":"vi_ifrs16","label":"IFRS16","fijo":1.00}]},
         ],
         "ANT": [
             {"key":"mina","label":"Mina","subareas":[

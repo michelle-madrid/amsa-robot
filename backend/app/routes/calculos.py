@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/calculos", tags=["calculos"])
 
 # Correspondencia fija: clave de variable de fórmula → lk en kpi_mappings
 # Permite derivar automáticamente los valores desde los mapeos Excel ya configurados.
-_FORMULA_VAR_TO_LK: dict[str, str] = {
+_FORMULA_VAR_TO_LK: dict[str, str | list] = {
     "tarifa_bolas":        "Tarifas||Bolas",
     "tarifa_energia":      "Tarifas||Energía",
     "tarifa_combustible":  "Tarifas||Combustible",
@@ -28,13 +28,29 @@ _FORMULA_VAR_TO_LK: dict[str, str] = {
     "consumo_energia":     "Consumos||Energía Total",
     "consumo_combustible": "Consumos||Combustible",
     "consumo_explosivos":  "Consumos||Explosivos",
-    "tratamiento":         "Variables Mineras||Procesamiento",
+    "tarifa_acido":        "Tarifas||Ácido",
+    "consumo_acido":       "Consumos||Ácido",
+    # Variables mineras hidro
+    "ley_hidro":           "Variables Mineras||Ley hidro",
+    "apilamiento":         "Variables Mineras||Apilado",
+    "beneficio_hidro":     "Variables Mineras||Beneficio",
+    "rec_hidro":           "Variables Mineras||Recuperación hidro",
+    "otros_hidro":         "Variables Mineras||ROM Dinámico /Ripos",
+    # Rendimientos directos desde kpi_mappings (evita recalcular cuando ya existe el KPI)
+    "rend_bolas_directo":  "Rendimientos||Bolas",
+    "rend_acido_directo":  "Rendimientos||Ácido",
+    "tratamiento":         ["Variables Mineras||Procesamiento",
+                            "Variables Mineras||Beneficio",
+                            "Variables Mineras||Apilado"],
     "horas_efectivas":     "Variables Mineras||Horas efectivas transporte",
     "tronadura":           "Variables Mineras||Total Tronado/Quebrado",
-    "ley_cu":              "Variables Mineras||Ley sulfuros",
-    "recuperacion":        "Variables Mineras||Recuperación sulfuros",
+    "ley_cu":              ["Variables Mineras||Ley sulfuros",
+                            "Variables Mineras||Ley oxidos"],
+    "recuperacion":        ["Variables Mineras||Recuperación sulfuros",
+                            "Variables Mineras||Recuperación óxidos"],
     "vi_inv":              "Variables Mineras||Var. Inv.",
-    "cu_fino":             "Variables Mineras||CuFino",
+    "cu_fino":             ["Variables Mineras||CuFino",
+                            "Variables Mineras||Cátodos"],
     "mov_mina_sulf":       "Variables Mineras||Movimiento mina sulfuros",
     "mov_mina_ox":         "Variables Mineras||Movimiento mina óxidos",
     "mov_mina_total":      "Variables Mineras||Movimiento mina total",
@@ -65,10 +81,19 @@ DEFAULT_PARAMS: dict = {
         "tarifa_energia":      "Energía all in",
         "tarifa_combustible":  "Combustible",
         "tarifa_explosivos":   "Precios Insumos Críticos||Explosivos",
+        "tarifa_acido":        "",
+        "ley_hidro":           "",
+        "apilamiento":         "",
+        "beneficio_hidro":     "",
+        "rec_hidro":           "",
+        "otros_hidro":         "",
+        "rend_bolas_directo":  "",
+        "rend_acido_directo":  "",
         "consumo_bolas":       "Consumo Bolas",
         "consumo_energia":     "Consumo Energía Compañía",
         "consumo_combustible": "Mina||Consumo Comb. - Transporte",
         "consumo_explosivos":  "Mina||Explosivos",
+        "consumo_acido":       "",
         "tratamiento":         "Tratamiento",
         "ley_cu":              "Ley de Cu",
         "recuperacion":        "Recuperación de cobre",
@@ -145,9 +170,14 @@ def _apply_formula_var_mappings(kpi_keys: dict, company: str) -> dict:
             # Scalar or real/budget-split mapping — pass through so _resolve can handle it
             result[var_key] = raw
 
-    # 1. Static auto-resolution via _FORMULA_VAR_TO_LK
-    for var_key, lk in _FORMULA_VAR_TO_LK.items():
-        _assign(var_key, company_map.get(lk))
+    # 1. Static auto-resolution via _FORMULA_VAR_TO_LK (listas = fallbacks en orden)
+    for var_key, lk_or_list in _FORMULA_VAR_TO_LK.items():
+        lks = lk_or_list if isinstance(lk_or_list, list) else [lk_or_list]
+        for lk in lks:
+            raw = company_map.get(lk)
+            if raw and raw != "__NA__":
+                _assign(var_key, raw)
+                break
     # 2. Explicit _formula_vars overrides (manual assignments, higher priority)
     for var_key, lk in all_maps.get("_formula_vars", {}).get(company, {}).items():
         _assign(var_key, company_map.get(lk))
@@ -363,6 +393,17 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
     ley_b  = _ley_b / 100 if _ley_b is not None else None
     rec_r  = _rec_r / 100 if _rec_r is not None else None
     rec_b  = _rec_b / 100 if _rec_b is not None else None
+    # Variables hidro (SX-EW)
+    _ben_key = k.get("beneficio_hidro", "")
+    _lh_key  = k.get("ley_hidro", "")
+    _rh_key  = k.get("rec_hidro", "")
+    ben_r  = r(_ben_key) if _ben_key else None;  ben_b  = b(_ben_key) if _ben_key else None
+    _lh_r  = r(_lh_key)  if _lh_key  else None;  _lh_b  = b(_lh_key)  if _lh_key  else None
+    _rh_r  = r(_rh_key)  if _rh_key  else None;  _rh_b  = b(_rh_key)  if _rh_key  else None
+    lh_r = _lh_r / 100 if _lh_r is not None else None
+    lh_b = _lh_b / 100 if _lh_b is not None else None
+    rh_r = _rh_r / 100 if _rh_r is not None else None
+    rh_b = _rh_b / 100 if _rh_b is not None else None
     hef_r  = r(k["horas_efectivas"]);      hef_b  = b(k["horas_efectivas"])
     tron_r = _sum_resolve(r_snap, tron_keys, field)
     tron_b = _sum_resolve(b_snap, tron_keys, field)
@@ -376,6 +417,8 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
     con_energ_r = r(k["consumo_energia"]);     con_energ_b = b(k["consumo_energia"])
     con_comb_r  = r(k["consumo_combustible"]); con_comb_b  = b(k["consumo_combustible"])
     con_expl_r  = r(k["consumo_explosivos"]);  con_expl_b  = b(k["consumo_explosivos"])
+    tar_acido_r = r(k.get("tarifa_acido", "")); tar_acido_b = b(k.get("tarifa_acido", ""))
+    con_acido_r = r(k.get("consumo_acido", "")); con_acido_b = b(k.get("consumo_acido", ""))
 
     rend_bolas_r = _m(_safe_div(con_bolas_r, proc_r), 1000.0)
     rend_bolas_b = _m(_safe_div(con_bolas_b, proc_b), 1000.0)
@@ -385,10 +428,17 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
     rend_comb_b  = _safe_div(con_comb_b,  hef_b)
     rend_expl_r  = _m(_safe_div(con_expl_r, tron_r), 1000.0)
     rend_expl_b  = _m(_safe_div(con_expl_b, tron_b), 1000.0)
+    # ácido: con en t, denominador en kt → ratio t/kt = kg/t (sin ×1000)
+    apil_r = r(k.get("apilamiento", ""))
+    apil_b = b(k.get("apilamiento", ""))
+    _acido_den_r = apil_r if apil_r is not None else proc_r
+    _acido_den_b = apil_b if apil_b is not None else proc_b
+    rend_acido_r = _safe_div(con_acido_r, _acido_den_r)
+    rend_acido_b = _safe_div(con_acido_b, _acido_den_b)
 
     # Delta Gasto (Precio)
     dg_bolas = _m(_n(tar_bolas_r, tar_bolas_b), con_bolas_r, 1/1000) if con_bolas_r else None
-    dg_acido = None
+    dg_acido = _m(_n(tar_acido_r, tar_acido_b), con_acido_r, 1/1000) if con_acido_r else None
     dg_energ = _m(_n(tar_energ_r, tar_energ_b), con_energ_r, 1/1000) if con_energ_r else None
     dg_comb  = _m(_n(tar_comb_r,  tar_comb_b),  con_comb_r)          if con_comb_r  else None
     dg_expl  = _m(_n(tar_expl_r,  tar_expl_b),  con_expl_r, 1/1000)  if con_expl_r  else None
@@ -397,7 +447,7 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
 
     # Delta Rendimiento
     dr_bolas   = _m(_n(rend_bolas_r, rend_bolas_b), proc_r,  1000.0, tar_bolas_b, 1/1e9) if proc_r else None
-    dr_acido   = None
+    dr_acido   = _m(_n(rend_acido_r, rend_acido_b), _acido_den_r, tar_acido_b, 1/1000) if _acido_den_r else None
     dr_energ_c = _m(_n(rend_energ_r, rend_energ_b), proc_r,  1000.0, tar_energ_b, 1/1e6) if proc_r else None
     dr_energ_h = None
     dr_comb    = _m(_n(rend_comb_r,  rend_comb_b),  hef_r,           tar_comb_b)          if hef_r  else None
@@ -405,18 +455,24 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
     vals_dr    = [dr_bolas, dr_acido, dr_energ_c, dr_energ_h, dr_comb, dr_expl]
     dr_total   = sum(_s(x) for x in vals_dr if x is not None) or None
 
-    # Delta Actividad
+    # Delta Actividad — concentradora (None si no hay datos de concentradora)
     dp = _n(proc_r, proc_b); dl = _n(ley_r, ley_b); dr = _n(rec_r, rec_b)
-    da_trat_c = _delta_act_trat(dp, dl, dr, ley_b, rec_b)
-    da_trat_h = None
-    da_rec_c  = _delta_act_rec(dp, dl, dr, proc_b, ley_b)
-    da_rec_h  = None
+    if ley_b is None and rec_b is None:
+        da_trat_c = None
+        da_rec_c  = None
+    else:
+        da_trat_c = _delta_act_trat(dp, dl, dr, ley_b, rec_b)
+        da_rec_c  = _delta_act_rec(dp, dl, dr, proc_b, ley_b)
+    # Delta Actividad — hidro (SX-EW)
+    dph = _n(ben_r, ben_b); dlh = _n(lh_r, lh_b); drh = _n(rh_r, rh_b)
+    da_trat_h = _delta_act_trat(dph, dlh, drh, lh_b, rh_b)
+    da_rec_h  = _delta_act_rec(dph, dlh, drh, ben_b, lh_b)
     vals_da   = [da_trat_c, da_trat_h, da_rec_c, da_rec_h]
     da_total  = sum(_s(x) for x in vals_da if x is not None) or None
 
     # Efecto Ley
     el_conc  = _efecto_ley(dp, dl, dr, proc_b, rec_b)
-    el_hidro = None
+    el_hidro = _efecto_ley(dph, dlh, drh, ben_b, rh_b)
     vals_el  = [el_conc, el_hidro]
     el_total = sum(_s(x) for x in vals_el if x is not None) or None
 
@@ -498,14 +554,40 @@ def _sum_or_none(vals: list) -> float | None:
     return round(total, 4) if has else None
 
 
-def _compute_dm_item(r_snap: dict, b_snap: dict, field: str, item: dict) -> float | None:
-    kpis = item.get("kpis", [])
-    if not kpis:
-        return None
-    rv = _sum_resolve(r_snap, kpis, field)
-    bv = _sum_resolve(b_snap, kpis, field)
-    v  = _n(rv, bv)
-    return round(v, 4) if v is not None else None
+def _compute_dm_item(r_snap: dict, b_snap: dict, field: str, item: dict,
+                     p: dict | None = None, company: str = "") -> float | None:
+    t = item.get("type", "delta")
+    cost_kpis = (item.get("cost_kpis_per_company") or {}).get(company) \
+                or item.get("cost_kpis") or item.get("kpis", [])
+
+    if t == "delta":
+        if not cost_kpis:
+            return None
+        rv = _sum_resolve(r_snap, cost_kpis, field)
+        bv = _sum_resolve(b_snap, cost_kpis, field)
+        v  = _n(rv, bv)
+        return round(v, 4) if v is not None else None
+
+    if t in ("efecto_p", "efecto_q"):
+        vol_kpis = item.get("vol_kpis") or (p or {}).get("desarrollo_mina", [])
+        if not cost_kpis or not vol_kpis:
+            return None
+        cost_r = _sum_resolve(r_snap, cost_kpis, field)
+        cost_b = _sum_resolve(b_snap, cost_kpis, field)
+        vol_r  = _sum_resolve(r_snap, vol_kpis,  field)
+        vol_b  = _sum_resolve(b_snap, vol_kpis,  field)
+        if None in (cost_r, cost_b, vol_r, vol_b) or vol_b == 0:
+            return None
+        cu_b = cost_b / vol_b
+        if t == "efecto_p":
+            if vol_r == 0:
+                return None
+            v = (cost_r / vol_r - cu_b) * vol_r
+        else:
+            v = (vol_r - vol_b) * cu_b
+        return round(v, 4)
+
+    return None
 
 
 def _compute_actividad_contexto(
@@ -528,6 +610,12 @@ def _compute_actividad_contexto(
     cu_conc  = ac.get("costo_unitario_conc")
     cu_hidro = ac.get("costo_unitario_hidro")
 
+    k = p.get("kpi_keys", {})
+    ben_key = k.get("beneficio_hidro", "")
+    ben_r   = _resolve(r_snap, ben_key, field) if ben_key else None
+    ben_b   = _resolve(b_snap, ben_key, field) if ben_key else None
+    delta_ben = _n(ben_r, ben_b)
+
     def _act(delta, cu):
         if delta is None or cu is None or tc_factor is None:
             return None
@@ -538,7 +626,7 @@ def _compute_actividad_contexto(
         "mov_mina":       fmt(delta_mov),
         "actividad_mina": fmt(_act(delta_mov,  cu_mina)),
         "actividad_conc": fmt(_act(delta_proc, cu_conc)),
-        "actividad_hidro": None,
+        "actividad_hidro": fmt(_act(delta_ben, cu_hidro)),
     }
 
 
@@ -859,7 +947,7 @@ def get_calculos(
         _d = _compute_deltas(rs, bs, field, p)
         col_deltas.append(_d)
         col_dev.append(_compute_simple_delta(rs, bs, field, p["desarrollo_mina"]))
-        col_dev_items.append({it["key"]: _compute_dm_item(rs, bs, field, it) for it in dm_items})
+        col_dev_items.append({it["key"]: _compute_dm_item(rs, bs, field, it, p, company) for it in dm_items})
         col_varinv.append(_d.get("varinv_residual"))
         col_act_ctx.append(_compute_actividad_contexto(rs, bs, field, p, _tc_factor(yr, mo)))
 
