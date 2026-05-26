@@ -11,7 +11,7 @@ from .calculos import (
     _fetch_snapshot, _resolve, _sum_resolve,
     _safe_div, _n, _m, _compute_deltas, _compute_actividad_contexto,
 )
-from .costos_ajustados import get_costos_ajustados
+from .costos_ajustados import get_costos_ajustados, get_costos_ajustados_monthly
 
 router = APIRouter(prefix="/api/explicaciones", tags=["explicaciones"])
 
@@ -49,6 +49,43 @@ def get_explicaciones(company: str, año: int, mes: int):
         "mes": (_ca_onsite.get("mes") or {}).get("ppto"),
         "ytd": (_ca_onsite.get("ytd") or {}).get("ppto"),
     }
+
+    # Monetary effects from monthly costos_ajustados (month-by-month, matches Excel)
+    _cam_ef: dict[str, dict] = {"mes": {}, "ytd": {}}
+    try:
+        _cam = get_costos_ajustados_monthly(company=company, año=año, mes_cierre=mes)
+        all_grupos    = (_cam or {}).get("grupos") or []
+        onsite_grupos = [g for g in all_grupos if not g.get("exclude_from_onsite")]
+        def _sg(field, grupos=None):
+            t = None
+            for g in (grupos if grupos is not None else all_grupos):
+                v = (g.get("total") or {}).get(field)
+                if v is not None:
+                    t = (t or 0.0) + v
+            return t
+        def _total_onsite_kus(suffix, grupos):
+            tc  = _sg(f"ef_tc_{suffix}",  grupos) or 0.0
+            ipc = _sg(f"ef_ipc_{suffix}", grupos) or 0.0
+            cpi = _sg(f"ef_cpi_{suffix}", grupos) or 0.0
+            return tc + ipc + cpi
+        _cam_ef = {
+            # TC: todos los grupos (incl. vi/dev/ifrs16) — igual que Excel AM20
+            # total_onsite: suma (tc+ipc+cpi) solo onsite — numerador de O22 en Excel
+            "mes": {
+                "tc":            _sg("ef_tc_mes"),
+                "ipc":           _sg("ef_ipc_mes",  onsite_grupos),
+                "cpi":           _sg("ef_cpi_mes",  onsite_grupos),
+                "total_onsite":  _total_onsite_kus("mes",  onsite_grupos),
+            },
+            "ytd": {
+                "tc":            _sg("ef_tc_acum"),
+                "ipc":           _sg("ef_ipc_acum", onsite_grupos),
+                "cpi":           _sg("ef_cpi_acum", onsite_grupos),
+                "total_onsite":  _total_onsite_kus("acum", onsite_grupos),
+            },
+        }
+    except Exception:
+        pass
 
     def _avg_fin(key: str):
         vals = [
@@ -245,9 +282,19 @@ def get_explicaciones(company: str, año: int, mes: int):
                 return None
             return base * frac * (float(ratio_num) / float(ratio_den) - 1.0)
 
-        ef_tc  = f(_aj_efecto(gasto_b, exp_tc_frac,        tc_b_val,  tc_r_val))
-        ef_ipc = f(_aj_efecto(gasto_b, exp_tc_frac,        ipc_r_val, ipc_b_val))
-        ef_cpi = f(_aj_efecto(gasto_b, 1.0 - exp_tc_frac, cpi_r_val, cpi_b_val))
+        _mef = _cam_ef.get(panel, {})
+        ef_tc  = _mef.get("tc")  if _mef.get("tc")  is not None else f(_aj_efecto(gasto_b, exp_tc_frac,        tc_b_val,  tc_r_val))
+        ef_ipc = _mef.get("ipc") if _mef.get("ipc") is not None else f(_aj_efecto(gasto_b, exp_tc_frac,        ipc_r_val, ipc_b_val))
+        ef_cpi = _mef.get("cpi") if _mef.get("cpi") is not None else f(_aj_efecto(gasto_b, 1.0 - exp_tc_frac, cpi_r_val, cpi_b_val))
+        # IPC/CPI = O22 − TC (Excel mixed-denominator formula):
+        #   O22 uses budget production as denominator, TC uses real production.
+        #   ef_ipc_cpi_kus × (1/cu_r) = total_onsite_kus × (1/cu_b) − ef_tc_kus × (1/cu_r)
+        #   → ef_ipc_cpi_kus = total_onsite_kus × (cu_r/cu_b) − ef_tc_kus
+        _total_onsite = _mef.get("total_onsite")
+        if _total_onsite is not None and ef_tc is not None and cu_r and cu_b and cu_b != 0:
+            ef_ipc_cpi = f(_total_onsite * cu_r / cu_b - ef_tc)
+        else:
+            ef_ipc_cpi = f((ef_ipc or 0.0) + (ef_cpi or 0.0)) if (ef_ipc is not None or ef_cpi is not None) else None
 
         # Real operational cost (for eficiencia/desfases residual)
         gasto_r_key = k.get("gasto_operacional_real", "")
@@ -301,8 +348,8 @@ def get_explicaciones(company: str, año: int, mes: int):
             "cu_prod_budget": f(cu_b),
             "ajuste_monetario": [
                 {"label": "TC (Dólar)", "unit": "CLP/USD", "real": f(tc_r_val),  "ppto": f(tc_b_val),  "efecto_kus": ef_tc},
-                {"label": "IPC",        "unit": "Índice",  "real": f(ipc_r_val), "ppto": f(ipc_b_val), "efecto_kus": f(ef_ipc)},
-                {"label": "CPI",        "unit": "Índice",  "real": f(cpi_r_val), "ppto": f(cpi_b_val), "efecto_kus": f(ef_cpi)},
+                {"label": "IPC / CPI",  "unit": "Índice",  "real": f(ipc_r_val), "ppto": f(ipc_b_val), "efecto_kus": ef_ipc_cpi},
+                {"label": "CPI",        "unit": "Índice",  "real": f(cpi_r_val), "ppto": f(cpi_b_val), "efecto_kus": None},
             ],
             "precio_insumos": [
                 {"label": "Energía",     "unit": "US$/MWh", "real": f(rv(k["tarifa_energia"])),     "ppto": f(bv(k["tarifa_energia"])),     "efecto_kus": f(dg["energia"])},

@@ -705,5 +705,11 @@
     "Costos Ajustados||Ajustes Financieros||Ingresos y Gastos Financieros": "Items Relevantes||Ingresos y Gastos Financieros",
     "Costos Ajustados||Ajustes Financieros||Ingresos No Operacionales": "Items Relevantes||Ingresos No Operacionales",
     "Costos Ajustados||Ajustes Financieros||Otros egresos operacionales": "Items Relevantes||Otros egresos operacionales"
+  },
+  "_formula_vars": {
+    "CEN": {
+      "consumo_bolas": "Rendimientos||Bolas",
+      "consumo_combustible": "Consumos||Combustible Transporte"
+    }
   }
 }

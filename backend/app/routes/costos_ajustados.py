@@ -544,8 +544,9 @@ def get_costos_ajustados(company: str, año: int, mes: int):
         else:
             grp_mes = _sum_periods(sub_mes)
             grp_ytd = _sum_periods(sub_ytd)
-        onsite_mes_list.append(grp_mes)
-        onsite_ytd_list.append(grp_ytd)
+        if not grp.get("exclude_from_onsite"):
+            onsite_mes_list.append(grp_mes)
+            onsite_ytd_list.append(grp_ytd)
 
         result_grupos.append({
             "key": grp["key"], "label": grp["label"],
@@ -663,8 +664,10 @@ def get_costos_ajustados_monthly(company: str, año: int, mes_cierre: int):
                 sub_rows.append(d)
         grp_direct = _monthly(grp["key"], 1.0, label=grp.get("label"))
         grp_total = grp_direct if grp_direct.get("mapped") else _sum_monthly_rows(sub_rows)
-        onsite_rows.append(grp_total)
+        if not grp.get("exclude_from_onsite"):
+            onsite_rows.append(grp_total)
         result_grupos.append({"key": grp["key"], "label": grp["label"],
+                               "exclude_from_onsite": grp.get("exclude_from_onsite", False),
                                "subareas": result_sub, "total": grp_total})
 
     result_sum: list = []

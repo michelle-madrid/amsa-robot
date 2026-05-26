@@ -157,18 +157,36 @@ def _apply_formula_var_mappings(kpi_keys: dict, company: str) -> dict:
     company_map = all_maps.get(company, {})
     result = dict(kpi_keys)
 
-    def _assign(var_key, raw):
+    def _resolve_raw(raw):
+        """Collapse a raw kpi_mappings value to something _resolve can handle (no _f nesting)."""
         if not raw or raw == "__NA__":
-            return
-        if isinstance(raw, str):
-            result[var_key] = raw
-        elif isinstance(raw, list):
-            non_empty = [x for x in raw if x and x != "__NA__"]
-            if non_empty:
-                result[var_key] = non_empty if len(non_empty) > 1 else non_empty[0]
-        elif isinstance(raw, dict) and (raw.get("_s") or raw.get("_rb")):
-            # Scalar or real/budget-split mapping — pass through so _resolve can handle it
-            result[var_key] = raw
+            return None
+        if isinstance(raw, (str, list)):
+            return raw
+        if isinstance(raw, dict):
+            if raw.get("_s") or raw.get("_rb"):
+                return raw
+            if raw.get("_f"):
+                # Pre-resolve operands so _resolve can evaluate the formula later
+                raw_a = company_map.get(raw.get("a", ""))
+                raw_b = company_map.get(raw.get("b", ""))
+                res_a = _resolve_raw(raw_a)
+                res_b = _resolve_raw(raw_b)
+                if res_a is not None and res_b is not None:
+                    return {
+                        "_f_resolved": True,
+                        "a": res_a,
+                        "op": raw.get("op", "/"),
+                        "b": res_b,
+                        "scale": raw.get("scale"),
+                        "scale_op": raw.get("scale_op", "*"),
+                    }
+        return None
+
+    def _assign(var_key, raw):
+        resolved = _resolve_raw(raw)
+        if resolved is not None:
+            result[var_key] = resolved
 
     # 1. Static auto-resolution via _FORMULA_VAR_TO_LK (listas = fallbacks en orden)
     for var_key, lk_or_list in _FORMULA_VAR_TO_LK.items():
@@ -268,9 +286,28 @@ def _resolve(snapshot: dict, src, field: str):
     # Handle list: sum all resolved values
     if isinstance(src, list):
         return _sum_resolve(snapshot, src, field)
-    # Handle _s (scalar) or _rb (real/budget split) dict format from kpi_mappings
+    # Handle dict variants from kpi_mappings
     scalar_op, scalar_val = None, None
     if isinstance(src, dict):
+        if src.get("_f_resolved"):
+            a_val = _resolve(snapshot, src["a"], field)
+            b_val = _resolve(snapshot, src["b"], field)
+            if a_val is None or b_val is None:
+                return None
+            op = src.get("op", "/")
+            if op == "/" and b_val == 0:
+                return None
+            val = {"+": a_val + b_val, "-": a_val - b_val,
+                   "*": a_val * b_val, "/": a_val / b_val}.get(op)
+            if val is None:
+                return None
+            scale = src.get("scale")
+            if scale is not None:
+                sc = float(scale)
+                s_op = src.get("scale_op", "*")
+                val = {"+": val + sc, "-": val - sc, "*": val * sc,
+                       "/": val / sc if sc != 0 else None}.get(s_op, val)
+            return val
         if src.get("_s"):
             scalar_op  = src.get("op", "*")
             scalar_val = src.get("scalar")
