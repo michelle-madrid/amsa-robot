@@ -183,7 +183,7 @@
     "Variables Mineras||Movimiento mina total": "Movimiento Total||Movimiento Total",
     "Variables Mineras||Movimiento mina sulfuros": "__NA__",
     "Variables Mineras||Movimiento mina óxidos": "__NA__",
-    "Variables Mineras||Desarrollo mina total": "",
+    "Variables Mineras||Desarrollo mina total": "- Costos Unitario: Falta definir que procesos estarán involucrados, y si será sólo el costo Directo o el costo Total Mina.||Esteril a Activar",
     "Variables Mineras||Desarrollo mina sulfuros": "__NA__",
     "Variables Mineras||Remanejo total": "Remanejo||Remanejo",
     "Variables Mineras||Remanejo sulfuros": "__NA__",
@@ -193,13 +193,21 @@
     "Variables Mineras||Beneficio": "Horas del mes||Mineral Beneficiado",
     "Variables Mineras||Apilado": "Horas del mes||Mineral Apilado",
     "Variables Mineras||Ley sulfuros": "Mineral Procesado||Ley de Cu",
-    "Variables Mineras||Ley oxidos": "Mineral Beneficiado||Ley de CuT",
-    "Variables Mineras||Ley hidro": "Mineral Beneficiado||Ley de CuT",
+    "Variables Mineras||Ley oxidos": {
+      "_s": true,
+      "src": "Mineral Beneficiado||Ley de CuT",
+      "op": "*",
+      "scalar": 100
+    },
     "Variables Mineras||Recuperación sulfuros": "Mineral Procesado||Recuperación de cobre",
-    "Variables Mineras||Recuperación óxidos": "Mineral Beneficiado||Recuperación Contable",
-    "Variables Mineras||Recuperación hidro": "Mineral Beneficiado||Recuperación Contable",
+    "Variables Mineras||Recuperación óxidos": {
+      "_s": true,
+      "src": "Mineral Beneficiado||Recuperación Contable",
+      "op": "*",
+      "scalar": 100
+    },
     "Variables Mineras||CuFino": "Cu fino pagable filtrado||Cu fino pagable filtrado",
-    "Variables Mineras||Cátodos": "Horas del mes||Producción Cu Fino, Cátodos",
+    "Variables Mineras||Cátodos": "Administración||Ox Producción Cu fino, Catodos",
     "Variables Mineras||Horas efectivas transporte": [
       "Flota CAT 797F||Horas Efectivas",
       "Flota CAT 797B||Horas Efectivas",
@@ -253,7 +261,9 @@
     "Gasto||Energía": "Items Relevantes||Energía",
     "Gasto||Combustible": "Items Relevantes||Combustible y lubricantes",
     "Gasto||Explosivos": "Items Relevantes||Explosivos y accesorios",
-    "Subproductos||Ventas Subproductos||Moly": "",
+    "Subproductos||Ventas Subproductos||Moly": "Molibdeno||Ingresos por Ventas",
+    "Subproductos||Ventas Subproductos||Oro": "Oro||Ingresos por Ventas",
+    "Subproductos||Ventas Subproductos||Plata": "Plata||Ingresos por Ventas",
     "Subproductos||Ingresos Subproductos||Moly": "",
     "Subproductos||Precio Realizado Subproductos al costo||Moly": "",
     "Subproductos||Cantidades Producidas||Moly": {
@@ -296,7 +306,10 @@
       "Planta Concentradora||Prechancado / Chancado 2° / 3°",
       "Planta Concentradora||Alimentación Mineral"
     ],
-    "Costos Ajustados||Planta Concentradora||Molienda": ["Planta Concentradora||Molienda", "Planta Concentradora||Circuito Pebbles"],
+    "Costos Ajustados||Planta Concentradora||Molienda": [
+      "Planta Concentradora||Molienda",
+      "Planta Concentradora||Circuito Pebbles"
+    ],
     "Costos Ajustados||Planta Concentradora||Flotación": "Planta Concentradora||Flotación",
     "Costos Ajustados||Planta Concentradora||Sistemas Auxiliares": "Planta Concentradora||Sistemas Auxiliares",
     "Costos Ajustados||Planta Concentradora||Planta Molibdeno": "Planta Concentradora||Planta Molibdeno",
@@ -309,27 +322,35 @@
     "Costos Ajustados||Puerto||Muelle": "Puerto||Muelle",
     "Costos Ajustados||Puerto||Mantenimiento": "Puerto||Mantenimiento Puerto",
     "Costos Ajustados||Puerto||Servicios de Apoyo": "Puerto||Servicios de Apoyo Puerto",
-    "Costos Ajustados||pto_serv": "Puerto||Servicios de Apoyo Puerto",
     "Costos Ajustados||Puerto||Admin.": "Puerto||Administración Puerto",
     "Costos Ajustados||Planta SX-EW||Chancado SX-EW": [
-      "Planta Cátodos||Alimentación Mineral",
-      "Planta Cátodos||Chancado Secundario Terciario"
+      "Área Seca - Planta 1||Alimentación Mineral",
+      "Área Seca - Planta 1||Chancado Secundario Terciario",
+      "Área Seca - Planta 2||Chancado Secundario Terciario",
+      "Área Seca - Planta 2||Alimentación Mineral"
     ],
     "Costos Ajustados||Planta SX-EW||Aglomeración / Apilamiento": [
-      "Planta Cátodos||Aglomeración",
-      "Planta Cátodos||Apilamiento",
-      "Planta Cátodos||Descarga de Ripios"
+      "Área Seca - Planta 1||Aglomeración",
+      "Área Seca - Planta 1||Apilamiento",
+      "Área Seca - Planta 1||Descarga de Ripios",
+      "Área Seca - Planta 2||Aglomeración",
+      "Área Seca - Planta 2||Apilamiento",
+      "Área Seca - Planta 2||Descarga de Ripios"
     ],
     "Costos Ajustados||Planta SX-EW||Lixiviación": [
-      "Planta Cátodos||Lixiviación",
-      "Planta Cátodos||Lixiviación Ripios"
+      "Área Seca - Planta 1||Lixiviación",
+      "Área Seca - Planta 1||Lixiviación Ripios",
+      "Área Seca - Planta 2||Lixiviación",
+      "Área Seca - Planta 2||Lixiviación Ripios"
     ],
-    "Costos Ajustados||Planta SX-EW||ROM / SL": "Planta Cátodos||Lixiviación ROM",
+    "Costos Ajustados||Planta SX-EW||ROM / SL": [
+      "Área Seca - Planta 1||Lixiviación ROM",
+      "Área Seca - Planta 2||Lixiviación ROM"
+    ],
     "Costos Ajustados||Planta SX-EW||SX-EW": [
-      "Planta Cátodos||Electro Obtención",
-      "Planta Cátodos||Extracción por Solventes"
+      "Área Húmeda||Electro Obtención",
+      "Área Húmeda||Extracción por Solventes"
     ],
-    "Costos Ajustados||Planta SX-EW||Admin.": "Planta Cátodos||Administración Planta",
     "Costos Ajustados||Planta SX-EW||Otros costos planta SX-EW": [
       "Planta Cátodos||Servicios de Apoyo Planta Cátodos",
       "Planta Cátodos||Sistemas Auxiliares"
@@ -371,11 +392,9 @@
     "Variables Mineras||Beneficio": "Mineral Beneficiado||Mineral Beneficiado",
     "Variables Mineras||Apilado": "Mineral Apilado||Mineral Apilado",
     "Variables Mineras||Ley sulfuros": "__NA__",
-    "Variables Mineras||Ley oxidos": "__NA__",
-    "Variables Mineras||Ley hidro": "Mineral Beneficiado||Ley de CuT",
+    "Variables Mineras||Ley oxidos": "Mineral Beneficiado||Ley de CuT",
     "Variables Mineras||Recuperación sulfuros": "__NA__",
-    "Variables Mineras||Recuperación óxidos": "__NA__",
-    "Variables Mineras||Recuperación hidro": "Mineral Beneficiado||Recuperación Metalúrgica",
+    "Variables Mineras||Recuperación óxidos": "Mineral Beneficiado||Recuperación Metalúrgica",
     "Variables Mineras||ROM Dinámico /Ripos": "Mineral ROM Dinámico||Mineral ROM Dinámico",
     "Variables Mineras||Cátodos": "Producción Cu Fino, Cátodos||Producción Cu Fino, Cátodos",
     "Variables Mineras||Horas operativas transporte": [
@@ -532,16 +551,19 @@
     ],
     "Variables Mineras||Apilado": "Mineral Apilado (HL total)||Mineral Apilado (HL total)",
     "Variables Mineras||Ley sulfuros": "__NA__",
-    "Variables Mineras||Ley oxidos": "__NA__",
-    "Variables Mineras||Ley hidro": "Mineral Beneficiado HL||Ley de CuT",
+    "Variables Mineras||Ley oxidos": "Mineral Beneficiado HL||Ley de CuT",
     "Variables Mineras||Recuperación sulfuros": "__NA__",
-    "Variables Mineras||Recuperación óxidos": "__NA__",
-    "Variables Mineras||Recuperación hidro": "Mineral Beneficiado HL||Recuperación Metalúrgica del mes",
+    "Variables Mineras||Recuperación óxidos": {
+      "_s": true,
+      "src": "Mineral Beneficiado HL||Recuperación Metalúrgica del mes",
+      "op": "*",
+      "scalar": 100
+    },
     "Variables Mineras||ROM Dinámico /Ripos": {
       "_pf": true,
       "num": "Producción Cu Fino, Cátodos||Producción Cátodos ROM (DL)",
       "den": "Producción Cu Fino, Cátodos||Producción Cátodos Ripios - (RAL)",
-      "op": "/",
+      "op": "+",
       "scale": null
     },
     "Variables Mineras||Cátodos": "Producción Cu Fino, Cátodos||Producción Cu Fino, Cátodos",

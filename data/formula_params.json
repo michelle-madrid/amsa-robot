@@ -75,80 +75,11 @@
     "Fase 11||Esteril a Activar",
     "Fase 12E||Esteril a Activar"
   ],
-  "desarrollo_mina_items": [
-    {
-      "key": "ifric20",
-      "label": "IFRIC20",
-      "type": "delta",
-      "kpis": [],
-      "cost_kpis_per_company": {
-        "MLP": [
-          "Administración||Desarrollo"
-        ],
-        "CEN": [
-          "Items Relevantes||Desarrollo Mina"
-        ],
-        "ANT": [
-          "Items Relevantes||Desarrollo Mina"
-        ],
-        "CMZ": [
-          "Costos C1 por Procesos||Desarrollo Mina"
-        ]
-      }
-    },
-    {
-      "key": "efecto_p",
-      "label": "Efecto P",
-      "type": "efecto_p",
-      "kpis": [],
-      "cost_kpis_per_company": {
-        "MLP": [
-          "Administración||Desarrollo"
-        ],
-        "CEN": [
-          "Items Relevantes||Desarrollo Mina"
-        ],
-        "ANT": [
-          "Items Relevantes||Desarrollo Mina"
-        ],
-        "CMZ": [
-          "Costos C1 por Procesos||Desarrollo Mina"
-        ]
-      }
-    },
-    {
-      "key": "efecto_q",
-      "label": "Efecto Q",
-      "type": "efecto_q",
-      "kpis": [],
-      "cost_kpis_per_company": {
-        "MLP": [
-          "Administración||Desarrollo"
-        ],
-        "CEN": [
-          "Items Relevantes||Desarrollo Mina"
-        ],
-        "ANT": [
-          "Items Relevantes||Desarrollo Mina"
-        ],
-        "CMZ": [
-          "Costos C1 por Procesos||Desarrollo Mina"
-        ]
-      }
-    }
-  ],
+  "desarrollo_mina_items": [],
   "variacion_inventario": [
     "Administración||Variación de Inventario"
   ],
-  "actividad_contexto": {
-    "mov_mina_kpis": [
-      "Movimiento Mina"
-    ],
-    "procesamiento_kpi": "Tratamiento",
-    "costo_unitario_mina": null,
-    "costo_unitario_conc": null,
-    "costo_unitario_hidro": null
-  },
+  "actividad_contexto": {},
   "subprod_precio_scale": 1.0,
   "kpi_scales_per_company": {
     "CEN": {

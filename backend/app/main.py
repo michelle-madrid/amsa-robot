@@ -14,7 +14,9 @@ from .routes.costos_ajustados import router as ca_router
 from .routes.export import router as export_router
 from .routes.flash import router as flash_router
 
-FRONTEND_INDEX = Path(__file__).resolve().parents[2] / "frontend" / "index.html"
+FRONTEND_DIR   = Path(__file__).resolve().parents[2] / "frontend"
+FRONTEND_INDEX = FRONTEND_DIR / "index.html"
+LOGO_AMSA      = FRONTEND_DIR / "logo-amsa - v2.png"
 
 app = FastAPI(
     title="Robot 2026 - API de Automatización",
@@ -43,6 +45,11 @@ app.include_router(flash_router)
 @app.get("/health")
 def health():
     return {"status": "ok", "app": "Robot 2026"}
+
+
+@app.get("/logo-amsa.png", include_in_schema=False)
+def serve_logo():
+    return FileResponse(LOGO_AMSA, media_type="image/png")
 
 
 @app.get("/{full_path:path}", include_in_schema=False)

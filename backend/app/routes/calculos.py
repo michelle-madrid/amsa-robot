@@ -224,6 +224,8 @@ def _load_params() -> dict:
             result["kpi_scales_per_company"] = saved["kpi_scales_per_company"]
         if "kpi_scales_mes_ytd_per_company" in saved:
             result["kpi_scales_mes_ytd_per_company"] = saved["kpi_scales_mes_ytd_per_company"]
+        if "visualizar_scales_per_company" in saved:
+            result["visualizar_scales_per_company"] = saved["visualizar_scales_per_company"]
         return result
     return DEFAULT_PARAMS
 
@@ -482,6 +484,27 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
     vals_dg  = [dg_bolas, dg_acido, dg_energ, dg_comb, dg_expl]
     dg_total = sum(_s(x) for x in vals_dg if x is not None) or None
 
+    # Descomposición del efecto Precio Insumos (kUS$):
+    #   efecto = (tarifa_real − tarifa_ppto) × consumo_real × escala
+    # escala lleva el resultado a kUS$ según las unidades de cada insumo.
+    def _dg_calc(tar_r, tar_b, con_r, escala, tar_unit, con_unit):
+        if con_r is None or tar_r is None or tar_b is None:
+            return None
+        return {
+            "metodo": "precio_insumo",
+            "tarifa_real": round(tar_r, 4), "tarifa_ppto": round(tar_b, 4),
+            "delta_tarifa": round(tar_r - tar_b, 4),
+            "consumo_real": round(con_r, 4),
+            "escala": escala, "tarifa_unit": tar_unit, "consumo_unit": con_unit,
+        }
+    dg_calc = {
+        "bolas":       _dg_calc(tar_bolas_r, tar_bolas_b, con_bolas_r, 1/1000, "US$/t",   "t"),
+        "acido":       _dg_calc(tar_acido_r, tar_acido_b, con_acido_r, 1/1000, "US$/t",   "t"),
+        "energia":     _dg_calc(tar_energ_r, tar_energ_b, con_energ_r, 1/1000, "US$/MWh", "MWh"),
+        "combustible": _dg_calc(tar_comb_r,  tar_comb_b,  con_comb_r,  1.0,    "US$/lt",  "klt"),
+        "explosivos":  _dg_calc(tar_expl_r,  tar_expl_b,  con_expl_r,  1/1000, "US$/t",   "t"),
+    }
+
     # Delta Rendimiento
     dr_bolas   = _m(_n(rend_bolas_r, rend_bolas_b), proc_r,  1000.0, tar_bolas_b, 1/1e9) if proc_r else None
     dr_acido   = _m(_n(rend_acido_r, rend_acido_b), _acido_den_r, tar_acido_b, 1/1000) if _acido_den_r else None
@@ -491,6 +514,28 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
     dr_expl    = _m(_n(rend_expl_r,  rend_expl_b),  tron_r,          tar_expl_b,  1/1e6)  if tron_r else None
     vals_dr    = [dr_bolas, dr_acido, dr_energ_c, dr_energ_h, dr_comb, dr_expl]
     dr_total   = sum(_s(x) for x in vals_dr if x is not None) or None
+
+    # Descomposición del efecto Rendimiento (kUS$):
+    #   efecto = (rend_real − rend_ppto) × cantidad_base × tarifa_ppto × escala
+    # cantidad_base y escala dependen de las unidades del insumo.
+    def _dr_calc(rend_r, rend_b, base, base_lbl, base_unit, tar_b, tar_unit, escala, rend_unit):
+        if rend_r is None or rend_b is None or base is None or tar_b is None:
+            return None
+        return {
+            "metodo": "rendimiento",
+            "rend_real": round(rend_r, 6), "rend_ppto": round(rend_b, 6),
+            "delta_rend": round(rend_r - rend_b, 6), "rend_unit": rend_unit,
+            "base": round(base, 4), "base_lbl": base_lbl, "base_unit": base_unit,
+            "tarifa_ppto": round(tar_b, 4), "tarifa_unit": tar_unit,
+            "escala": escala,
+        }
+    dr_calc = {
+        "bolas":       _dr_calc(rend_bolas_r, rend_bolas_b, proc_r,       "tratamiento", "kt", tar_bolas_b, "US$/t", 1000.0/1e9, "g/t"),
+        "acido":       _dr_calc(rend_acido_r, rend_acido_b, _acido_den_r, "apilamiento", "kt", tar_acido_b, "US$/t", 1/1000,     "kg/t"),
+        "energia_conc":_dr_calc(rend_energ_r, rend_energ_b, proc_r,       "tratamiento", "kt", tar_energ_b, "US$/MWh", 1000.0/1e6,"MWh/kt"),
+        "combustible": _dr_calc(rend_comb_r,  rend_comb_b,  hef_r,        "horas efectivas", "hr", tar_comb_b, "US$/lt", 1.0,     "lt/hr"),
+        "explosivos":  _dr_calc(rend_expl_r,  rend_expl_b,  tron_r,       "tronadura",   "kt", tar_expl_b,  "US$/t", 1/1e6,      "g/t"),
+    }
 
     # Delta Actividad — concentradora (None si no hay datos de concentradora)
     dp = _n(proc_r, proc_b); dl = _n(ley_r, ley_b); dr = _n(rec_r, rec_b)
@@ -552,6 +597,8 @@ def _compute_deltas(r_snap: dict, b_snap: dict, field: str, p: dict) -> dict:
             "bolas": fmt(dg_bolas), "acido": fmt(dg_acido), "energia": fmt(dg_energ),
             "combustible": fmt(dg_comb), "explosivos": fmt(dg_expl), "total": fmt(dg_total),
         },
+        "delta_gasto_precio_calc": dg_calc,
+        "delta_rendimiento_calc": dr_calc,
         "delta_rendimiento": {
             "bolas": fmt(dr_bolas), "acido": fmt(dr_acido), "energia_conc": fmt(dr_energ_c),
             "energia_hidro": fmt(dr_energ_h), "combustible": fmt(dr_comb),
@@ -918,11 +965,22 @@ class FormulaParamsBody(BaseModel):
     variacion_inventario: list
     actividad_contexto: dict = {}
     subprod_precio_scale: float = 1.0
+    # Escalas de presentación por compañía (deben preservarse al guardar)
+    kpi_scales_per_company: dict = {}
+    kpi_scales_mes_ytd_per_company: dict = {}
+    visualizar_scales_per_company: dict = {}
 
 
 @router.put("/formula-params")
 def put_formula_params(body: FormulaParamsBody):
-    _save_params(body.model_dump())
+    # Conservar escalas existentes si el cliente no las envía (evita borrarlas)
+    incoming = body.model_dump()
+    existing = _load_params()
+    for k in ("kpi_scales_per_company", "kpi_scales_mes_ytd_per_company",
+              "visualizar_scales_per_company"):
+        if not incoming.get(k) and existing.get(k):
+            incoming[k] = existing[k]
+    _save_params(incoming)
     return {"ok": True}
 
 

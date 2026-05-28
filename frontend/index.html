@@ -35,65 +35,110 @@
     .app-layout { display:flex; height:100vh; overflow:hidden; }
     .sidebar {
       width:224px; flex-shrink:0;
-      background:white; border-right:1px solid var(--border);
-      box-shadow:2px 0 12px rgba(26,58,74,.06);
+      background:var(--navy); border-right:1px solid #12303c;
+      box-shadow:2px 0 12px rgba(26,58,74,.18);
       display:flex; flex-direction:column;
       height:100vh; overflow-y:auto; overflow-x:hidden; z-index:10;
+      transition:width .2s ease;
     }
     .sidebar-logo {
       padding:18px 18px 15px;
-      background:linear-gradient(145deg,var(--navy) 0%,#234d63 100%);
-      border-bottom:2px solid var(--teal); flex-shrink:0;
+      background:linear-gradient(145deg,#143442 0%,#1d4458 100%);
+      border-bottom:1px solid rgba(255,255,255,.07); flex-shrink:0;
+      display:flex; align-items:center; gap:11px;
     }
-    .sidebar-logo h1 { font-size:.91rem; font-weight:800; color:white; line-height:1.3; letter-spacing:-.01em; }
-    .sidebar-logo p  { font-size:.7rem; color:var(--teal-lt); margin-top:4px; opacity:.9; }
+    .sidebar-logo-icon {
+      width:38px; height:38px; flex-shrink:0; border-radius:8px;
+      background:white; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 1px 4px rgba(0,0,0,.2); padding:4px;
+    }
+    .sidebar-logo-text { min-width:0; }
+    .sidebar-logo h1 { font-size:.95rem; font-weight:800; color:white; line-height:1.2; letter-spacing:-.01em; }
+    .sidebar-logo p  { font-size:.68rem; color:var(--teal-lt); margin-top:2px; opacity:.9; }
     .sidebar-section { padding:12px 0 4px; }
-    .sidebar-section-label { padding:0 16px 6px; font-size:.64rem; font-weight:700; color:var(--teal); text-transform:uppercase; letter-spacing:.1em; }
+    .sidebar-section-label { padding:0 16px 6px; font-size:.64rem; font-weight:700; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.1em; }
     .sidebar-item {
       display:flex; align-items:center; gap:9px;
       padding:7px 14px; margin:1px 6px;
       border-radius:var(--radius-sm);
-      cursor:pointer; font-size:.835rem; font-weight:500; color:#4a6070;
+      cursor:pointer; font-size:.835rem; font-weight:500; color:rgba(255,255,255,.78);
       transition:background var(--transition),color var(--transition);
     }
-    .sidebar-item:hover { background:var(--teal-pale); color:var(--teal); }
+    .sidebar-item:hover { background:rgba(255,255,255,.08); color:white; }
     .sidebar-item:hover svg { opacity:1; }
     .sidebar-item.active {
-      background:linear-gradient(90deg,var(--teal-pale),#d2f0ed);
-      color:#0a5e51; font-weight:700;
-      box-shadow:inset 2px 0 0 var(--teal),var(--shadow-xs);
+      background:rgba(78,195,195,.16);
+      color:#fff; font-weight:700;
+      box-shadow:inset 3px 0 0 var(--teal-lt);
     }
-    .sidebar-item svg { flex-shrink:0; opacity:.5; transition:opacity var(--transition); }
+    .sidebar-item svg { flex-shrink:0; opacity:.6; transition:opacity var(--transition); }
     .sidebar-item.active svg { opacity:1; }
-    .sidebar-sep { border:none; border-top:1px solid var(--border); margin:6px 12px; }
-    .sidebar-bottom { margin-top:auto; padding:14px 10px; border-top:1px solid var(--border); }
-    .sidebar-export {
-      display:flex; align-items:center; gap:7px; width:100%;
-      padding:10px 14px;
-      background:linear-gradient(135deg,var(--teal),#1e8898);
-      color:white; border:none; border-radius:var(--radius-sm);
-      font-size:.84rem; font-weight:700; cursor:pointer;
-      text-decoration:none; justify-content:center;
-      box-shadow:var(--shadow-teal);
-      transition:opacity var(--transition),transform var(--transition),box-shadow var(--transition);
-    }
-    .sidebar-export:hover { opacity:.92; transform:translateY(-1px); box-shadow:0 4px 16px rgba(26,112,128,.3); }
+    .sidebar-sep { border:none; border-top:1px solid rgba(255,255,255,.08); margin:6px 12px; }
+    .sidebar-bottom { margin-top:auto; padding:14px 10px; border-top:1px solid rgba(255,255,255,.08); }
 
     /* ── Content area ── */
-    .content-area { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    .content-area { flex:1; display:flex; flex-direction:column; overflow:hidden; background:#f0f2f5; }
+    /* V2: header blanco tipo page-header */
     .content-header {
-      background:linear-gradient(135deg,#1A7080 0%,#2a8fa0 55%,#4EC3C3 100%);
-      color:white; padding:13px 24px 12px;
+      background:white; color:var(--navy);
+      padding:12px 24px 10px;
       display:flex; align-items:center; flex-direction:row;
       justify-content:space-between; flex-shrink:0;
-      border-bottom:1px solid rgba(255,255,255,.15);
-      box-shadow:0 2px 8px rgba(26,112,128,.18); gap:8px;
+      border-bottom:1px solid var(--border);
+      box-shadow:0 1px 3px rgba(0,0,0,.06); gap:12px;
     }
-    .content-header-info { display:flex; flex-direction:column; }
-    .content-header-title { font-size:.94rem; font-weight:700; line-height:1.3; letter-spacing:-.01em; }
-    .content-header-sub   { font-size:.7rem; color:rgba(255,255,255,.72); margin-top:2px; }
+    .content-header-info { display:flex; flex-direction:column; gap:1px; }
+    .content-header-breadcrumb { display:flex; align-items:center; gap:5px; font-size:.69rem; color:var(--text-muted); line-height:1; margin-bottom:4px; }
+    .content-header-breadcrumb span.sep { opacity:.45; }
+    .content-header-breadcrumb span.cur { color:var(--navy); font-weight:600; }
+    .content-header-title { font-size:1.12rem; font-weight:800; line-height:1.2; letter-spacing:-.02em; color:var(--navy); }
+    .content-header-sub   { font-size:.72rem; color:var(--text-muted); margin-top:2px; font-weight:500; }
+    /* Indicador última actualización */
+    .last-update-badge {
+      display:flex; align-items:center; gap:6px; font-size:.7rem;
+      color:#047857; background:#d1fae5; border:1px solid #a7f3d0;
+      border-radius:20px; padding:4px 12px; white-space:nowrap; flex-shrink:0;
+      font-weight:500;
+    }
+    .last-update-dot { width:7px; height:7px; border-radius:50%; background:#10b981; flex-shrink:0; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
+    /* Botones icono del header */
+    .hdr-icon-btn {
+      width:32px; height:32px; border-radius:6px; border:1px solid var(--border);
+      background:var(--gray-soft); cursor:pointer; display:flex; align-items:center;
+      justify-content:center; transition:background var(--transition); color:var(--text-muted);
+      flex-shrink:0;
+    }
+    .hdr-icon-btn:hover { background:var(--teal-pale); color:var(--teal); border-color:var(--teal-lt); }
+    /* Avatar */
+    .hdr-avatar {
+      width:32px; height:32px; border-radius:50%;
+      background:var(--navy); color:white; font-size:.72rem; font-weight:700;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+      letter-spacing:.02em;
+    }
+    /* Botón Exportar */
+    .hdr-export-btn {
+      display:flex; align-items:center; gap:6px; padding:7px 14px;
+      background:var(--navy); color:white; border:none; border-radius:6px;
+      font-size:.8rem; font-weight:700; cursor:pointer; text-decoration:none;
+      white-space:nowrap; flex-shrink:0; transition:background var(--transition);
+    }
+    .hdr-export-btn:hover { background:#234d63; }
     .topbar { background:white; border-bottom:1px solid var(--border); padding:0 20px; flex-shrink:0; box-shadow:var(--shadow-xs); }
     .main { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:16px; }
+
+    /* dark mode overrides for new header */
+    [data-dark] .content-header { background:#0c2f38; border-color:#163d47; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+    [data-dark] .content-header-title { color:#e8f1f1; }
+    [data-dark] .content-header-breadcrumb span.cur { color:#e8f1f1; }
+    [data-dark] .last-update-badge { background:#064e3b; border-color:#065f46; color:#6ee7b7; }
+    [data-dark] .last-update-dot { background:#10b981; }
+    [data-dark] .hdr-icon-btn { background:#0a2a32; border-color:#163d47; color:#9bb5b9; }
+    [data-dark] .hdr-icon-btn:hover { background:#0e4f5c; color:#5fc7d4; border-color:#1a6b78; }
+    [data-dark] .hdr-avatar { background:#1a6b78; }
+    [data-dark] .hdr-export-btn { background:#1a6b78; }
+    [data-dark] .hdr-export-btn:hover { background:#1e8898; }
+    [data-dark] .content-area { background:#06222a; }
 
     @media print { .sidebar { display:none !important; } }
 
@@ -163,8 +208,88 @@
     .li { color:#7a9db0; } .lok { color:#6ee7b7; } .lw { color:#fcd34d; } .ler { color:#fca5a5; }
 
     /* ── Misc ── */
-    @keyframes spin { to { transform:rotate(360deg); } }
+    @keyframes spin    { to { transform:rotate(360deg); } }
+    @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
     .spin { display:inline-block; width:13px; height:13px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:5px; }
+    .skeleton-line { background:linear-gradient(90deg,#e8ecef 0%,#f4f6f8 50%,#e8ecef 100%); background-size:400px 100%; animation:shimmer 1.3s linear infinite; border-radius:4px; }
+
+    /* ── Sidebar collapsed ── */
+    .sidebar.collapsed { width:64px; }
+    .sidebar.collapsed .sidebar-logo-text,
+    .sidebar.collapsed .sidebar-section-label,
+    .sidebar.collapsed .sidebar-item span { display:none; }
+    .sidebar.collapsed .sidebar-logo { padding:14px 12px; justify-content:center; }
+    .sidebar.collapsed .sidebar-item { justify-content:center; padding:9px 0; margin:2px 8px; }
+    .sidebar.collapsed .sidebar-item svg { opacity:.7; }
+    .sidebar.collapsed .sidebar-sep { margin:6px 8px; }
+    .sidebar.collapsed .sidebar-bottom { padding:10px 8px; }
+    .sidebar-collapse-btn {
+      width:100%; padding:7px; border:none; background:transparent; color:rgba(255,255,255,.5);
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      border-top:1px solid rgba(255,255,255,.08); transition:background var(--transition);
+    }
+    .sidebar-collapse-btn:hover { background:rgba(255,255,255,.08); color:white; }
+    .sidebar-collapse-btn svg { transition:transform .2s; }
+    .sidebar.collapsed .sidebar-collapse-btn svg { transform:rotate(180deg); }
+
+    /* ── Dark mode ── */
+    [data-dark] { color-scheme:dark; }
+    [data-dark] body { background:#06222a; color:#e8f1f1; }
+    [data-dark] { --teal:#5fc7d4; --teal-lt:#7fdce6; --teal-pale:#0e4f5c; --amber:#f5c842; --amber-pale:#1a2810;
+      --red:#ff8275; --navy:#c8dde0; --gray:#163d47; --gray-soft:#0a2a32;
+      --text-muted:#9bb5b9; --border:#163d47; --shadow-xs:0 1px 2px rgba(0,0,0,.3);
+      --shadow-sm:0 1px 4px rgba(0,0,0,.4); --shadow-md:0 4px 16px rgba(0,0,0,.4); }
+    [data-dark] .sidebar { background:#04181e; border-color:#163d47; }
+    [data-dark] .sidebar-logo { background:linear-gradient(145deg,#04181e,#062028); border-color:#1a6b78; }
+    [data-dark] .sidebar-item { color:#9bb5b9; }
+    [data-dark] .sidebar-item:hover { background:#0e4f5c; color:#5fc7d4; }
+    [data-dark] .sidebar-item.active { background:linear-gradient(90deg,#0e4f5c,#0a3d49); color:#fff; box-shadow:inset 2px 0 0 #5fc7d4; }
+    [data-dark] .sidebar-collapse-btn { border-color:#163d47; }
+    [data-dark] .sidebar-collapse-btn:hover { background:#0e4f5c; color:#5fc7d4; }
+    [data-dark] .content-area { background:#06222a; }
+    [data-dark] .content-header { background:linear-gradient(135deg,#0a3d49,#0e5260,#1a6b78); }
+    [data-dark] .topbar { background:#0c2f38; border-color:#163d47; }
+    [data-dark] .ctrl-bar-sticky { background:#0c2f38; border-color:#163d47; }
+    [data-dark] .card { background:#0c2f38; border-color:#163d47; }
+    [data-dark] .card-title { color:#5fc7d4; }
+    [data-dark] table { color:#e8f1f1; }
+    [data-dark] td { border-color:#163d47; }
+    [data-dark] tr:hover td { background:#0a2a32; }
+    [data-dark] tr:nth-child(even) td { background:#0a2932; }
+    [data-dark] tr:nth-child(even):hover td { background:#0c3240; }
+    [data-dark] .tbl-subhd { background:#0e4f5c; color:#c8dde0; border-color:#1a6b78; }
+    [data-dark] .tbl-tot, [data-dark] .tbl-tot-val { background:#0e4f5c; }
+    [data-dark] .form-group select { background:#0c2f38; border-color:#163d47; color:#e8f1f1; }
+    [data-dark] .btn-secondary { background:#0c2f38; color:#e8f1f1; border-color:#163d47; }
+    [data-dark] .btn-secondary:hover:not(:disabled) { background:#163d47; border-color:#1f5060; }
+    [data-dark] .seg-ctrl { background:#0a2a32; border-color:#163d47; }
+    [data-dark] .seg-btn { color:#9bb5b9; }
+    [data-dark] .seg-btn.active { background:#5fc7d4; color:#04181e; box-shadow:none; }
+    [data-dark] .seg-btn:hover:not(.active) { background:#163d47; color:#e8f1f1; }
+    [data-dark] .company-tab { background:#0c2f38; border-color:#163d47; color:#9bb5b9; }
+    [data-dark] .company-tab.active { background:#5fc7d4; border-color:#5fc7d4; color:#04181e; }
+    [data-dark] .chip { border-color:#163d47; color:#9bb5b9; }
+    [data-dark] .chip:hover { border-color:#1a6b78; color:#5fc7d4; background:#0e4f5c; }
+    [data-dark] .chip.on { background:#5fc7d4; border-color:#5fc7d4; color:#04181e; }
+    [data-dark] .map-input { background:#0c2f38; border-color:#163d47; color:#e8f1f1; }
+    [data-dark] .map-input.mapped { background:#0a2a1a; border-color:#10b981; }
+    [data-dark] .params-inp { background:#0c2f38; border-color:#163d47; color:#e8f1f1; }
+    [data-dark] .err { background:#3e1814; border-color:#ef4444; color:#fca5a5; }
+    [data-dark] .skeleton-line { background:linear-gradient(90deg,#163d47 0%,#0e4f5c 50%,#163d47 100%); background-size:400px 100%; }
+    [data-dark] select { background:#0c2f38; border-color:#163d47; color:#e8f1f1; }
+    [data-dark] input { background:#0c2f38; border-color:#163d47; color:#e8f1f1; }
+    [data-dark] .tbl-sec { background:#04181e; }
+    [data-dark] .tbl-amber { background:#4a2000; }
+    [data-dark] .tbl-kpi { background:inherit; }
+    [data-dark] .viz-mes1 { background:#0c3040; }
+    [data-dark] .viz-mes2 { background:#1a2810; }
+    .dark-toggle-btn {
+      width:34px; height:34px; border-radius:7px; border:1px solid rgba(255,255,255,.25);
+      background:rgba(255,255,255,.12); cursor:pointer; display:flex; align-items:center;
+      justify-content:center; transition:background var(--transition); flex-shrink:0;
+    }
+    .dark-toggle-btn:hover { background:rgba(255,255,255,.22); }
     .divider-lbl { font-size:.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:8px; }
 
     /* ── Company tabs ── */
@@ -210,6 +335,14 @@
     .params-inp:focus { border-color:var(--teal-lt); }
     .params-td { padding:5px 8px; text-align:center; border-bottom:1px solid #f0f3f5; }
 
+    /* ── Explicaciones rows ── */
+    .exp-row { background:white; transition:background .1s; }
+    .exp-row.alt { background:#f8fafb; }
+    .exp-row:hover { background:#f0f7f8; }
+    [data-dark] .exp-row { background:#0c2f38; color:#e8f1f1; }
+    [data-dark] .exp-row.alt { background:#0a2932; }
+    [data-dark] .exp-row:hover { background:#103b46; }
+
     /* ── Shared ── */
     .err  { color:var(--red); font-size:.87rem; margin-bottom:12px; background:#fef2f2; border:1px solid #fecaca; padding:8px 12px; border-radius:var(--radius-sm); }
     .hint { color:#b0bec5; font-size:.84rem; }
@@ -237,6 +370,39 @@ const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio',
                'Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const COMPANIES = ['MLP','CEN','ANT','CMZ'];
 const NOW = new Date();
+
+/* ─── Toast notifications ─── */
+let _toastSetFn = null;
+function useToastRoot() {
+  const [toasts, setToasts] = useState([]);
+  _toastSetFn = setToasts;
+  return toasts;
+}
+function showToast(msg, type='error') {
+  if (!_toastSetFn) return;
+  const id = Date.now();
+  _toastSetFn(prev => [...prev, {id, msg, type}]);
+  setTimeout(() => _toastSetFn(prev => prev.filter(t => t.id !== id)), 4000);
+}
+function ToastContainer() {
+  const toasts = useToastRoot();
+  if (!toasts.length) return null;
+  return (
+    <div style={{position:'fixed', bottom:'24px', right:'24px', zIndex:9999,
+      display:'flex', flexDirection:'column', gap:'8px', pointerEvents:'none'}}>
+      {toasts.map(t => (
+        <div key={t.id} style={{
+          padding:'11px 18px', borderRadius:'8px', maxWidth:'340px',
+          fontSize:'.875rem', fontWeight:600, boxShadow:'0 4px 20px rgba(0,0,0,.18)',
+          background: t.type==='error' ? '#fee2e2' : t.type==='ok' ? '#d1fae5' : '#fef3c7',
+          color:       t.type==='error' ? '#991b1b' : t.type==='ok' ? '#065f46' : '#92400e',
+          borderLeft: `4px solid ${t.type==='error'?'#ef4444':t.type==='ok'?'#10b981':'#f59e0b'}`,
+          animation: 'toastIn .2s ease',
+        }}>{t.msg}</div>
+      ))}
+    </div>
+  );
+}
 
 /* ─── API helpers ─── */
 async function apiGet(path) {
@@ -283,24 +449,27 @@ const IcoText    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="n
 const IcoGraph   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
 const IcoDownload= () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
 
+const IcoChevronLeft = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>;
+
 /* ─── Shared components ─── */
-function Sidebar({ tab, setTab, period }) {
-  function excelUrl() {
-    const enc = encodeURIComponent;
-    const { tipo1, a1ini, m1ini, a1fin, m1fin, tipo2, a2ini, m2ini, a2fin, m2fin } = period;
-    return `/api/export/excel?tipo1=${enc(tipo1)}&año1_ini=${a1ini}&mes1_ini=${m1ini}&año1_fin=${a1fin}&mes1_fin=${m1fin}`
-         + `&tipo2=${enc(tipo2)}&año2_ini=${a2ini}&mes2_ini=${m2ini}&año2_fin=${a2fin}&mes2_fin=${m2fin}`;
-  }
+function Sidebar({ tab, setTab, collapsed, onToggleCollapse }) {
   const item = (id, label, Icon) => (
-    <div className={`sidebar-item ${tab===id?'active':''}`} onClick={()=>setTab(id)}>
-      <Icon/>{label}
+    <div className={`sidebar-item ${tab===id?'active':''}`} onClick={()=>setTab(id)}
+         title={collapsed ? label : undefined}>
+      <Icon/>{!collapsed && <span>{label}</span>}
     </div>
   );
   return (
-    <nav className="sidebar">
+    <nav className={`sidebar ${collapsed?'collapsed':''}`} style={{transition:'width .2s ease'}}>
       <div className="sidebar-logo">
-        <h1>Robot Cierre de Mes</h1>
-        <p>Automatización de Reportes</p>
+        <div className="sidebar-logo-icon" aria-hidden="true">
+          <img src="/logo-amsa.png" alt="Antofagasta Minerals"
+            style={{width:'100%', height:'100%', objectFit:'contain'}}/>
+        </div>
+        <div className="sidebar-logo-text">
+          <h1>Cierre de Mes</h1>
+          <p>Antofagasta Minerals</p>
+        </div>
       </div>
 
       <div className="sidebar-section">
@@ -329,10 +498,10 @@ function Sidebar({ tab, setTab, period }) {
       </div>
 
       <div className="sidebar-bottom">
-        <a href={excelUrl()} className="sidebar-export"
-           title="Descargar reporte completo Excel (todas las compañías y secciones)">
-          <IcoDownload/> Exportar Reporte
-        </a>
+        <button className="sidebar-collapse-btn" onClick={onToggleCollapse}
+          title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}>
+          <IcoChevronLeft/>
+        </button>
       </div>
     </nav>
   );
@@ -535,11 +704,23 @@ function MapeosTab({company, setCompany}) {
 
   function HojaLabel({src}) {
     if (!src || typeof src !== 'string' || !src.trim()) return null;
-    const match = parquetKpis.find(k => k.name === src.trim());
-    if (!match || !match.hoja) return null;
+    // Todas las hojas donde aparece este KPI (puede haber varias con datos distintos)
+    const hojas = [...new Set(
+      parquetKpis.filter(k => k.name === src.trim() && k.hoja).map(k => k.hoja)
+    )];
+    if (hojas.length === 0) return null;
+    const ambiguo = hojas.length > 1;
+    // Resumir si hay muchas hojas para no romper el layout
+    const MAX = 2;
+    const resumen = ambiguo
+      ? (hojas.length > MAX ? `${hojas.slice(0, MAX).join(' / ')} +${hojas.length - MAX}` : hojas.join(' / '))
+      : hojas[0];
     return (
-      <span style={{fontSize:'.65rem', color:'#0369a1', paddingLeft:'2px', whiteSpace:'nowrap'}}>
-        {match.hoja}
+      <span style={{fontSize:'.65rem', color: ambiguo ? '#b45309' : '#0369a1',
+        paddingLeft:'2px', display:'inline-block', maxWidth:'100%',
+        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}
+        title={ambiguo ? `Este KPI existe en ${hojas.length} hojas con datos distintos:\n${hojas.join(', ')}` : hojas[0]}>
+        {ambiguo ? `⚠ ${resumen}` : hojas[0]}
       </span>
     );
   }
@@ -655,7 +836,7 @@ function MapeosTab({company, setCompany}) {
                               {[['real','Real'],['budget','Ppto']].map(([fld,lbl])=>(
                                 <div key={fld} style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
                                   <span style={{width:'38px',fontSize:'.76rem',color:'#888',fontWeight:'600',flexShrink:0}}>{lbl}</span>
-                                  <div style={{flex:1,display:'flex',flexDirection:'column',gap:'1px'}}>
+                                  <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:'1px'}}>
                                     <input
                                       className={`map-input ${raw[fld]&&raw[fld].trim()?'mapped':''}`}
                                       list={`pq-${company}`}
@@ -675,7 +856,7 @@ function MapeosTab({company, setCompany}) {
                             </div>
                           ) : isScalar ? (
                             <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
-                              <div style={{flex:1,display:'flex',flexDirection:'column',gap:'1px'}}>
+                              <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:'1px'}}>
                                 <input
                                   className={`map-input ${raw.src&&raw.src.trim()?'mapped':''}`}
                                   list={`pq-${company}`}
@@ -766,7 +947,7 @@ function MapeosTab({company, setCompany}) {
                             <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
                               {sources.map((s,idx)=>(
                                 <div key={idx} style={{display:'flex',gap:'4px',alignItems:'center',flexWrap:'wrap'}}>
-                                  <div style={{flex:1,display:'flex',flexDirection:'column',gap:'1px'}}>
+                                  <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:'1px'}}>
                                     <input
                                       className={`map-input ${s&&s.trim()?'mapped':''}`}
                                       list={`pq-${company}`}
@@ -1910,6 +2091,16 @@ function buildWaterfall(expData, panel, tipo2) {
   if (wf.c3_r != null) snapMain('c3_real', 'C3 Real', wf.c3_r);
   else pushMain('c3_real', 'C3 Real');
 
+  // Efecto TC/RC & Comercialización (real − ppto) en c/lb, solo para el gráfico.
+  // tcrc_kus/comer_kus ya son el delta real vs ppto; se convierten a c/lb con
+  // la producción presupuestada. chartOnly → no se muestra en la tabla.
+  const tcComerKus = nsum(wf.tcrc_kus, wf.comer_kus);
+  const budgetKtu  = d?.cu_prod_budget ?? null;
+  rows.push({
+    id: 'tcrc_comer_ef', label: 'TC/RC & Comerc.', type: 'effect', chartOnly: true,
+    dclb: toClb(tcComerKus, budgetKtu),
+  });
+
   return rows;
 }
 
@@ -1922,7 +2113,7 @@ const AC_DCLB = (v) => {
   return <span style={{color:col}}>{v >= 0 ? '+' : ''}{v.toFixed(2)}</span>;
 };
 
-function WaterfallTable({rows}) {
+const WaterfallTable = React.memo(function WaterfallTable({rows}) {
   const thS = {background:'#1A3A4A', color:'white', padding:'6px 10px', fontSize:'.74rem', fontWeight:600, textAlign:'right', whiteSpace:'nowrap'};
   const thL = {...thS, textAlign:'left', minWidth:'200px'};
   const tdR = {padding:'3px 10px', textAlign:'right', fontSize:'.78rem', whiteSpace:'nowrap'};
@@ -1948,7 +2139,7 @@ function WaterfallTable({rows}) {
           </tr>
         </thead>
         <tbody>
-          {rows.map(r => {
+          {rows.filter(r => !r.chartOnly).map(r => {
             const isMain  = r.type === 'main';
             const isGroup = r.type === 'group';
             const isSub   = r.type === 'sub';
@@ -1971,26 +2162,26 @@ function WaterfallTable({rows}) {
       </table>
     </div>
   );
-}
+});
 
 /* ─── Callout metadata (compartido con GraficosTab) ─── */
 const CALLOUT_META = {
   act:  {label:'Actividad',     yOffset:  0, rows:[{id:'ac_mn', lbl:'Mov. Mina'}, {id:'ac_cn', lbl:'Planta'}]},
-  prod: {label:'Prod. Cu',      yOffset: 44, rows:[{id:'cu_tr', lbl:'Cu Trat.'}, {id:'cu_rc', lbl:'Cu Rec.'}, {id:'cu_iv', lbl:'Cu Inv.'}]},
-  vi:   {label:'Var.Inv./IFRIC',yOffset:  0, rows:[{id:'inv',  lbl:'Var. Inv.'}, {id:'ifrs16', lbl:'IFRIC 20'}]},
+  prod: {label:'Producción Cu', yOffset: 44, rows:[{id:'cu_tr', lbl:'Cu Tratamiento'}, {id:'cu_rc', lbl:'Cu Recuperación'}, {id:'cu_iv', lbl:'Cu Inventario'}]},
+  vi:   {label:'Var. Inv. & IFRIC20', yOffset: 0, rows:[{id:'inv',  lbl:'Var. Inv.'}, {id:'ifrs16', lbl:'IFRIC 20'}]},
 };
 
 /* ─── Configuración por defecto de barras intermedias del waterfall ─── */
 const DELTA_BARS_DEFAULT = [
-  {id:'aj',    label:'Aj. Monetario',   wfIds:['aj_mon'],                                    callout:null,   visible:true},
-  {id:'pr',    label:'Precio Insumos',  wfIds:['pr_ins'],                                    callout:null,   visible:true},
-  {id:'rend',  label:'Rendim. Insumos', wfIds:['rend'],                                      callout:null,   visible:true},
-  {id:'ley',   label:'Leyes',           wfIds:['ley'],                                       callout:null,   visible:true},
-  {id:'act',   label:'Actividad',       wfIds:['act'],                                       callout:'act',  visible:true},
-  {id:'prod',  label:'Prod. Cu',        wfIds:['prod_cu'],                                   callout:'prod', visible:true},
-  {id:'vi',    label:'Var.Inv./IFRIC',  wfIds:['inv','ifrs16'],                              callout:'vi',   visible:true},
-  {id:'tcrc',  label:'TC/RC & Comerc.', wfIds:['tcrc_pre','comer_pre','tcrc_r','comer_r'],   callout:null,   visible:true},
-  {id:'otros', label:'Otros',           wfIds:['dev','efic'],                                callout:null,   visible:true},
+  {id:'aj',    label:'Ajuste monetario',     wfIds:['aj_mon'],                                    callout:null,   visible:true},
+  {id:'pr',    label:'Precio insumos',       wfIds:['pr_ins'],                                    callout:null,   visible:true},
+  {id:'rend',  label:'Rendimiento insumos',  wfIds:['rend'],                                      callout:null,   visible:true},
+  {id:'ley',   label:'Leyes',                wfIds:['ley'],                                       callout:null,   visible:true},
+  {id:'act',   label:'Actividad',            wfIds:['act'],                                       callout:'act',  visible:true},
+  {id:'prod',  label:'Producción Cu',        wfIds:['prod_cu'],                                   callout:'prod', visible:true},
+  {id:'vi',    label:'Var. Inv. & IFRIC20',  wfIds:['inv','ifrs16'],                              callout:'vi',   visible:true},
+  {id:'tcrc',  label:'TC/RC & Comerc.',      wfIds:['tcrc_comer_ef'],                             callout:null,   visible:true},
+  {id:'otros', label:'Otros',                wfIds:['dev','efic'],                                callout:null,   visible:true},
 ];
 const WF_BARS_LS_KEY = 'wf_bar_config_v1';
 
@@ -2005,21 +2196,23 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
     const vs = ids.map(id => byId[id]?.dclb).filter(v => v != null);
     return vs.length ? vs.reduce((a,b)=>a+b,0) : null;
   };
-  const fv = (v) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1);
-
-  // Auto-split label en máx 2 líneas por espacio central
-  const splitLbl = lbl => {
-    const w = lbl.trim().split(/\s+/);
-    if (w.length <= 1) return [lbl];
-    const mid = Math.ceil(w.length / 2);
-    return [w.slice(0, mid).join(' '), w.slice(mid).join(' ')];
+  // Formato contable: negativos entre paréntesis, coma decimal, positivos sin signo
+  const fv = (v) => {
+    if (v == null) return '—';
+    const s = Math.abs(v).toFixed(1).replace('.', ',');
+    return v < -0.05 ? `(${s})` : s;
   };
+  // Valor absoluto con coma (para totales dentro de barras)
+  const fvAbs = (v) => v == null ? '—' : v.toFixed(1).replace('.', ',');
+
+  // Etiquetas en una sola línea (nombre completo, como la imagen)
+  const splitLbl = lbl => [lbl];
 
   // Barras principales
   const bars = [
-    {id:'c1_b',  labels:['C1','Ppto'],       type:'split',
+    {id:'c1_b',  labels:['Costo C1 ppto'],   type:'split',
       clb_net: byId.c1p?.clb,  clb_pre: byId.precredit?.clb},
-    {id:'pre_b', labels:['Pre-créd.','Ppto'], type:'anchor', clb: byId.precredit?.clb, style:'pre'},
+    {id:'pre_b', labels:['Pre-crédito Ppto'], type:'anchor', clb: byId.precredit?.clb, style:'pre'},
     ...deltaBars.filter(b => b.visible).map(b => ({
       id: b.id,
       labels: splitLbl(b.label),
@@ -2027,8 +2220,8 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
       dclb: ns(...b.wfIds),
       callout: b.callout || null,
     })),
-    {id:'pre_r', labels:['Pre-créd.','Real'], type:'anchor', clb: byId.precredit_r?.clb, style:'pre'},
-    {id:'c1_r',  labels:['C1','Real'],        type:'split',
+    {id:'pre_r', labels:['Pre-crédito Real'], type:'anchor', clb: byId.precredit_r?.clb, style:'pre'},
+    {id:'c1_r',  labels:['Costo C1 real'],    type:'split',
       clb_net: byId.c1_real?.clb, clb_pre: byId.precredit_r?.clb},
   ];
 
@@ -2060,31 +2253,38 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
   const bx = i => ML + i * bGap + (bGap - bW) / 2;
   const bcx = i => bx(i) + bW / 2;   // centro X de barra i
 
-  // Escala Y: siempre desde 0
-  const allTops = computed.flatMap(b => {
+  // Escala Y: incluye 0 y valores negativos (ej. C1 neto negativo cuando el
+  // crédito de subproductos supera al pre-crédito, como en CEN).
+  const allVals = computed.flatMap(b => {
     if (b.isNull) return [];
-    if (b.type === 'split')  return [b.clb_pre];
+    if (b.type === 'split')  return [b.clb_pre, b.clb_net];
     if (b.type === 'anchor') return [b.clb];
     const d = b.dclb ?? 0, base = b.base ?? 0;
     return [base, base + d];
   }).filter(v => v != null && isFinite(v));
 
-  if (!allTops.length) return <p style={{color:'#aaa', textAlign:'center', padding:'24px'}}>Sin datos</p>;
+  if (!allVals.length) return <p style={{color:'#aaa', textAlign:'center', padding:'24px'}}>Sin datos</p>;
 
-  const yMax = Math.max(...allTops) * 1.08;
-  const sy = v => MT + cH - (v / yMax) * cH;
-  const yBase = MT + cH;   // = sy(0)
+  const vMax = Math.max(...allVals, 0);
+  const vMin = Math.min(...allVals, 0);
+  const pad  = (vMax - vMin) * 0.08 || 1;
+  const yMax = vMax + pad;
+  const yMin = vMin < 0 ? vMin - pad : 0;
+  const sy = v => MT + cH - ((v - yMin) / (yMax - yMin)) * cH;
+  const yBase = sy(0);        // línea de cero (referencia de las barras)
+  const chartBottom = MT + cH; // borde inferior (donde van las etiquetas X)
 
-  // Ticks Y
-  const rawStep = yMax / 5;
+  // Ticks Y (incluye negativos si los hay)
+  const rawStep = (yMax - yMin) / 5;
   const texp = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const tickStep = Math.ceil(rawStep / texp) * texp;
   const ticks = [];
-  for (let t = 0; t <= yMax + 0.001; t = Math.round((t + tickStep) * 1e6) / 1e6) ticks.push(t);
+  for (let t = Math.ceil(yMin / tickStep) * tickStep; t <= yMax + 0.001; t = Math.round((t + tickStep) * 1e6) / 1e6) ticks.push(t);
 
   const FILL = {c1:'#1A3A4A', pre:'#1A7080'};
   const CELESTE = '#4EC3C3';
-  const GRN = '#059669', RED = '#dc2626', NEU = '#aaa';
+  // Paleta de la imagen: aumentos de costo en rojo, disminuciones en teal/verde
+  const GRN = '#4F9D8C', RED = '#C0392B', NEU = '#9aa3a8';
 
   // Posiciones de barras Pre-crédito para el bracket
   const preBIdx  = computed.findIndex(b => b.id === 'pre_b');
@@ -2094,6 +2294,10 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
   const bracketY = MT - 16;  // entre título y área de barras
   const deltaPre = (preBClb != null && preRClb != null) ? preRClb - preBClb : null;
   const pctPre   = (deltaPre != null && preBClb) ? (deltaPre / preBClb * 100) : null;
+
+  // Etiqueta de categoría en el borde inferior (una línea, tamaño uniforme)
+  const renderLabel = (lbl, i, fill = '#444') =>
+    <text x={bcx(i)} y={chartBottom + 15} textAnchor="middle" fontSize={7} fill={fill}>{lbl}</text>;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{display:'block', fontFamily:'-apple-system,sans-serif'}}>
@@ -2115,7 +2319,7 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
         const x1 = bcx(preBIdx), x2 = bcx(preRIdx);
         const by = bracketY;
         const col = NEU;
-        const lbl = `${deltaPre >= 0 ? '+' : ''}${deltaPre.toFixed(1)}${pctPre != null ? ` (${pctPre >= 0 ? '+' : ''}${pctPre.toFixed(0)}%)` : ''}`;
+        const lbl = `${deltaPre >= 0 ? '+' : ''}${deltaPre.toFixed(1).replace('.', ',')}${pctPre != null ? ` (${pctPre >= 0 ? '+' : ''}${pctPre.toFixed(0)}%)` : ''}`;
         return (
           <g>
             {/* línea horizontal + bajadas */}
@@ -2143,27 +2347,30 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
       {/* ── Barras ── */}
       {computed.map((b, i) => {
         if (b.isNull) return (
-          <g key={b.id}>
-            {b.labels.map((l,li) => <text key={li} x={bcx(i)} y={yBase+14+li*11}
-              textAnchor="middle" fontSize={8} fill="#ccc">{l}</text>)}
-          </g>
+          <g key={b.id}>{renderLabel(b.labels[0], i, '#ccc')}</g>
         );
 
         if (b.type === 'split') {
-          // C1 neto ABAJO (mismo color que Pre-créd.) + subproductos ARRIBA (color clarito)
-          const subVal = b.clb_pre - b.clb_net;  // altura segmento superior (subprod)
-          const ySplit = sy(b.clb_net);           // frontera: nivel C1 neto
-          const yTop   = sy(b.clb_pre);           // tope barra
-          const hBot   = Math.max(yBase - ySplit, 1);   // C1 neto (abajo)
-          const hTop   = Math.max(ySplit - yTop, 1);    // subproductos (arriba)
+          // C1 neto (color Pre-créd.) + subproductos (clarito). El C1 neto puede ser
+          // NEGATIVO (crédito de subprod > pre-crédito): se dibuja bajo la línea de cero.
+          const subVal = b.clb_pre - b.clb_net;  // crédito subproductos (segmento claro)
+          const yPre = sy(b.clb_pre);            // tope = pre-crédito
+          const yNet = sy(b.clb_net);            // frontera = C1 neto
+          const yZ   = sy(0);
+          // Segmento claro (subproductos): entre C1 neto y pre-crédito
+          const lightY = Math.min(yPre, yNet), lightH = Math.max(Math.abs(yNet - yPre), 1);
+          // Segmento oscuro (C1 neto): entre 0 y C1 neto (bajo cero si es negativo)
+          const darkY  = Math.min(yZ, yNet),    darkH  = Math.max(Math.abs(yNet - yZ), 1);
           return (
             <g key={b.id}>
-              {/* Segmento superior: subproductos — color clarito */}
-              <rect x={bx(i)} y={yTop} width={bW} height={hTop+1} fill="#b0d8e8" rx={2}/>
-              {/* Segmento inferior: C1 neto — mismo color que Pre-créd. */}
-              <rect x={bx(i)} y={ySplit} width={bW} height={hBot} fill={FILL.pre} rx={2}/>
-              {b.labels.map((l,li) => <text key={li} x={bcx(i)} y={yBase+14+li*11}
-                textAnchor="middle" fontSize={8} fill="#333" fontWeight={600}>{l}</text>)}
+              <rect x={bx(i)} y={lightY} width={bW} height={lightH} fill="#b0d8e8" rx={2}/>
+              <rect x={bx(i)} y={darkY}  width={bW} height={darkH}  fill={FILL.pre} rx={2}/>
+              {/* Valores dentro de cada segmento */}
+              {lightH > 14 && <text x={bcx(i)} y={lightY + lightH/2 + 3} textAnchor="middle"
+                fontSize={9} fontWeight={700} fill="#1A3A4A">{fvAbs(subVal)}</text>}
+              {darkH > 14 && <text x={bcx(i)} y={darkY + darkH/2 + 3} textAnchor="middle"
+                fontSize={9} fontWeight={700} fill="white">{fvAbs(b.clb_net)}</text>}
+              {renderLabel(b.labels[0], i)}
             </g>
           );
         }
@@ -2175,8 +2382,9 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
           return (
             <g key={b.id}>
               <rect x={bx(i)} y={yTop} width={bW} height={barH} fill={fill} rx={2}/>
-              {b.labels.map((l,li) => <text key={li} x={bcx(i)} y={yBase+14+li*11}
-                textAnchor="middle" fontSize={8} fill="#333" fontWeight={600}>{l}</text>)}
+              {barH > 14 && <text x={bcx(i)} y={yTop + barH/2 + 3} textAnchor="middle"
+                fontSize={9} fontWeight={700} fill="white">{fvAbs(b.clb)}</text>}
+              {renderLabel(b.labels[0], i)}
             </g>
           );
         }
@@ -2193,7 +2401,7 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
         const calloutMeta = b.callout ? CALLOUT_META[b.callout] : null;
         const showCallout = calloutMeta && !hiddenCallouts.has(b.callout);
         const calloutRows = calloutMeta?.rows ?? [];
-        const callBoxW = 72;
+        const callBoxW = 116;   // más ancho para nombres completos (Cu Tratamiento, etc.)
         const callBoxH = calloutRows.length * 13 + 6;
         // Posición: 62% del área de barras desde arriba (debajo del nivel de running total)
         const callBoxY = MT + cH * 0.62 + (calloutMeta?.yOffset ?? 0);
@@ -2205,8 +2413,7 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
             <text x={bcx(i)} y={yTop-3} textAnchor="middle" fontSize={8} fontWeight={700} fill={col}>
               {fv(d)}
             </text>
-            {b.labels.map((l,li) => <text key={li} x={bcx(i)} y={yBase+14+li*11}
-              textAnchor="middle" fontSize={8} fill="#444">{l}</text>)}
+            {renderLabel(b.labels[0], i)}
 
             {/* Callout box con desglose */}
             {showCallout && (() => {
@@ -2218,19 +2425,18 @@ function WaterfallSvgChart({rows, title, hiddenCallouts = new Set(), deltaBars =
                   {/* línea vertical de conexión desde base de barra hasta caja */}
                   <line x1={bcx(i)} y1={barBottomY + 2} x2={bcx(i)} y2={callBoxY}
                     stroke="#bbb" strokeWidth={0.8} strokeDasharray="3,2"/>
-                  {/* fondo semitransparente */}
-                  <rect x={callBoxX-1} y={callBoxY-1} width={callBoxW+2} height={callBoxH+2}
-                    fill="white" stroke="#ccc" strokeWidth={0.8} rx={3}
-                    style={{filter:'drop-shadow(0 1px 2px rgba(0,0,0,0.08))'}}/>
+                  {/* caja gris claro, sin sombra, estilo tabla (como la imagen) */}
+                  <rect x={callBoxX} y={callBoxY} width={callBoxW} height={callBoxH}
+                    fill="#f2f3f4" stroke="#d9dde0" strokeWidth={0.8} rx={2}/>
                   {calloutRows.map((s, si) => {
                     const sv = byId[s.id]?.dclb;
-                    const sc = sv == null ? '#bbb' : sv < -0.01 ? GRN : sv > 0.01 ? RED : '#888';
+                    const sc = sv == null ? '#bbb' : sv < -0.01 ? GRN : sv > 0.01 ? RED : '#555';
                     return (
                       <g key={s.id}>
-                        <text x={callBoxX+4} y={callBoxY + 10 + si*13}
-                          fontSize={7} fill="#555">{s.lbl}</text>
-                        <text x={callBoxX+callBoxW-3} y={callBoxY + 10 + si*13}
-                          textAnchor="end" fontSize={7} fontWeight={700} fill={sc}>{fv(sv)}</text>
+                        <text x={callBoxX+6} y={callBoxY + 11 + si*13}
+                          fontSize={7.5} fill="#444">{s.lbl}</text>
+                        <text x={callBoxX+callBoxW-5} y={callBoxY + 11 + si*13}
+                          textAnchor="end" fontSize={7.5} fontWeight={700} fill={sc}>{fv(sv)}</text>
                       </g>
                     );
                   })}
@@ -2818,6 +3024,14 @@ function ParamsTab({period}) {
     apiGet('/api/calculos/formula-params').then(d => setFp(d)).catch(()=>{});
   }, []);
 
+  /* Ctrl+S guarda desde teclado (ref para evitar stale closure) */
+  const _saveRef = useRef(null);
+  React.useEffect(() => {
+    const h = e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); _saveRef.current?.(); } };
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
+  }, []);
+
   const cols1 = useMemo(() => buildColumns(a1ini, m1ini, a1fin, m1fin), [a1ini, m1ini, a1fin, m1fin]);
   const cols2 = useMemo(() => buildColumns(a2ini, m2ini, a2fin, m2fin), [a2ini, m2ini, a2fin, m2fin]);
 
@@ -2909,18 +3123,21 @@ function ParamsTab({period}) {
     const saves = [apiPost('/api/params', params)];
     if (fp) saves.push(apiPut('/api/calculos/formula-params', fp));
     Promise.all(saves)
-      .then(() => { setSaved(true); })
-      .catch(() => alert('Error al guardar'))
+      .then(() => { setSaved(true); showToast('Guardado correctamente', 'ok'); })
+      .catch(e => showToast(e.message || 'Error al guardar'))
       .finally(() => setSaving(false));
   };
+  _saveRef.current = handleSave;
 
   return (
     <div className="main">
       <div className="card">
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px'}}>
         <div className="card-title" style={{margin:0}}>Parámetros Económicos</div>
-        <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{fontSize:'.88rem'}}>
+        <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{fontSize:'.88rem'}}
+          title="Guardar (Ctrl+S)">
           {saving ? 'Guardando...' : saved ? '✓ Guardado' : 'Guardar'}
+          {!saving && !saved && <span style={{fontSize:'.72rem', opacity:.65, marginLeft:'6px', fontWeight:400}}>Ctrl+S</span>}
         </button>
       </div>
 
@@ -3091,55 +3308,119 @@ function expFmtN(v) {
   return Number(v).toLocaleString('es-CL', {maximumFractionDigits:3});
 }
 
-function ExpTblHead({title}) {
-  const thSt = {padding:'5px 8px', fontSize:'.72rem', color:'white', background:'#2d5a6e', fontWeight:700, whiteSpace:'nowrap'};
+/* Control de decimales por columna: stepper flotante elegante al hover */
+function ExpDecHeaderLight({ label, value, onChange }) {
+  const [hover, setHover] = useState(false);
+  const step = (e, dir) => { e.stopPropagation(); onChange(Math.min(4, Math.max(0, value + dir))); };
+  const btn = dis => ({
+    border:'none', background:'transparent', padding:'0 5px', margin:0,
+    color: dis ? 'var(--border)' : 'var(--teal)', cursor: dis ? 'default' : 'pointer',
+    fontSize:13, lineHeight:1, fontFamily:'inherit', fontWeight:700,
+    display:'flex', alignItems:'center', height:'100%',
+  });
   return (
-    <thead>
-      <tr>
-        <th style={{...thSt, textAlign:'left', minWidth:'140px', fontSize:'.8rem', background:'#1A3A4A', padding:'7px 10px', letterSpacing:'.03em'}}>{title}</th>
-        <th style={{...thSt, textAlign:'center', width:'64px'}}>Ud.</th>
-        <th style={{...thSt, textAlign:'right', width:'88px'}}>Real</th>
-        <th style={{...thSt, textAlign:'right', width:'88px'}}>Ppto</th>
-        <th style={{...thSt, textAlign:'right', width:'90px'}}>Efecto</th>
-      </tr>
-    </thead>
+    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{position:'relative', display:'inline-flex', alignItems:'center',
+        justifyContent:'flex-end', gap:5, minHeight:18, cursor:'default'}}>
+      <span>{label}</span>
+      {/* ícono sutil de decimales — solo señala que es ajustable, sin número */}
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="2.5" strokeLinecap="round"
+        style={{opacity: hover ? 0 : .35, transition:'opacity .12s'}}>
+        <circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+        <circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+      </svg>
+      {/* stepper flotante (aparece al hover, no empuja el texto) */}
+      {hover && (
+        <div onClick={e => e.stopPropagation()}
+          style={{position:'absolute', top:'50%', right:0, transform:'translateY(-50%)',
+            display:'flex', alignItems:'center', height:21,
+            background:'var(--gray-soft)', border:'1px solid var(--border)',
+            borderRadius:7, boxShadow:'var(--shadow-sm)', overflow:'hidden', zIndex:5}}>
+          <button onClick={e => step(e,-1)} disabled={value<=0} style={btn(value<=0)}>−</button>
+          <span style={{fontSize:10, fontWeight:700, color:'var(--navy)', minWidth:13,
+            textAlign:'center', borderLeft:'1px solid var(--border)',
+            borderRight:'1px solid var(--border)', padding:'0 2px'}}>{value}</span>
+          <button onClick={e => step(e,1)} disabled={value>=4} style={btn(value>=4)}>+</button>
+        </div>
+      )}
+    </div>
   );
 }
 
-function ExpSecHd({label, total, cols=5}) {
+const ExpTblHead = React.memo(function ExpTblHead({title, colDec, setColDec}) {
+  // Mockup: cabecera clara — fondo blanco, texto gris en mayúsculas, borde inferior
+  const thSt = {padding:'8px', fontSize:'.7rem', color:'var(--text-muted)', background:'transparent',
+    fontWeight:700, whiteSpace:'nowrap', textTransform:'uppercase', letterSpacing:'.05em',
+    borderBottom:'1px solid var(--border)'};
+  return (
+    <thead>
+      <tr>
+        <th style={{...thSt, textAlign:'left', minWidth:'140px', fontSize:'.86rem', color:'var(--navy)',
+          padding:'9px 10px', letterSpacing:'0', textTransform:'none', fontWeight:800}}>{title}</th>
+        <th style={{...thSt, textAlign:'center', width:'64px'}}>Ud.</th>
+        <th style={{...thSt, textAlign:'right', width:'88px'}}>
+          {colDec ? <ExpDecHeaderLight label="Real" value={colDec.real} onChange={v => setColDec(d=>({...d,real:v}))}/> : 'Real'}
+        </th>
+        <th style={{...thSt, textAlign:'right', width:'88px'}}>
+          {colDec ? <ExpDecHeaderLight label="Ppto" value={colDec.ppto} onChange={v => setColDec(d=>({...d,ppto:v}))}/> : 'Ppto'}
+        </th>
+        <th style={{...thSt, textAlign:'right', width:'90px'}}>
+          {colDec ? <ExpDecHeaderLight label="Efecto" value={colDec.efecto ?? colDec.real} onChange={v => setColDec(d=>({...d,efecto:v}))}/> : 'Efecto'}
+        </th>
+      </tr>
+    </thead>
+  );
+});
+
+/* V2-style group header: left color border, teal soft bg */
+const ExpSecHd = React.memo(function ExpSecHd({label, total, cols=5, tone}) {
+  // Mockup: solo borde izquierdo de color + título oscuro sobre fondo blanco (sin banda teal)
+  const borderColor = tone==='pos' ? '#16a368' : tone==='neg' ? '#d4453a' : 'var(--teal-lt)';
   return (
     <tr>
       <td colSpan={cols} style={{
-        background:'#1A3A4A', color:'white', fontWeight:700,
-        padding:'5px 8px 5px 10px', fontSize:'.72rem',
-        letterSpacing:'.05em', textTransform:'uppercase',
+        background:'transparent', color:'var(--navy)', fontWeight:700,
+        padding:'9px 10px 6px 12px', fontSize:'.7rem',
+        letterSpacing:'.06em', textTransform:'uppercase',
+        borderLeft:`3px solid ${borderColor}`,
       }}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <span>{label}</span>
-          {total != null && <span style={{fontWeight:700, fontSize:'.79rem', textTransform:'none', letterSpacing:0}}>{total}</span>}
+          {total != null && (
+            <span style={{fontWeight:700, fontSize:'.78rem', textTransform:'none', letterSpacing:0,
+              color: tone==='pos'?'#16a368': tone==='neg'?'#d4453a':'inherit'}}>{total}</span>
+          )}
         </div>
       </td>
     </tr>
   );
+});
+
+function expFmtNDec(v, dec) {
+  if (v == null) return <span style={{color:'#bbb'}}>—</span>;
+  return Number(v).toLocaleString('es-CL', {minimumFractionDigits:dec, maximumFractionDigits:dec});
 }
 
-function ExpRow({label, unit, real, ppto, efNode, alt, indent}) {
-  const bg = alt ? '#f8fafb' : 'white';
+const ExpRow = React.memo(function ExpRow({label, unit, real, ppto, efNode, alt, indent, colDec}) {
+  const decR = colDec?.real ?? 3;
+  const decP = colDec?.ppto ?? 3;
   return (
-    <tr style={{background:bg}}>
-      <td style={{...EXP_CKpi, background:bg, paddingLeft: indent ? '28px' : undefined}}>{label}</td>
+    <tr className={`exp-row${alt?' alt':''}`}>
+      <td style={{...EXP_CKpi, background:'transparent', paddingLeft: indent ? '28px' : undefined}}>{label}</td>
       <td style={EXP_CUnit}>{unit}</td>
-      <td style={EXP_CVal}>{expFmtN(real)}</td>
-      <td style={EXP_CVal}>{expFmtN(ppto)}</td>
+      <td style={EXP_CVal}>{expFmtNDec(real, decR)}</td>
+      <td style={EXP_CVal}>{expFmtNDec(ppto, decP)}</td>
       <td style={EXP_CEf}>{efNode}</td>
     </tr>
   );
-}
+});
 
 /* ─── EfPopover: detalle de un efecto al hacer click ─── */
 function EfPopover({pop, onClose}) {
   if (!pop) return null;
-  const {label, unit, real, ppto, kus, ktcuf, clb, clbDec, cprod, x, y} = pop;
+  const {label, unit, real, ppto, kus, ktcuf, clb, clbDec, cprod, calc, x, y} = pop;
   const delta = (real != null && ppto != null) ? real - ppto : null;
   const deltaPct = (delta != null && ppto && ppto !== 0) ? (delta / ppto * 100) : null;
   const fmt = v => v == null ? '—' : Number(v).toLocaleString('es-CL', {maximumFractionDigits:3});
@@ -3187,6 +3468,30 @@ function EfPopover({pop, onClose}) {
         <div style={{borderTop:'1px solid #eee', paddingTop:'7px'}}>
           <div style={{color:'#666', marginBottom:3}}>Efecto en kUS$:</div>
           <div style={{fontWeight:600, color:col(-kus)}}>{kus >= 0 ? '+' : ''}{(kus/1000).toFixed(2)} MUS$</div>
+          {calc && (
+            <div style={{marginTop:6}}>
+              <div style={{color:'#666', marginBottom:2}}>Cómo se calcula:</div>
+              <div style={{fontFamily:'monospace', fontSize:'.71rem', color:'#555', lineHeight:1.7,
+                           background:'#f8fafc', borderRadius:4, padding:'4px 6px'}}>
+                {calc.metodo === 'precio_insumo' && (<>
+                  (tarifa real − ppto) × consumo real{calc.escala !== 1 ? ' ÷ 1.000' : ''}<br/>
+                  ({fmt(calc.tarifa_real)} − {fmt(calc.tarifa_ppto)}) × {fmt(calc.consumo_real)}{calc.escala !== 1 ? ' ÷ 1.000' : ''}<br/>
+                  = {fmt(calc.delta_tarifa)} {calc.tarifa_unit} × {fmt(calc.consumo_real)} {calc.consumo_unit}
+                </>)}
+                {calc.metodo === 'rendimiento' && (<>
+                  (rend. real − ppto) × {calc.base_lbl} × tarifa ppto{calc.escala !== 1 ? ' × escala' : ''}<br/>
+                  ({fmt(calc.rend_real)} − {fmt(calc.rend_ppto)}) {calc.rend_unit} × {fmt(calc.base)} {calc.base_unit} × {fmt(calc.tarifa_ppto)} {calc.tarifa_unit}<br/>
+                  = Δ {fmt(calc.delta_rend)} {calc.rend_unit} valorizado a precio ppto
+                </>)}
+                {calc.metodo === 'ajuste_monetario' && (<>
+                  gasto base × {calc.fraccion_lbl} × ({calc.ratio_lbl} − 1)<br/>
+                  {fmt(calc.gasto_base)} kUS$ × {(calc.fraccion*100).toFixed(0)}% × ({fmt(calc.ratio_num)}/{fmt(calc.ratio_den)} − 1)<br/>
+                  = {fmt(calc.gasto_base)} × {fmt(calc.fraccion)} × ({fmt(calc.ratio)} − 1)
+                </>)}
+                <br/><span style={{fontWeight:700, color:col(-kus)}}>= {kus >= 0 ? '+' : ''}{(kus/1000).toFixed(3)} MUS$</span>
+              </div>
+            </div>
+          )}
           {cprod != null && cprod > 0 && clb != null && (
             <div style={{marginTop:6}}>
               <div style={{color:'#666', marginBottom:2}}>Conversión a c/lb:</div>
@@ -3213,10 +3518,10 @@ function EfPopover({pop, onClose}) {
 /* ─── Tab: Explicaciones ─── */
 const EXP_CO_LABELS = {MLP:'Los Pelambres', CEN:'Centinela', ANT:'Antucoya', CMZ:'Zaldívar'};
 
-function ExplicacionesTab({period, company, setCompany, panel, setPanel}) {
-  const {a1fin, m1fin} = period;
-  const [showTodas, setShowTodas] = useState(false);
-  const expCompany = showTodas ? 'Todas' : company;
+function ExplicacionesTab({period, company, expAño, expMes, expPanel, expColDec, setExpColDec, expCargar}) {
+  const expCompany = company; // 'Todas' or a company code — managed by App
+  const colDec = expColDec;
+  const setColDec = setExpColDec;
   const [efPop, setEfPop] = useState(null);
   useEffect(() => {
     if (!efPop) return;
@@ -3224,10 +3529,13 @@ function ExplicacionesTab({period, company, setCompany, panel, setPanel}) {
     document.addEventListener('click', h);
     return () => document.removeEventListener('click', h);
   }, [efPop]);
-  const [año, setAño] = useState(a1fin);
-  const [mes, setMes] = useState(m1fin);
-  const [decimals, setDecimals] = useState(1);
+  const año = expAño;
+  const mes = expMes;
+  const panel = expPanel;
   const [data, loading, error, run] = useAsyncState();
+
+  /* Carga cuando cambia año, mes, compañía o se pulsa Cargar */
+  useEffect(() => { cargar(); }, [año, mes, expCompany, expCargar]);
 
   function cargar() {
     const url = x => `/api/explicaciones/${x}?año=${año}&mes=${mes}`;
@@ -3250,8 +3558,10 @@ function ExplicacionesTab({period, company, setCompany, panel, setPanel}) {
     const toC = ef => (ef == null || cprod == null || cprod === 0) ? null : ef * 100 / (cprod * 2204.62);
     const smC = rows => { let t=null; for(const r of rows){const v=toC(r.efecto_kus); if(v!=null)t=(t||0)+v;} return t; };
     const smK = rows => { let t=null; for(const r of rows){if(r.efecto_ktcuf!=null)t=(t||0)+r.efecto_ktcuf;} return t; };
-    const fC = v => { if(v==null)return <span style={{color:'#bbb'}}>—</span>; const col=v<0?'var(--red)':v>0?'#059669':'inherit'; return <span style={{color:col,fontWeight:700}}>{v>=0?'+':''}{v.toFixed(decimals)} c/lb</span>; };
-    const fK = v => { if(v==null)return <span style={{color:'#bbb'}}>—</span>; const col=v<0?'var(--red)':v>0?'#059669':'inherit'; return <span style={{color:col,fontWeight:700}}>{v>=0?'+':''}{v.toFixed(decimals)} ktCuf</span>; };
+    const decEf = colDec.efecto ?? colDec.real; // columna Efecto con sus propios decimales
+    const fC = v => { if(v==null)return <span style={{color:'#bbb'}}>—</span>; const col=v<0?'var(--red)':v>0?'#059669':'inherit'; return <span style={{color:col,fontWeight:700}}>{v>=0?'+':''}{v.toFixed(decEf)} c/lb</span>; };
+    const fK = v => { if(v==null)return <span style={{color:'#bbb'}}>—</span>; const col=v<0?'var(--red)':v>0?'#059669':'inherit'; return <span style={{color:col,fontWeight:700}}>{v>=0?'+':''}{v.toFixed(decEf)} ktCuf</span>; };
+    const toneOf = v => v == null ? null : v < 0 ? 'neg' : v > 0 ? 'pos' : null;
     const wrap = (node, detail) => {
       if (detail.kus == null && detail.ktcuf == null) return node;
       return (
@@ -3259,7 +3569,7 @@ function ExplicacionesTab({period, company, setCompany, panel, setPanel}) {
           onClick={e => {
             e.stopPropagation();
             const rc = e.currentTarget.getBoundingClientRect();
-            setEfPop({...detail, cprod, clbDec:decimals, x:rc.left, y:rc.bottom});
+            setEfPop({...detail, cprod, clbDec:decEf, x:rc.left, y:rc.bottom});
           }}>
           {node}
         </span>
@@ -3277,42 +3587,42 @@ function ExplicacionesTab({period, company, setCompany, panel, setPanel}) {
         <div style={{overflowX:'auto'}}>
           <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', minWidth:'640px'}}>
             <table style={EXP_TBL}>
-              <ExpTblHead title="Insumos"/>
+              <ExpTblHead title="Insumos" colDec={colDec} setColDec={setColDec}/>
               <tbody>
-                <ExpSecHd label="Ajuste Monetario" total={fC(ajTot)}/>
+                <ExpSecHd label="Ajuste Monetario" total={fC(ajTot)} tone={toneOf(ajTot)}/>
                 {pd.ajuste_monetario.map((r,i)=>(
-                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto}
-                    efNode={wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus)})}/>
+                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto} colDec={colDec}
+                    efNode={wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus), calc:r.calc})}/>
                 ))}
-                <ExpSecHd label="Precio Insumos" total={fC(piTot)}/>
+                <ExpSecHd label="Precio Insumos" total={fC(piTot)} tone={toneOf(piTot)}/>
                 {pd.precio_insumos.map((r,i)=>(
-                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto}
-                    efNode={wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus)})}/>
+                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto} colDec={colDec}
+                    efNode={wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus), calc:r.calc})}/>
                 ))}
-                <ExpSecHd label="Rendimiento" total={fC(rendTot)}/>
+                <ExpSecHd label="Rendimiento" total={fC(rendTot)} tone={toneOf(rendTot)}/>
                 {pd.rendimiento.map((r,i)=>(
-                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto}
-                    efNode={wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus)})}/>
+                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto} colDec={colDec}
+                    efNode={wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus), calc:r.calc})}/>
                 ))}
               </tbody>
             </table>
             <table style={EXP_TBL}>
-              <ExpTblHead title="Actividad"/>
+              <ExpTblHead title="Actividad" colDec={colDec} setColDec={setColDec}/>
               <tbody>
-                <ExpSecHd label="Producción" total={fK(prodTot)}/>
+                <ExpSecHd label="Producción" total={fK(prodTot)} tone={toneOf(prodTot)}/>
                 {pd.produccion.filter(r => r.real!=null || r.ppto!=null || r.efecto_ktcuf!=null || r.efecto_kus!=null).map((r,i)=>(
-                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto}
+                  <ExpRow key={i} alt={i%2!==0} label={r.label} unit={r.unit} real={r.real} ppto={r.ppto} colDec={colDec}
                     efNode={r.efecto_kus!=null
                       ? wrap(fC(toC(r.efecto_kus)), {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, kus:r.efecto_kus, clb:toC(r.efecto_kus)})
                       : wrap(fK(r.efecto_ktcuf),    {label:r.label, unit:r.unit, real:r.real, ppto:r.ppto, ktcuf:r.efecto_ktcuf})}/>
                 ))}
-                <ExpSecHd label="Movimiento Mina" total={fC(toC(pd.mov_mina.efecto_kus))}/>
-                <ExpRow label="Movimiento total Mina" unit="kt" real={pd.mov_mina.real} ppto={pd.mov_mina.ppto}
+                <ExpSecHd label="Movimiento Mina" total={fC(toC(pd.mov_mina.efecto_kus))} tone={toneOf(toC(pd.mov_mina.efecto_kus))}/>
+                <ExpRow label="Movimiento total Mina" unit="kt" real={pd.mov_mina.real} ppto={pd.mov_mina.ppto} colDec={colDec}
                   efNode={wrap(fC(toC(pd.mov_mina.efecto_kus)), {label:'Movimiento total Mina', unit:'kt', real:pd.mov_mina.real, ppto:pd.mov_mina.ppto, kus:pd.mov_mina.efecto_kus, clb:toC(pd.mov_mina.efecto_kus)})}/>
-                <ExpSecHd label="Desarrollo Mina" total={fC(toC(pd.desarrollo_mina.efecto_kus))}/>
-                <ExpRow label="Tonelaje" unit="kt" real={pd.desarrollo_mina.tonelaje_real} ppto={pd.desarrollo_mina.tonelaje_ppto}
+                <ExpSecHd label="Desarrollo Mina" total={fC(toC(pd.desarrollo_mina.efecto_kus))} tone={toneOf(toC(pd.desarrollo_mina.efecto_kus))}/>
+                <ExpRow label="Tonelaje" unit="kt" real={pd.desarrollo_mina.tonelaje_real} ppto={pd.desarrollo_mina.tonelaje_ppto} colDec={colDec}
                   efNode={wrap(fC(toC(pd.desarrollo_mina.tonelaje_efecto_kus)), {label:'Tonelaje Desarrollo Mina', unit:'kt', real:pd.desarrollo_mina.tonelaje_real, ppto:pd.desarrollo_mina.tonelaje_ppto, kus:pd.desarrollo_mina.tonelaje_efecto_kus, clb:toC(pd.desarrollo_mina.tonelaje_efecto_kus)})}/>
-                <ExpRow label="Costo unitario" unit="US$/t" real={pd.desarrollo_mina.cu_real} ppto={pd.desarrollo_mina.cu_ppto}
+                <ExpRow label="Costo unitario" unit="US$/t" real={pd.desarrollo_mina.cu_real} ppto={pd.desarrollo_mina.cu_ppto} colDec={colDec}
                   efNode={wrap(fC(toC(pd.desarrollo_mina.cu_efecto_kus)), {label:'Costo Unitario Desarrollo Mina', unit:'US$/t', real:pd.desarrollo_mina.cu_real, ppto:pd.desarrollo_mina.cu_ppto, kus:pd.desarrollo_mina.cu_efecto_kus, clb:toC(pd.desarrollo_mina.cu_efecto_kus)})}/>
               </tbody>
             </table>
@@ -3325,60 +3635,42 @@ function ExplicacionesTab({period, company, setCompany, panel, setPanel}) {
   const pd = data?._todas ? null : data?.data?.[panel];
 
   return (
-    <div className="main">
+    <>
       <EfPopover pop={efPop} onClose={() => setEfPop(null)}/>
-      {/* Controls */}
-      <div className="card">
-        <div className="card-title">Explicaciones</div>
-        <div className="seg-ctrl" style={{marginBottom:'12px', flexWrap:'wrap'}}>
-          {['Grupo Minero', ...COMPANIES, 'Todas'].map(c => (
-            <button key={c} className={`seg-btn ${expCompany===c?'active':''}`}
-              onClick={()=>{ if(c==='Todas'){setShowTodas(true);} else {setShowTodas(false);setCompany(c);} }}>
-              {c}
-            </button>
-          ))}
-        </div>
-        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end', marginTop:'12px'}}>
-          <div className="form-group">
-            <label>Año</label>
-            <select value={año} onChange={e=>setAño(Number(e.target.value))}>
-              {RANGE_YEARS.map(a=><option key={a}>{a}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Mes</label>
-            <select value={mes} onChange={e=>setMes(Number(e.target.value))}>
-              {MESES.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
-            </select>
-          </div>
-          <button className="btn btn-primary" onClick={cargar} disabled={loading} style={{height:'38px'}}>
-            {loading ? <><span className="spin"/>Cargando…</> : 'Cargar'}
-          </button>
-          {data && (
-            <div className="seg-ctrl" style={{alignSelf:'flex-end'}}>
-              {[['ytd','YTD'],['mes','Mes']].map(([k,lbl]) => (
-                <button key={k} className={`seg-btn ${panel===k?'active':''}`}
-                  onClick={()=>setPanel(k)}>{lbl}</button>
+      {error && <p className="err">{error}</p>}
+
+      {/* Skeleton loading */}
+      {loading && (
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px'}}>
+          {[0,1].map(i => (
+            <div key={i} className="card" style={{padding:'18px'}}>
+              <div className="skeleton-line" style={{height:18, width:'40%', marginBottom:14}}/>
+              {[...Array(10)].map((_,j) => (
+                <div key={j} style={{display:'flex', gap:8, marginBottom:8, alignItems:'center'}}>
+                  <div className="skeleton-line" style={{height:12, flex:2}}/>
+                  <div className="skeleton-line" style={{height:12, width:40}}/>
+                  <div className="skeleton-line" style={{height:12, width:56}}/>
+                  <div className="skeleton-line" style={{height:12, width:56}}/>
+                  <div className="skeleton-line" style={{height:12, width:50}}/>
+                </div>
               ))}
             </div>
-          )}
-          <div style={{display:'flex', gap:'4px', alignSelf:'flex-end', marginLeft:'8px', alignItems:'center'}}>
-            <span style={{fontSize:'.75rem', color:'#aaa'}}>Dec.</span>
-            <select value={decimals} onChange={e=>setDecimals(Number(e.target.value))}
-              style={{padding:'3px 4px', border:'1px solid #ddd', borderRadius:'5px',
-                fontSize:'.8rem', color:'#555', background:'white', cursor:'pointer'}}>
-              {[0,1,2,3].map(d=><option key={d} value={d}>{d}</option>)}
-            </select>
-          </div>
+          ))}
         </div>
-        {error && <p className="err" style={{marginTop:'12px'}}>{error}</p>}
-      </div>
+      )}
 
-      {data?._todas
+      {!loading && (data?._todas
         ? COMPANIES.map(co => renderPanel(data.byCompany[co]?.data?.[panel], EXP_CO_LABELS[co] || co))
         : pd && renderPanel(pd, null)
-      }
-    </div>
+      )}
+      {!loading && (data?._todas ? true : !!pd) && (
+        <div style={{padding:'11px 16px', background:'var(--teal-pale)', border:'1px dashed var(--teal-lt)',
+          borderRadius:'var(--radius-sm)', display:'flex', alignItems:'center', gap:10, fontSize:'.78rem', color:'var(--teal)'}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span><b>Tips:</b> Clic en el valor de <b>Efecto</b> para ver cómo se calcula. Clic en una fila con drill-down (ej. <b>Explosivos</b>) para ver drivers, evolución y narrativa.</span>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -3990,16 +4282,25 @@ function FlashProduccionesTab({period}) {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
-
+  const [tracePop, setTracePop] = useState(null);  // {label, col, trace, x, y}
   useEffect(() => {
+    if (!tracePop) return;
+    const h = e => { if (!e.target.closest('[data-trace-pop]')) setTracePop(null); };
+    document.addEventListener('click', h);
+    return () => document.removeEventListener('click', h);
+  }, [tracePop]);
+
+  const reload = useCallback(() => {
     if (!a1fin || !m1fin) return;
     setLoading(true); setError(''); setData(null);
     apiGet(`/api/flash-producciones?año=${a1fin}&mes=${m1fin}&tipo_r=${encodeURIComponent(tipo1)}&tipo_b=${encodeURIComponent(tipo2)}`)
       .then(setData).catch(e => setError(e.message || 'Error')).finally(() => setLoading(false));
   }, [a1fin, m1fin, tipo1, tipo2]);
+  useEffect(() => { reload(); }, [reload]);
 
-  const COMPANIES = ['MLP','CEN','ANT','CMZ','GM'];
-  const LABELS    = {MLP:'Los Pelambres', CEN:'Centinela', ANT:'Antucoya', CMZ:'Zaldívar (50%)', GM:'Grupo Minero'};
+  const COMPANIES = ['MLP','CEN_CC','CEN_CAT','ANT','CMZ','GM'];
+  const LABELS    = {MLP:'Los Pelambres', CEN_CC:'Centinela CuCons', CEN_CAT:'Centinela Cátodos',
+                     ANT:'Antucoya', CMZ:'Zaldívar (50%)', GM:'Grupo Minero'};
   const MES_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   function fmtV(v, unit) {
@@ -4009,15 +4310,16 @@ function FlashProduccionesTab({period}) {
     if (unit === 'koz' && Math.abs(v) >= 100) return Math.round(v).toString();
     return v.toFixed(1);
   }
-  function fmtEf(r, b, unit) {
-    if (r == null || b == null) return '—';
-    const ef = r - b;
-    const abs = fmtV(Math.abs(ef), unit);
+  // Efecto: viene pre-calculado del backend (descomposición ktCuf o Real−Ppto).
+  // Siempre se muestra como NÚMERO con 1 decimal (nunca %).
+  function fmtEf(ef) {
+    if (ef == null) return '—';
+    const abs = Math.abs(ef).toFixed(1);
     return ef < 0 ? `(${abs})` : abs;
   }
-  function efColor(r, b) {
-    if (r == null || b == null) return undefined;
-    return r < b ? '#c0392b' : '#000';
+  function efColor(ef) {
+    if (ef == null) return undefined;
+    return ef < 0 ? '#c0392b' : '#000';
   }
 
   async function downloadExcel() {
@@ -4086,10 +4388,26 @@ function FlashProduccionesTab({period}) {
                       {COMPANIES.map(co => {
                         const cv = row.companies[co] || {};
                         const rv = cv[rk]; const bv = cv[bk];
+                        const panel = rk.slice(2);  // "r_mes" → "mes"
+                        const ef = cv['ef_' + panel];
+                        const tr = cv.trace;
+                        const clickable = tr && !tr.agregado;
+                        const openTrace = which => e => {
+                          if (!clickable) return;
+                          e.stopPropagation();
+                          const rc = e.currentTarget.getBoundingClientRect();
+                          setTracePop({ label: row.label, unit: row.unit, col: co, rowkey: row.key,
+                            which, colLabel: LABELS[co], trace: tr, cellCfg: cv.cell_cfg || {},
+                            x: rc.left, y: rc.bottom });
+                        };
+                        const cellSt = clickable ? {cursor:'pointer'} : {};
                         return [
-                          <td key={co+'r'} style={{...TD, borderLeft:'2px solid #ddd', background: bg}}>{fmtV(rv, row.unit)}</td>,
-                          <td key={co+'b'} style={{...TD, background: bg}}>{fmtV(bv, row.unit)}</td>,
-                          <td key={co+'e'} style={{...TD, background: bg, color: efColor(rv, bv), fontWeight:'600'}}>{fmtEf(rv, bv, row.unit)}</td>,
+                          <td key={co+'r'} onClick={openTrace('real')} title={clickable?'Configurar fuente Real':undefined}
+                            style={{...TD, ...cellSt, borderLeft:'2px solid #ddd', background: bg}}>{fmtV(rv, row.unit)}</td>,
+                          <td key={co+'b'} onClick={openTrace('ppto')} title={clickable?'Configurar fuente Ppto':undefined}
+                            style={{...TD, ...cellSt, background: bg}}>{fmtV(bv, row.unit)}</td>,
+                          <td key={co+'e'} onClick={openTrace('efecto')} title={clickable?'Configurar fuente Efecto':undefined}
+                            style={{...TD, ...cellSt, background: bg, color: efColor(ef), fontWeight:'600'}}>{fmtEf(ef)}</td>,
                         ];
                       })}
                     </tr>
@@ -4128,16 +4446,244 @@ function FlashProduccionesTab({period}) {
           <Section label={`Acumulado Ene–${mesNombre} ${a1fin}`} rk="r_ytd" bk="b_ytd"/>
         </div>
       )}
+
+      {tracePop && <FlashTracePopover pop={tracePop} onClose={() => setTracePop(null)}
+        onSaved={() => { setTracePop(null); reload(); }}/>}
+    </div>
+  );
+}
+
+/* ─── Popover de trazabilidad de una celda del Flash ─── */
+function FlashTracePopover({pop, onClose, onSaved}) {
+  const {label, unit, colLabel, trace, x, y} = pop;
+  const [edits, setEdits] = useState({});   // lk → nuevo src
+  const [saving, setSaving] = useState(false);
+  const [sources, setSources] = useState(null);   // {descomposicion:[], visualizar:[]}
+  const [slots, setSlots] = useState(() => pop.cellCfg || {});  // {real,ppto,efecto:{source,kpi}}
+  const [savingCfg, setSavingCfg] = useState(false);
+  const W = 380;
+  const left = Math.min(x, window.innerWidth - W - 16);
+  const top = Math.min(y + 6, window.innerHeight - 420);
+  const company = trace.company;
+
+  // Cargar KPIs seleccionables de la columna (Visualizar + Descomposición)
+  useEffect(() => {
+    if (trace.agregado) return;
+    apiGet(`/api/flash-producciones/sources?col=${encodeURIComponent(pop.col)}`)
+      .then(setSources).catch(() => setSources({descomposicion:[], visualizar:[]}));
+  }, [pop.col]);
+
+  function setSlot(which, patch) {
+    setSlots(p => ({...p, [which]: {...(p[which]||{}), ...patch}}));
+  }
+  async function saveCfg() {
+    setSavingCfg(true);
+    try {
+      await apiPut('/api/flash-producciones/cell-config',
+        {col: pop.col, rowkey: pop.rowkey, slots});
+      showToast('Fuente de celda actualizada', 'ok');
+      onSaved && onSaved();
+    } catch(e) { showToast(e.message || 'Error al guardar'); }
+    finally { setSavingCfg(false); }
+  }
+
+  const tipoLabel = m => ({
+    directo: 'Directo', suma: 'Suma', escalar: 'Escalar', formula: 'Fórmula',
+    real_ppto: 'Real/Ppto', sin_mapear: 'Sin mapear', otro: 'Otro',
+  }[m.tipo] || m.tipo);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const all = await apiGet('/api/setup/mappings');
+      const cmap = {...(all[company] || {})};
+      for (const [lk, src] of Object.entries(edits)) {
+        cmap[lk] = src;   // edición de fuente directa
+      }
+      await apiPost('/api/setup/mappings', {...all, [company]: cmap});
+      showToast('Mapeo actualizado', 'ok');
+      onSaved && onSaved();
+    } catch(e) {
+      showToast(e.message || 'Error al guardar');
+    } finally { setSaving(false); }
+  }
+
+  const hasEdits = Object.keys(edits).length > 0;
+
+  return (
+    <div data-trace-pop style={{
+      position:'fixed', left, top, width:W, maxHeight:'320px', overflowY:'auto',
+      background:'white', border:'1px solid #d0d8e0', borderRadius:'8px',
+      boxShadow:'0 6px 24px rgba(0,0,0,.18)', padding:'12px 14px', zIndex:9999,
+      fontSize:'.78rem', lineHeight:1.5,
+    }} onClick={e => e.stopPropagation()}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center',
+        fontWeight:700, marginBottom:8, borderBottom:'1px solid #eee', paddingBottom:6}}>
+        <span>{label} · {colLabel}</span>
+        <span style={{cursor:'pointer', color:'#aaa'}} onClick={onClose}>✕</span>
+      </div>
+
+      {trace.agregado ? (
+        <p style={{color:'#888', margin:0}}>Columna agregada (Grupo Minero): suma/promedio de las demás columnas. No tiene mapeo directo.</p>
+      ) : trace.derivado ? (
+        <div>
+          <div style={{display:'flex', gap:6, alignItems:'center', marginBottom:6}}>
+            <span style={{fontSize:'.66rem', fontWeight:700, color:'#7c3aed',
+              background:'#ede9fe', borderRadius:4, padding:'1px 6px'}}>Fórmula</span>
+            <span style={{fontSize:'.7rem', color:'#888'}}>Compañía: <b>{trace.company}</b></span>
+          </div>
+          <div style={{fontFamily:'monospace', fontSize:'.78rem', color:'#374151',
+            background:'#f8fafc', borderRadius:5, padding:'7px 9px', marginBottom:8}}>
+            {trace.formula}
+          </div>
+          <p style={{color:'#666', margin:0, fontSize:'.74rem'}}>{trace.detalle}</p>
+        </div>
+      ) : (trace.lks || []).length === 0 ? (
+        <p style={{color:'#888', margin:0}}>Sin KPIs vinculados para esta celda.</p>
+      ) : (
+        <>
+          <div style={{fontSize:'.7rem', color:'#888', marginBottom:6}}>
+            Compañía origen: <b>{company}</b>
+          </div>
+          {trace.lks.map((e, i) => {
+            const m = e.mapping;
+            const editableSrc = (m.tipo === 'directo' || m.tipo === 'escalar');
+            const curSrc = e.lk in edits ? edits[e.lk] : (m.src || '');
+            return (
+              <div key={i} style={{marginBottom:10, paddingBottom:8,
+                borderBottom: i < trace.lks.length-1 ? '1px dashed #eee' : 'none'}}>
+                <div style={{display:'flex', gap:6, alignItems:'center', marginBottom:3}}>
+                  <span style={{fontSize:'.66rem', fontWeight:700, color:'#0369a1',
+                    background:'#e0f2fe', borderRadius:4, padding:'1px 6px'}}>{tipoLabel(m)}</span>
+                  {e.es_total && <span style={{fontSize:'.64rem', color:'#b45309'}}>(total)</span>}
+                  <span style={{fontWeight:600}}>{e.lk.split('||').pop()}</span>
+                </div>
+                {m.tipo === 'formula' ? (
+                  <div style={{fontFamily:'monospace', fontSize:'.72rem', color:'#555'}}>
+                    {(m.a||'?')} {m.op} {(m.b||'?')}
+                  </div>
+                ) : m.tipo === 'real_ppto' ? (
+                  <div style={{fontSize:'.72rem', color:'#555'}}>
+                    Real: {m.real||'—'} · Ppto: {m.budget||'—'}
+                  </div>
+                ) : editableSrc ? (
+                  <>
+                    <input value={curSrc}
+                      onChange={ev => setEdits(p => ({...p, [e.lk]: ev.target.value}))}
+                      placeholder="Fuente en parquet…"
+                      style={{width:'100%', padding:'5px 8px', border:'1.5px solid var(--gray)',
+                        borderRadius:5, fontSize:'.74rem', outline:'none',
+                        borderColor: e.lk in edits ? '#10b981' : 'var(--gray)'}}/>
+                    {m.tipo === 'escalar' && (
+                      <div style={{fontSize:'.66rem', color:'#b45309', marginTop:2}}>
+                        × escalar: {m.op} {m.scalar}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{fontSize:'.72rem', color: m.tipo==='sin_mapear'?'#dc2626':'#555'}}>
+                    {m.tipo === 'sin_mapear' ? 'No aplica / sin mapear'
+                      : Array.isArray(m.src) ? m.src.join(' + ') : (m.src || '—')}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <div style={{display:'flex', gap:8, justifyContent:'flex-end', marginTop:4}}>
+            <button onClick={onClose} style={{padding:'5px 12px', border:'1px solid var(--border)',
+              background:'var(--gray-soft)', borderRadius:5, cursor:'pointer', fontSize:'.76rem'}}>Cerrar</button>
+            <button onClick={handleSave} disabled={!hasEdits || saving}
+              style={{padding:'5px 14px', border:'none', borderRadius:5, fontSize:'.76rem',
+                background: hasEdits ? 'var(--teal)' : '#cbd5e1', color:'white',
+                cursor: hasEdits ? 'pointer' : 'default', fontWeight:700}}>
+              {saving ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+          <div style={{fontSize:'.66rem', color:'#999', marginTop:6}}>
+            Para editar escalares/fórmulas en detalle, usa <b>Configuración</b>.
+          </div>
+        </>
+      )}
+
+      {/* ── Configurar fuente SOLO de la parte clicada (Real, Ppto o Efecto) ── */}
+      {!trace.agregado && (() => {
+        const which = pop.which || 'efecto';
+        const whichLabel = {real:'Real', ppto:'Ppto', efecto:'Efecto'}[which];
+        const slot = slots[which] || {};
+        const opts = slot.source === 'visualizar' ? (sources?.visualizar || [])
+          : slot.source === 'descomposicion' ? (sources?.descomposicion || []) : [];
+        const selSt = {padding:'5px 7px', border:'1.5px solid var(--gray)', borderRadius:5,
+          fontSize:'.74rem', outline:'none', background:'white'};
+        return (
+          <div style={{marginTop:12, borderTop:'2px solid #eef2f5', paddingTop:10}}>
+            <div style={{fontWeight:700, fontSize:'.74rem', color:'var(--navy)', marginBottom:6}}>
+              Fuente de <span style={{color:'var(--teal)'}}>{whichLabel}</span> · {colLabel}
+            </div>
+            {!sources ? (
+              <p style={{color:'#aaa', fontSize:'.72rem', margin:0}}><span className="spin"/>Cargando KPIs…</p>
+            ) : (
+              <>
+                <div style={{display:'flex', gap:6, alignItems:'center', marginBottom:6}}>
+                  <select value={slot.source||''} style={{...selSt, width:110, flexShrink:0}}
+                    onChange={e => setSlot(which, {source: e.target.value || undefined, kpi: undefined})}>
+                    <option value="">— Default —</option>
+                    <option value="descomposicion">Descomposición</option>
+                    <option value="visualizar">Visualizar</option>
+                  </select>
+                  {slot.source && (
+                    <select value={slot.kpi||''} style={{...selSt, flex:1, minWidth:0}}
+                      onChange={e => setSlot(which, {kpi: e.target.value || undefined})}>
+                      <option value="">Elegir KPI…</option>
+                      {opts.map(o => <option key={o.kpi} value={o.kpi}>{o.label}</option>)}
+                    </select>
+                  )}
+                </div>
+                <div style={{display:'flex', gap:8, justifyContent:'flex-end', marginTop:4}}>
+                  <button onClick={() => setSlot(which, {source: undefined, kpi: undefined})}
+                    style={{padding:'5px 10px', border:'1px solid var(--border)', background:'var(--gray-soft)',
+                      borderRadius:5, cursor:'pointer', fontSize:'.74rem'}}>Quitar</button>
+                  <button onClick={saveCfg} disabled={savingCfg}
+                    style={{padding:'5px 14px', border:'none', borderRadius:5, fontSize:'.74rem',
+                      background:'var(--teal)', color:'white', cursor:'pointer', fontWeight:700}}>
+                    {savingCfg ? 'Guardando…' : `Guardar ${whichLabel}`}
+                  </button>
+                </div>
+                <div style={{fontSize:'.64rem', color:'#999', marginTop:5}}>
+                  Default = cálculo estándar del Flash. Elige un KPI para sobreescribir <b>{whichLabel}</b> de esta celda.
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
 /* ─── Root App ─── */
+const IcoMoon     = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
+const IcoSun      = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>;
+const IcoRefresh  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>;
+const IcoSettings = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+
 function App() {
-  const [tab,     setTab]     = useState('viz');
-  const [company, setCompany] = useState('Grupo Minero');
-  const [panel,   setPanel]   = useState('ytd');
+  const [tab,       setTab]       = useState('viz');
+  const [company,   setCompany]   = useState('Grupo Minero');
+  const [panel,     setPanel]     = useState('ytd');
+  const [dark,      setDark]      = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [tipos] = useState(['Real', 'Ppto']);
+  const [lastUpdate, setLastUpdate] = useState(() => {
+    const n = new Date();
+    return `${n.getDate()} ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][n.getMonth()]} ${n.getFullYear()} · ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+  });
+  /* Explicaciones ctrl-bar state hoisted so App can render it in ctrl-bar-sticky */
+  const [expAño,    setExpAño]    = useState(null);
+  const [expMes,    setExpMes]    = useState(null);
+  const [expPanel,  setExpPanel]  = useState('ytd');
+  const [expShowTodas, setExpShowTodas] = useState(false);
+  const [expColDec, setExpColDec] = useState({real:1, ppto:1, efecto:1});
+  const [expCargar, setExpCargar] = useState(0); // bump to trigger load
   const [tipo1, setTipo1] = useState('Real');
   const [a1ini, setA1ini] = useState(DEFAULT_YR);
   const [m1ini, setM1ini] = useState(1);
@@ -4167,22 +4713,111 @@ function App() {
     flash:'Reportes', explicaciones:'Reportes', graficos:'Reportes',
   };
 
+  const CO_NAMES = {MLP:'Minera Los Pelambres', CEN:'Centinela', ANT:'Antucoya', CMZ:'Zaldívar'};
+
+  /* Subtítulo dinámico por tab */
+  function getSubtitle() {
+    if (tab === 'explicaciones') {
+      const efectivoCo = expShowTodas ? 'Todas' : company;
+      const efectivoMes = expMes ?? m1fin;
+      const efectivoAño = expAño ?? a1fin;
+      const mesNom = MESES[efectivoMes] || '';
+      const coLabel = efectivoCo === 'Todas' ? 'Grupo Minero'
+        : CO_NAMES[efectivoCo] ? `${efectivoCo} — ${CO_NAMES[efectivoCo]}` : efectivoCo;
+      return `Variaciones Real vs Presupuesto · ${coLabel}`;
+    }
+    if (tab === 'flash') return `Flash Producciones · ${MESES[m1fin]} ${a1fin}`;
+    if (tab === 'analisis' || tab === 'costos_aj' || tab === 'cm') {
+      const cName = CO_NAMES[company]; return cName ? `${company} — ${cName}` : (company || '');
+    }
+    return TAB_SECTIONS[tab] || '';
+  }
+
+  /* Título grande (V2) */
+  function getPageTitle() {
+    if (tab === 'explicaciones') {
+      const efectivoMes = expMes ?? m1fin;
+      const efectivoAño = expAño ?? a1fin;
+      return `Explicaciones · Cierre ${MESES[efectivoMes]} ${efectivoAño}`;
+    }
+    if (tab === 'flash') return `Flash Producciones · ${MESES[m1fin]} ${a1fin}`;
+    return TAB_LABELS[tab] || tab;
+  }
+
+  function excelUrl() {
+    const enc = encodeURIComponent;
+    return `/api/export/excel?tipo1=${enc(tipo1)}&año1_ini=${a1ini}&mes1_ini=${m1ini}&año1_fin=${a1fin}&mes1_fin=${m1fin}`
+         + `&tipo2=${enc(tipo2)}&año2_ini=${a2ini}&mes2_ini=${m2ini}&año2_fin=${a2fin}&mes2_fin=${m2fin}`;
+  }
+
+  /* sync dark class on document element */
+  useEffect(() => {
+    dark ? document.documentElement.setAttribute('data-dark','') : document.documentElement.removeAttribute('data-dark');
+  }, [dark]);
+
+  /* Init exp state from period when tab switches */
+  useEffect(() => {
+    if (tab === 'explicaciones') {
+      setExpAño(a => a ?? a1fin);
+      setExpMes(m => m ?? m1fin);
+    }
+  }, [tab]);
+
+  const expCtrlCompany = expShowTodas ? 'Todas' : (COMPANIES.includes(company) ? company : COMPANIES[0]);
+
+  const initials = 'MR'; // Michelle Madrid
+
   return (
     <div className="app-layout">
-      <Sidebar tab={tab} setTab={setTab} period={period}/>
+      <Sidebar tab={tab} setTab={setTab} collapsed={collapsed} onToggleCollapse={() => setCollapsed(c => !c)}/>
       <div className="content-area">
+
+        {/* ── Header V2: blanco, breadcrumb + título grande + acciones ── */}
         <div className="content-header">
-          <div className="content-header-info">
-            <div className="content-header-title">{TAB_LABELS[tab] || tab}</div>
-            <div className="content-header-sub">{TAB_SECTIONS[tab]}</div>
+          {/* Izquierda: breadcrumb + título + subtítulo */}
+          <div className="content-header-info" style={{flex:1, minWidth:0}}>
+            <div className="content-header-breadcrumb">
+              <span>{TAB_SECTIONS[tab] || 'Inicio'}</span>
+              <span className="sep">›</span>
+              <span className="cur">{TAB_LABELS[tab] || tab}</span>
+            </div>
+            <div className="content-header-title">{getPageTitle()}</div>
+            <div className="content-header-sub">{getSubtitle()}</div>
+          </div>
+
+          {/* Derecha: última actualización + íconos + avatar */}
+          <div style={{display:'flex', gap:'8px', alignItems:'center', flexShrink:0}}>
+            <div className="last-update-badge">
+              <span className="last-update-dot"/>
+              <span>Última actualización: {lastUpdate}</span>
+            </div>
+            <button className="hdr-icon-btn" title="Refrescar" onClick={() => {
+              const n = new Date();
+              setLastUpdate(`${n.getDate()} ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][n.getMonth()]} ${n.getFullYear()} · ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`);
+              if (tab==='explicaciones') setExpCargar(x => x+1);
+            }}>
+              <IcoRefresh/>
+            </button>
+            <button className="hdr-icon-btn" onClick={() => setDark(d => !d)}
+              title={dark ? 'Modo claro' : 'Modo oscuro'}>
+              {dark ? <IcoSun/> : <IcoMoon/>}
+            </button>
+            <button className="hdr-icon-btn" title="Configuración"><IcoSettings/></button>
+            <a href={excelUrl()} className="hdr-export-btn">
+              <IcoDownload/> Exportar
+            </a>
+            <div className="hdr-avatar" title="Michelle Madrid">{initials}</div>
           </div>
         </div>
 
+        {/* PeriodBar para tabs que la necesitan */}
         {showPeriodBar && (
           <div className="topbar">
             <PeriodBar period={period} setters={setters} tipos={tipos}/>
           </div>
         )}
+
+        {/* ctrl-bar: selector empresa + otros controles según tab */}
         {(tab==='viz' || tab==='analisis' || tab==='costos_aj') && (
           <div className="ctrl-bar-sticky">
             <CtrlBar
@@ -4194,6 +4829,81 @@ function App() {
             />
           </div>
         )}
+
+        {/* ctrl-bar de Explicaciones: GRUPO | MLP CEN ANT CMZ Todas | 📅 año | mes | YTD Mes | Cargar */}
+        {tab==='explicaciones' && (
+          <div className="ctrl-bar-sticky">
+            <div style={{display:'flex', gap:'8px', alignItems:'center', flexWrap:'wrap'}}>
+              {/* Label GRUPO */}
+              <span style={{fontSize:'.72rem', fontWeight:700, color:'var(--text-muted)',
+                textTransform:'uppercase', letterSpacing:'.08em', paddingRight:'4px',
+                borderRight:'2px solid var(--border)', marginRight:'2px'}}>
+                Grupo
+              </span>
+              {/* Selector compañía */}
+              <div className="seg-ctrl">
+                {['MLP','CEN','ANT','CMZ','Todas'].map(c => (
+                  <button key={c} className={`seg-btn ${expCtrlCompany===c?'active':''}`}
+                    onClick={()=>{ if(c==='Todas'){setExpShowTodas(true);} else {setExpShowTodas(false);setCompany(c);} }}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+
+              {/* Separador */}
+              <div style={{width:'1px', height:'24px', background:'var(--border)', margin:'0 2px'}}/>
+
+              {/* Selector Año con ícono calendario */}
+              <div style={{display:'flex', alignItems:'center', gap:'4px',
+                border:'1.5px solid var(--gray)', borderRadius:'6px', padding:'3px 8px',
+                background:'white', cursor:'pointer'}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <select style={{border:'none', outline:'none', fontSize:'.83rem', fontWeight:600,
+                  color:'var(--navy)', background:'transparent', cursor:'pointer', padding:'0'}}
+                  value={expAño ?? a1fin}
+                  onChange={e=>setExpAño(Number(e.target.value))}>
+                  {RANGE_YEARS.map(a=><option key={a}>{a}</option>)}
+                </select>
+              </div>
+
+              {/* Selector Mes */}
+              <div style={{display:'flex', alignItems:'center', gap:'4px',
+                border:'1.5px solid var(--gray)', borderRadius:'6px', padding:'3px 8px',
+                background:'white', cursor:'pointer'}}>
+                <select style={{border:'none', outline:'none', fontSize:'.83rem', fontWeight:600,
+                  color:'var(--navy)', background:'transparent', cursor:'pointer', padding:'0',
+                  minWidth:'60px'}}
+                  value={expMes ?? m1fin}
+                  onChange={e=>setExpMes(Number(e.target.value))}>
+                  {MESES.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+                </select>
+              </div>
+
+              {/* YTD / Mes */}
+              <div className="seg-ctrl">
+                {[['ytd','YTD'],['mes','Mes']].map(([k,lbl]) => (
+                  <button key={k} className={`seg-btn ${expPanel===k?'active':''}`}
+                    onClick={()=>setExpPanel(k)}>{lbl}</button>
+                ))}
+              </div>
+
+              {/* Botón Cargar — va a la derecha */}
+              <button style={{
+                marginLeft:'auto', display:'flex', alignItems:'center', gap:'6px',
+                padding:'7px 18px', background:'var(--navy)', color:'white', border:'none',
+                borderRadius:'6px', fontWeight:700, fontSize:'.84rem', cursor:'pointer',
+                boxShadow:'var(--shadow-xs)', transition:'background var(--transition)',
+              }}
+              onMouseEnter={e=>e.currentTarget.style.background='#234d63'}
+              onMouseLeave={e=>e.currentTarget.style.background='var(--navy)'}
+              onClick={() => setExpCargar(x => x+1)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.84"/></svg>
+                Cargar
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="main">
           {tab==='mapeos'        && <MapeosTab company={company} setCompany={setCompany}/>}
           {tab==='viz'           && <VisualizarTab period={period} tipos={tipos} company={company} setCompany={setCompany}/>}
@@ -4202,7 +4912,11 @@ function App() {
           {tab==='cm'            && <CostosAjMesTab period={period} company={company} setCompany={setCompany}/>}
           {tab==='params'        && <ParamsTab period={period}/>}
           {tab==='flash'         && <FlashProduccionesTab period={period}/>}
-          {tab==='explicaciones' && <ExplicacionesTab period={period} company={company} setCompany={setCompany} panel={panel} setPanel={setPanel}/>}
+          {tab==='explicaciones' && <ExplicacionesTab
+            period={period} company={expCtrlCompany}
+            expAño={expAño ?? a1fin} expMes={expMes ?? m1fin}
+            expPanel={expPanel} expColDec={expColDec} setExpColDec={setExpColDec}
+            expCargar={expCargar}/>}
           {tab==='graficos'      && <GraficosTab period={period} company={company} setCompany={setCompany} panel={panel} setPanel={setPanel}/>}
         </div>
       </div>
@@ -4210,7 +4924,10 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+function Root() {
+  return (<><App /><ToastContainer /></>);
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
 </script>
 </body>
 </html>

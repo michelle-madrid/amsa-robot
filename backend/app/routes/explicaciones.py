@@ -153,6 +153,8 @@ def get_explicaciones(company: str, año: int, mes: int):
         _p_calc    = {**p, "kpi_scales": {}, "kpi_scales_mes_ytd": []}
         deltas = _compute_deltas(r_scaled, b_scaled, panel, _p_calc)
         dg  = deltas["delta_gasto_precio"]
+        dgc = deltas.get("delta_gasto_precio_calc", {})
+        drc = deltas.get("delta_rendimiento_calc", {})
         dr  = deltas["delta_rendimiento"]
         da  = deltas["delta_actividad"]
         el  = deltas["efecto_ley"]
@@ -217,16 +219,39 @@ def get_explicaciones(company: str, año: int, mes: int):
         mov_r = _sum_resolve(r_snap, mov_kpis, panel) if mov_kpis else None
         mov_b = _sum_resolve(b_snap, mov_kpis, panel) if mov_kpis else None
 
-        # Derivar costo unitario de actividad desde costos_ajustados cuando no configurado
+        # Derivar costo unitario de actividad desde costos_ajustados cuando no configurado.
+        # Costo unit. = (Ppto_grupo_kUS$ × %Var) / volumen_ppto  → "Ppto aj Var" unitario.
+        # La parte Variable NO se ajusta por FX/IPC, así que el efecto NO lleva tc_factor.
+        _fijo_by_key = {}
+        for _g in (params_fin.get("costos_fijo_var", {}) or {}).get(company, []):
+            if isinstance(_g, dict) and _g.get("key") is not None:
+                _fijo_by_key[_g["key"]] = _g.get("fijo")
+        def _var_pct(gkey, default=1.0):
+            f = _fijo_by_key.get(gkey)
+            return (1.0 - f) if f is not None else default
         _act_ctx = dict(p.get("actividad_contexto", {}))
+        # Asegurar que el cálculo de actividad use los KPIs de Mov Mina ya resueltos
+        if not _act_ctx.get("mov_mina_kpis") and mov_kpis:
+            _act_ctx["mov_mina_kpis"] = mov_kpis
         if _ca_grupos:
             def _ca_ppto(gkey): return (_ca_grupos.get(gkey) or {}).get("total", {}).get(panel, {}).get("ppto")
+            # Costo unit. = (Ppto_grupo × %Var) / volumen_ppto (key Costos Ajustados ≠ key %fijo)
             if _act_ctx.get("costo_unitario_mina") is None and mov_b and _ca_ppto("mina"):
-                _act_ctx["costo_unitario_mina"] = _ca_ppto("mina") / mov_b
+                _act_ctx["costo_unitario_mina"] = _ca_ppto("mina") * _var_pct("mina") / mov_b
+            if _act_ctx.get("costo_unitario_conc") is None and proc_b and _ca_ppto("planta_conc"):
+                _act_ctx["costo_unitario_conc"] = _ca_ppto("planta_conc") * _var_pct("planta") / proc_b
             if _act_ctx.get("costo_unitario_hidro") is None and ben_hidro_b and _ca_ppto("planta_sx"):
-                _act_ctx["costo_unitario_hidro"] = _ca_ppto("planta_sx") / ben_hidro_b
+                _act_ctx["costo_unitario_hidro"] = _ca_ppto("planta_sx") * _var_pct("planta_sx") / ben_hidro_b
         _p_act = {**_p_calc, "actividad_contexto": _act_ctx}
-        ac = _compute_actividad_contexto(r_scaled, b_scaled, panel, _p_act, tc_factor)
+        # tc_factor=1.0 → la parte Variable no se ajusta por FX/IPC (fórmula del Excel)
+        ac = _compute_actividad_contexto(r_scaled, b_scaled, panel, _p_act, 1.0)
+        # Override Actividad Mina con mov ya resuelto de forma fiable (la resolución
+        # interna de _compute_actividad_contexto no encuentra "Movimiento Total"):
+        #   Actividad Mina = (Mov Real − Mov Ppto) × Costo Ajustado Mina (Ppto aj Var)
+        _cu_mina = _act_ctx.get("costo_unitario_mina")
+        if mov_r is not None and mov_b is not None and _cu_mina is not None:
+            ac["mov_mina"]       = round(mov_r - mov_b, 4)
+            ac["actividad_mina"] = round((mov_r - mov_b) * _cu_mina, 4)
 
         # Desarrollo mina: volume (kt) — usa keys mapeados si existen, si no el hardcodeado
         _dv_sulf  = k.get("dev_mina_sulf",      "")
@@ -286,6 +311,18 @@ def get_explicaciones(company: str, año: int, mes: int):
         ef_tc  = _mef.get("tc")  if _mef.get("tc")  is not None else f(_aj_efecto(gasto_b, exp_tc_frac,        tc_b_val,  tc_r_val))
         ef_ipc = _mef.get("ipc") if _mef.get("ipc") is not None else f(_aj_efecto(gasto_b, exp_tc_frac,        ipc_r_val, ipc_b_val))
         ef_cpi = _mef.get("cpi") if _mef.get("cpi") is not None else f(_aj_efecto(gasto_b, 1.0 - exp_tc_frac, cpi_r_val, cpi_b_val))
+
+        def _aj_calc(base, frac, ratio_num, ratio_den, ratio_lbl, frac_lbl, fuente_mef):
+            # Solo describible cuando proviene de la fórmula directa (no del cálculo mixto del Excel)
+            if fuente_mef is not None or base is None or frac is None or not ratio_num or not ratio_den or float(ratio_den) == 0:
+                return None
+            return {
+                "metodo": "ajuste_monetario",
+                "gasto_base": round(base, 4), "fraccion": round(frac, 4), "fraccion_lbl": frac_lbl,
+                "ratio_num": round(float(ratio_num), 4), "ratio_den": round(float(ratio_den), 4),
+                "ratio_lbl": ratio_lbl, "ratio": round(float(ratio_num) / float(ratio_den), 6),
+            }
+        calc_tc  = _aj_calc(gasto_b, exp_tc_frac, tc_b_val, tc_r_val, "TC_ppto / TC_real", "% expuesto a TC", _mef.get("tc"))
         # IPC/CPI = O22 − TC (Excel mixed-denominator formula):
         #   O22 uses budget production as denominator, TC uses real production.
         #   ef_ipc_cpi_kus × (1/cu_r) = total_onsite_kus × (1/cu_b) − ef_tc_kus × (1/cu_r)
@@ -347,23 +384,23 @@ def get_explicaciones(company: str, año: int, mes: int):
             "cu_prod_real":   f(cu_r),
             "cu_prod_budget": f(cu_b),
             "ajuste_monetario": [
-                {"label": "TC (Dólar)", "unit": "CLP/USD", "real": f(tc_r_val),  "ppto": f(tc_b_val),  "efecto_kus": ef_tc},
+                {"label": "TC (Dólar)", "unit": "CLP/USD", "real": f(tc_r_val),  "ppto": f(tc_b_val),  "efecto_kus": ef_tc, "calc": calc_tc},
                 {"label": "IPC / CPI",  "unit": "Índice",  "real": f(ipc_r_val), "ppto": f(ipc_b_val), "efecto_kus": ef_ipc_cpi},
                 {"label": "CPI",        "unit": "Índice",  "real": f(cpi_r_val), "ppto": f(cpi_b_val), "efecto_kus": None},
             ],
             "precio_insumos": [
-                {"label": "Energía",     "unit": "US$/MWh", "real": f(rv(k["tarifa_energia"])),     "ppto": f(bv(k["tarifa_energia"])),     "efecto_kus": f(dg["energia"])},
-                {"label": "Combustible", "unit": "US$/lt",  "real": f(rv(k["tarifa_combustible"])), "ppto": f(bv(k["tarifa_combustible"])), "efecto_kus": f(dg["combustible"])},
-                {"label": "Ácido",       "unit": "US$/t",   "real": f(rv(k.get("tarifa_acido",""))),  "ppto": f(bv(k.get("tarifa_acido",""))),  "efecto_kus": f(dg["acido"])},
-                {"label": "Bolas",       "unit": "US$/t",   "real": f(rv(k["tarifa_bolas"])),       "ppto": f(bv(k["tarifa_bolas"])),       "efecto_kus": f(dg["bolas"])},
-                {"label": "Explosivos",  "unit": "US$/t",   "real": f(rv(k["tarifa_explosivos"])),  "ppto": f(bv(k["tarifa_explosivos"])),  "efecto_kus": f(dg["explosivos"])},
+                {"label": "Energía",     "unit": "US$/MWh", "real": f(rv(k["tarifa_energia"])),     "ppto": f(bv(k["tarifa_energia"])),     "efecto_kus": f(dg["energia"]),     "calc": dgc.get("energia")},
+                {"label": "Combustible", "unit": "US$/lt",  "real": f(rv(k["tarifa_combustible"])), "ppto": f(bv(k["tarifa_combustible"])), "efecto_kus": f(dg["combustible"]), "calc": dgc.get("combustible")},
+                {"label": "Ácido",       "unit": "US$/t",   "real": f(rv(k.get("tarifa_acido",""))),  "ppto": f(bv(k.get("tarifa_acido",""))),  "efecto_kus": f(dg["acido"]),  "calc": dgc.get("acido")},
+                {"label": "Bolas",       "unit": "US$/t",   "real": f(rv(k["tarifa_bolas"])),       "ppto": f(bv(k["tarifa_bolas"])),       "efecto_kus": f(dg["bolas"]),       "calc": dgc.get("bolas")},
+                {"label": "Explosivos",  "unit": "US$/t",   "real": f(rv(k["tarifa_explosivos"])),  "ppto": f(bv(k["tarifa_explosivos"])),  "efecto_kus": f(dg["explosivos"]),  "calc": dgc.get("explosivos")},
             ],
             "rendimiento": [
-                {"label": "Energía",     "unit": "MWh/kt", "real": f(rend_energ_r), "ppto": f(rend_energ_b), "efecto_kus": f(dr["energia_conc"])},
-                {"label": "Combustible", "unit": "lt/hr",  "real": f(rend_comb_r),  "ppto": f(rend_comb_b),  "efecto_kus": f(dr["combustible"])},
-                {"label": "Ácido",       "unit": "kg/t",   "real": f(rend_acido_r),  "ppto": f(rend_acido_b),  "efecto_kus": f(dr["acido"])},
-                {"label": "Bolas",       "unit": "g/t",    "real": f(rend_bolas_r), "ppto": f(rend_bolas_b), "efecto_kus": f(dr["bolas"])},
-                {"label": "Explosivos",  "unit": "g/t",    "real": f(rend_expl_r),  "ppto": f(rend_expl_b),  "efecto_kus": f(dr["explosivos"])},
+                {"label": "Energía",     "unit": "MWh/kt", "real": f(rend_energ_r), "ppto": f(rend_energ_b), "efecto_kus": f(dr["energia_conc"]), "calc": drc.get("energia_conc")},
+                {"label": "Combustible", "unit": "lt/hr",  "real": f(rend_comb_r),  "ppto": f(rend_comb_b),  "efecto_kus": f(dr["combustible"]), "calc": drc.get("combustible")},
+                {"label": "Ácido",       "unit": "kg/t",   "real": f(rend_acido_r),  "ppto": f(rend_acido_b),  "efecto_kus": f(dr["acido"]), "calc": drc.get("acido")},
+                {"label": "Bolas",       "unit": "g/t",    "real": f(rend_bolas_r), "ppto": f(rend_bolas_b), "efecto_kus": f(dr["bolas"]), "calc": drc.get("bolas")},
+                {"label": "Explosivos",  "unit": "g/t",    "real": f(rend_expl_r),  "ppto": f(rend_expl_b),  "efecto_kus": f(dr["explosivos"]), "calc": drc.get("explosivos")},
             ],
             "produccion": [
                 {"label": "Ley Conc",        "unit": "% CuT", "real": f(ley_rr),      "ppto": f(ley_rb),      "efecto_ktcuf": f(el["concentradora"])},
